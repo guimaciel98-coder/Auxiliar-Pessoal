@@ -1,0 +1,310 @@
+.container {
+  margin-left: 220px;
+  min-height: 100vh;
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.header {
+  padding: 10px 20px 12px;
+  display: flex; flex-direction: column; gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.topNav {
+  display: flex; justify-content: space-between;
+  align-items: center; gap: 10px; flex-wrap: wrap;
+}
+
+/* Tabs de projeto */
+.projectTabs { display: flex; gap: 3px; }
+.tabBtn {
+  padding: 7px 14px; border-radius: 10px;
+  font-size: 13px; font-weight: 600;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  transition: all 0.2s var(--ease-out);
+}
+.tabBtn:hover { color: var(--text-secondary); background: rgba(255,255,255,0.09); }
+.tabActive { font-weight: 700; }
+
+/* Toggle Por Marca / Por Dia */
+.viewToggle {
+  display: flex; gap: 2px; padding: 3px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 10px; border: 1px solid rgba(255,255,255,0.07);
+}
+.toggleBtn {
+  padding: 5px 13px; border-radius: 8px;
+  font-size: 12px; font-weight: 600;
+  color: var(--text-muted); transition: all 0.2s;
+}
+.toggleActive {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* Sub-filtro VCA — hierarquia visual diferente (menor, mais recuado) */
+.subFilterBar {
+  display: flex; gap: 4px; padding-left: 2px;
+}
+.subBtn {
+  padding: 4px 11px; border-radius: 7px;
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted); border: 1px solid transparent;
+  transition: all 0.18s;
+}
+.subBtn:hover { color: var(--text-secondary); background: rgba(255,255,255,0.09); }
+.subActive {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-secondary);
+  border-color: rgba(255,255,255,0.1);
+}
+
+/* Legenda de cores — inline no header */
+.colorLegend {
+  display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px;
+}
+.legendItem {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--text-muted);
+}
+.legendDot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Board ───────────────────────────────────────────────────────────────── */
+.boardWrap {
+  width: 100%;
+  overflow-x: auto;
+  cursor: grab;
+  /* Sombra lateral indicando mais conteúdo */
+  -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
+  mask-image: linear-gradient(to right, black 90%, transparent 100%);
+}
+.boardWrap::-webkit-scrollbar { height: 4px; }
+.boardWrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+
+.columns {
+  display: flex; gap: 0;
+  padding: 16px 32px 40px 20px;
+  min-width: max-content;
+}
+
+/* ── Coluna ──────────────────────────────────────────────────────────────── */
+.column {
+  width: 280px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  border-right: 1px solid rgba(255,255,255,0.09);
+  padding-right: 8px; margin-right: 8px;
+}
+.column:last-child { border-right: none; }
+
+/* ── Cabeçalho da coluna ─────────────────────────────────────────────────── */
+.colHead {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 8px 8px;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.colHeadDay { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+
+.colName {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 1;
+}
+.colHeadOverdue .colName { color: var(--status-late); }
+
+.colCount {
+  font-size: 10px; font-weight: 700; font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.05);
+  padding: 1px 6px; border-radius: 99px;
+  flex-shrink: 0;
+}
+.colCountToday { background: rgba(0,229,160,0.12); color: var(--accent-primary); }
+.colCountOverdue { background: rgba(255,77,77,0.12); color: var(--status-late); }
+
+/* Barra de progresso da coluna */
+.colProgress {
+  height: 2px; background: rgba(255,255,255,0.05); border-radius: 99px;
+  margin: 0 8px 8px;
+  overflow: hidden;
+}
+.colProgressFill {
+  height: 100%; border-radius: 99px;
+  transition: width 0.6s var(--ease-out);
+}
+
+.rescheduleAllBtn {
+  font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--status-late); padding: 3px 7px; border-radius: 5px;
+  background: rgba(255,77,77,0.1); border: 1px solid rgba(255,77,77,0.2);
+  flex-shrink: 0; transition: all 0.18s;
+}
+.rescheduleAllBtn:hover { background: rgba(255,77,77,0.18); }
+
+/* ── Slot de tarefas ─────────────────────────────────────────────────────── */
+.taskSlot { display: flex; flex-direction: column; gap: 2px; padding: 0 0 4px; }
+.emptySlot {
+  height: 48px;
+  border: 1px dashed rgba(255,255,255,0.06);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: rgba(255,255,255,0.12);
+  margin: 2px 0;
+}
+
+/* ── Card de tarefa ──────────────────────────────────────────────────────── */
+.card {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 9px 10px 9px 6px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: default;
+  transition: background 0.15s, border-color 0.15s;
+  position: relative;
+}
+.card:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.06);
+}
+
+/* Área de drag */
+.dragArea {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 16px; display: flex; align-items: center; justify-content: center;
+  cursor: grab; opacity: 0; transition: opacity 0.15s;
+  touch-action: none;
+}
+.card:hover .dragArea { opacity: 1; }
+.dragDots { font-size: 11px; color: var(--text-muted); user-select: none; }
+
+/* Círculo de prioridade — nunca preenchido por padrão, checkmark só no hover */
+.circle {
+  width: 16px; height: 16px; flex-shrink: 0;
+  border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 2px;
+  background: transparent;
+  transition: all 0.2s; cursor: pointer;
+  position: relative;
+  padding: 0; font-family: inherit;
+}
+.circle:hover {
+  transform: scale(1.15);
+  background: rgba(0, 229, 160, 0.15);
+  border-color: var(--accent-primary) !important;
+}
+.circle:hover::after {
+  content: "✓";
+  font-size: 8px; font-weight: 900; line-height: 1;
+  color: var(--accent-primary);
+}
+
+/* Conteúdo do card */
+.cardBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.cardName {
+  font-size: 13px; font-weight: 400; line-height: 1.4;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+/* Meta: data + seção */
+.cardMeta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cardDate {
+  display: flex; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 500;
+  font-family: var(--font-mono);
+}
+.cardDate svg { flex-shrink: 0; opacity: 0.7; }
+.recIcon { font-size: 9px; opacity: 0.7; margin-left: 1px; }
+
+.sectionLabel {
+  font-size: 10px; font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100px;
+  background: rgba(255,255,255,0.09);
+  padding: 1px 5px; border-radius: 4px;
+}
+
+/* Botão reagendar — aparece no hover */
+.rescheduleBtn {
+  opacity: 0; flex-shrink: 0;
+  width: 22px; height: 22px; border-radius: 6px;
+  background: rgba(0,229,160,0.08);
+  border: 1px solid rgba(0,229,160,0.2);
+  color: var(--accent-primary); font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.15s, background 0.15s;
+  margin-top: 1px;
+}
+.card:hover .rescheduleBtn { opacity: 1; }
+.rescheduleBtn:hover { background: rgba(0,229,160,0.18); }
+
+/* ── Botão "Adicionar tarefa" ─────────────────────────────────────────────── */
+.addTaskBtn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 7px 10px;
+  border-radius: 8px; width: 100%;
+  font-size: 12px; font-weight: 500;
+  color: var(--text-muted);
+  transition: all 0.18s;
+  margin-top: 4px;
+}
+.addTaskBtn:hover { color: var(--accent-primary); background: rgba(0,229,160,0.06); }
+
+/* ── Botão expandir ─────────────────────────────────────────────────────── */
+.expandBtn {
+  padding: 6px 10px; border-radius: 8px;
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted);
+  border: 1px dashed rgba(255,255,255,0.08);
+  transition: all 0.18s; margin-top: 4px; width: 100%;
+}
+.expandBtn:hover {
+  background: rgba(0,229,160,0.06);
+  color: var(--accent-primary);
+  border-color: rgba(0,229,160,0.2);
+}
+
+/* ── Drag ghost ──────────────────────────────────────────────────────────── */
+.dragGhost {
+  background: var(--bg-elevated) !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,229,160,0.2);
+  border-radius: 10px; transform: rotate(1.5deg);
+  pointer-events: none;
+}
+
+/* ── Loading ─────────────────────────────────────────────────────────────── */
+.loading {
+  text-align: center; padding: 80px;
+  color: var(--text-muted); font-size: 13px;
+  padding-left: 88px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .container { margin-left: 0; padding-bottom: 80px; }
+  .column { width: 82vw; min-width: 260px; }
+  .boardWrap { -webkit-mask-image: none; mask-image: none; }
+  .header { padding: 8px 14px 10px; }
+  .topNav { gap: 6px; }
+  .projectTabs { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+  .projectTabs::-webkit-scrollbar { display: none; }
+  .tabBtn { padding: 6px 11px; font-size: 12px; flex-shrink: 0; }
+}
+
+@media (max-width: 480px) {
+  .column { width: 88vw; }
+  .columns { padding: 12px 20px 40px 12px; }
+}

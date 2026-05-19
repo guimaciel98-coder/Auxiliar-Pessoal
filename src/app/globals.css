@@ -1,0 +1,60 @@
+/* Fontes carregadas via next/font em layout.js — sem dependência HTTP externa */
+:root {
+  --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Mono', monospace;
+  /* Backgrounds — Tailwind gray palette, blue-tinted */
+  --bg-pure: #0d1117;
+  --bg-main: #111827;        /* gray-900 */
+  --bg-surface: #1f2937;     /* gray-800 */
+  --bg-elevated: #374151;    /* gray-700 */
+  --bg-overlay: #4b5563;     /* gray-600 */
+  --bg-card: rgba(31, 41, 55, 0.85);
+  --bg-glass: rgba(31, 41, 55, 0.6);
+
+  --accent-primary: #00e5a0; --accent-secondary: #00b37e;
+  --accent-success: #34d399; --accent-warning: #fbbf24; --accent-danger: #f87171;
+  --color-pessoal: #94a3b8; --color-vca: #5b9fd6; --color-pdv: #818cf8;
+
+  /* Texto — muito mais legível */
+  --text-primary: #f9fafb;   /* gray-50  — contraste 17:1 */
+  --text-secondary: #d1d5db; /* gray-300 — contraste 10:1 */
+  --text-muted: #9ca3af;     /* gray-400 — contraste  5:1 */
+
+  /* Bordas */
+  --border-glass: rgba(55, 65, 81, 0.8);
+  --border-subtle: rgba(55, 65, 81, 0.6);
+  --border-hover: rgba(0, 229, 160, 0.4);
+  --border-active: rgba(0, 229, 160, 0.55);
+  --shadow-premium: 0 12px 40px rgba(0,0,0,0.8); --shadow-card: 0 8px 24px rgba(0,0,0,0.5);
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px; --radius-xl: 24px; --radius-full: 9999px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --status-p1: #FF4D4D; --status-p2: #F97316; --status-p3: #FBBF24; --status-p4: #94A3B8;
+  --status-ok: #00e5a0; --status-late: #FF4D4D; --status-warn: #F97316;
+  --sp-xs: 4px; --sp-sm: 8px; --sp-md: 16px; --sp-lg: 24px; --sp-xl: 32px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --t-fast: 150ms; --t-base: 250ms; --t-slow: 400ms;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;scroll-behavior:smooth;height:100%}
+body{
+  background: var(--bg-main);
+  background-image:
+    radial-gradient(ellipse at 70% 0%, rgba(0, 229, 160, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse at 10% 100%, rgba(0, 179, 126, 0.03) 0%, transparent 60%);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  min-height: 100dvh;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+.glass{background:var(--bg-glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border-glass);box-shadow:var(--shadow-premium)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;transition:var(--transition)}
+button:active{transform:scale(0.97)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:var(--radius-full)}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.15)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}

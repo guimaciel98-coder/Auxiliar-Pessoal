@@ -1,0 +1,521 @@
+/* ── Container: offset sidebar ─────────────────────────────────────────── */
+.container {
+  margin-left: 220px;
+  min-height: 100vh;
+}
+
+/* ── Layout 2 colunas no desktop ────────────────────────────────────────── */
+.body {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 0;
+  align-items: start;
+}
+
+.mainCol {
+  padding: 0 0 80px;
+  min-width: 0;
+}
+
+.sideCol {
+  padding: 20px 24px 80px 8px;
+  position: sticky;
+  top: 56px;
+  max-height: calc(100vh - 56px);
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 16px;
+  scrollbar-width: none;
+}
+.sideCol::-webkit-scrollbar { display: none; }
+
+/* ── Cabeçalho da página ─────────────────────────────────────────────────── */
+.header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 24px 28px 16px;
+}
+.header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
+.header p { color: rgba(255,255,255,0.3); font-size: 13px; }
+.addBtn {
+  padding: 8px 16px; border-radius: 99px;
+  background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.28);
+  color: #10b981; font-size: 12px; font-weight: 700;
+  transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+}
+.addBtn:hover { background: rgba(16,185,129,0.2); }
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.tabs {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 4px;
+  background: rgba(255,255,255,0.04); border-radius: 12px; padding: 4px;
+  margin: 0 28px 20px;
+}
+.tab {
+  padding: 8px 4px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  color: rgba(255,255,255,0.35); transition: all 0.2s; text-align: center; cursor: pointer;
+}
+.tabActive { background: rgba(255,255,255,0.09); color: #fff; }
+
+/* ── Conteúdo do mainCol ─────────────────────────────────────────────────── */
+.content { padding: 0 28px; }
+
+/* ── Section labels ──────────────────────────────────────────────────────── */
+.sectionLabel {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.3); margin: 20px 0 10px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.sectionLabelAction { font-size: 11px; font-weight: 600; color: #10b981; cursor: pointer; text-transform: none; letter-spacing: 0; }
+
+/* ── Cards de variáveis ──────────────────────────────────────────────────── */
+.varCard {
+  padding: 14px 16px; border-radius: 14px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  margin-bottom: 8px;
+}
+.varTop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+.varName { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); }
+.varToday { font-size: 13px; color: rgba(255,255,255,0.55); }
+.varTodayVal { color: rgba(255,255,255,0.7); font-weight: 600; }
+
+/* Badge de overflow quando pct > 100% */
+.varOverflowBadge {
+  display: inline-block; margin-left: 8px;
+  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+  padding: 2px 7px; border-radius: 6px; vertical-align: middle;
+  background: rgba(239,68,68,0.15); color: #ef4444;
+  border: 1px solid rgba(239,68,68,0.3);
+}
+.varRemaining { font-size: 22px; font-weight: 800; font-family: var(--font-mono); letter-spacing: -0.02em; margin: 6px 0 8px; }
+.varBarTrack { height: 4px; border-radius: 99px; background: rgba(255,255,255,0.06); overflow: hidden; margin-bottom: 5px; }
+.varBarFill { height: 100%; border-radius: 99px; transition: width 0.7s ease; }
+.varBarMeta { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.25); }
+
+/* ── Cards de grupos (Fixos) ─────────────────────────────────────────────── */
+.groupCard { border-radius: 14px; border: 1px solid rgba(255,255,255,0.07); overflow: hidden; margin-bottom: 8px; }
+.groupHeader { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(255,255,255,0.03); cursor: pointer; gap: 12px; }
+.groupHeaderLeft { display: flex; align-items: center; gap: 8px; }
+.groupChevron { font-size: 10px; color: rgba(255,255,255,0.25); transition: transform 0.2s; flex-shrink: 0; }
+.groupChevronOpen { transform: rotate(180deg); }
+.groupName { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.75); }
+.groupBadge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.35); }
+.groupRight { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.groupTotal { font-size: 13px; font-weight: 700; font-family: var(--font-mono); color: rgba(255,255,255,0.5); }
+.groupItems { padding: 4px 16px 12px; border-top: 1px solid rgba(255,255,255,0.05); }
+.fixoRow { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.fixoRow:last-child { border-bottom: none; }
+.fixoName { font-size: 12px; color: rgba(255,255,255,0.6); }
+.fixoRight { display: flex; align-items: center; gap: 8px; }
+.fixoVal { font-size: 12px; font-family: var(--font-mono); color: rgba(255,255,255,0.5); }
+.ctrlIcon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+.ctrlPaid { background: rgba(16,185,129,0.12); color: #10b981; }
+.ctrlPending { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.25); }
+
+/* ── Compromissos ─────────────────────────────────────────────────────────── */
+.commitCard { padding: 14px 16px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); margin-bottom: 8px; }
+.commitTop { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.commitName { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); flex: 1; }
+.commitPrazo { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); white-space: nowrap; flex-shrink: 0; }
+.commitBottom { display: flex; justify-content: space-between; align-items: center; }
+.commitMensal { font-size: 11px; color: rgba(255,255,255,0.35); }
+.commitMensalVal { color: rgba(255,255,255,0.55); font-weight: 600; font-family: var(--font-mono); }
+.commitRestante { font-size: 15px; font-weight: 800; font-family: var(--font-mono); color: #ef4444; }
+.commitSummary { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-radius: 12px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); margin-top: 4px; }
+.commitSummaryLabel { font-size: 12px; color: rgba(255,255,255,0.4); font-weight: 600; }
+.commitSummaryVal { font-size: 15px; font-weight: 800; font-family: var(--font-mono); color: #ef4444; }
+
+/* ── Cenários ─────────────────────────────────────────────────────────────── */
+.scenarioRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.scenCard { padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.03); }
+.scenLabel { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.35); margin-bottom: 4px; }
+.scenGanho { font-size: 12px; color: rgba(255,255,255,0.35); margin-bottom: 6px; font-family: var(--font-mono); }
+.scenSaldo { font-size: 20px; font-weight: 800; font-family: var(--font-mono); letter-spacing: -0.02em; }
+.scenPos { color: #10b981; }
+.scenNeg { color: #ef4444; }
+.scenSub { font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 4px; }
+
+/* ── Renda — grid de cards ───────────────────────────────────────────────── */
+.incomeCardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .incomeCardGrid { grid-template-columns: 1fr; }
+}
+
+/* ── Renda ────────────────────────────────────────────────────────────────── */
+.incomeCard { padding: 14px 16px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); margin-bottom: 8px; }
+.incomeGroupLabel { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.3); margin-bottom: 10px; }
+.incomeRow { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.incomeRow:last-of-type { border-bottom: none; }
+.incomeName { font-size: 13px; color: rgba(255,255,255,0.7); }
+.incomeRight { display: flex; align-items: center; gap: 8px; }
+.incomeVal { font-size: 13px; font-weight: 700; font-family: var(--font-mono); color: #10b981; }
+.incomeCheck { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+.checkConfirmed { background: rgba(16,185,129,0.1); color: #10b981; }
+.checkPending { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); }
+.incomeTotalRow { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.07); }
+.incomeTotalLabel { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.5); }
+.incomeTotalVal { font-size: 15px; font-weight: 800; font-family: var(--font-mono); color: #10b981; }
+
+/* ── Poupança ─────────────────────────────────────────────────────────────── */
+.savingsHero { padding: 20px; border-radius: 18px; background: var(--bg-surface); border: 1px solid var(--border-glass); margin-bottom: 12px; }
+.savingsLabel { font-size: 12px; color: rgba(255,255,255,0.3); margin-bottom: 4px; }
+.savingsValue { font-size: 36px; font-weight: 800; letter-spacing: -0.03em; font-family: var(--font-mono); background: linear-gradient(135deg,#10b981,#06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.savingsMeta { font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 4px; }
+.savingsBarTrack { height: 6px; border-radius: 99px; background: rgba(255,255,255,0.06); overflow: hidden; margin: 16px 0 8px; }
+.savingsBarFill { height: 100%; border-radius: 99px; background: linear-gradient(90deg,#10b981,#06b6d4); transition: width 0.8s ease; }
+.savingsBarMeta { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.3); }
+.metasRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+.metaCard { padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
+.metaCardLabel { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.3); margin-bottom: 6px; }
+.metaCardVal { font-size: 17px; font-weight: 800; font-family: var(--font-mono); }
+.metaCardSub { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 3px; }
+/* Card com scroll interno para timeline completa */
+.timelineScroll {
+  max-height: 340px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.01);
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+.timelineScroll::-webkit-scrollbar { width: 4px; }
+.timelineScroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+
+.timelineWrap { display: flex; flex-direction: column; gap: 6px; }
+.timelineRow { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); }
+.timelineRowCurrent { background: rgba(6,182,212,0.06); border-color: rgba(6,182,212,0.2); }
+.timelineDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dotHit { background: #10b981; }
+.dotMiss { background: rgba(255,255,255,0.1); }
+.dotCurrent { background: #06b6d4; box-shadow: 0 0 8px rgba(6,182,212,0.6); }
+.timelineMes { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.5); flex: 1; text-transform: capitalize; }
+.timelineVal { font-size: 13px; font-weight: 700; font-family: var(--font-mono); }
+.timelineHit { color: #10b981; }
+.timelineMissVal { color: rgba(255,255,255,0.3); }
+.timelineBadge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+.badgeHit { background: rgba(16,185,129,0.1); color: #10b981; }
+.badgeCurrent { background: rgba(6,182,212,0.15); color: #06b6d4; }
+
+/* ── Painel lateral (sideCol) ────────────────────────────────────────────── */
+.sidePanel {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px; overflow: hidden;
+}
+.sidePanelTitle {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-muted);
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.sidePanelContent { padding: 16px; }
+.sideStat { margin-bottom: 16px; }
+.sideStatLabel { font-size: 11px; color: rgba(255,255,255,0.3); margin-bottom: 4px; }
+.sideStatValue { font-size: 22px; font-weight: 800; font-family: var(--font-mono); letter-spacing: -0.02em; }
+
+/* ── Sumário de gastos (abaixo do header) ─────────────────────────────────── */
+.expenseSummary {
+  display: flex; align-items: center;
+  margin: 0 28px 16px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+}
+.expenseSummaryItem { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.expenseSummaryDivider {
+  width: 1px; align-self: stretch;
+  background: rgba(255,255,255,0.08); margin: 0 16px; flex-shrink: 0;
+}
+.expenseSummaryLabel {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted);
+}
+.expenseSummaryValue {
+  font-size: 15px; font-weight: 700; font-family: var(--font-mono); color: var(--text-secondary);
+}
+
+/* ── Modal de registro de gasto ───────────────────────────────────────────── */
+.expenseModalOverlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 500;
+}
+.expenseModal {
+  background: rgba(17,24,39,0.98); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px 20px 0 0; padding: 28px 20px 44px;
+  width: 100%; max-width: 600px;
+}
+.expenseModalTitle { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+.expenseModalSubtitle { font-size: 12px; color: rgba(255,255,255,0.35); margin-bottom: 20px; }
+.expenseForm { display: flex; flex-direction: column; gap: 16px; }
+.expenseFormLabel {
+  display: block; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
+}
+.expenseInput {
+  width: 100%; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+  padding: 12px 14px; color: #f0f0f8; font-size: 18px;
+  font-family: var(--font-mono), monospace; outline: none; transition: border-color 0.2s;
+}
+.expenseInput:focus { border-color: rgba(16,185,129,0.4); }
+.expenseBtnRow { display: flex; gap: 10px; }
+.expenseBtnCancel {
+  flex: 1; padding: 12px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+  color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;
+}
+.expenseBtnCancel:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.65); }
+.expenseBtnSubmit {
+  flex: 2; padding: 12px; border-radius: 10px;
+  font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+  color: #fff; background: linear-gradient(135deg, #10b981, #059669);
+  border: none; transition: opacity 0.2s;
+}
+.expenseBtnSubmit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── History — filtro de período ─────────────────────────────────────────── */
+.histPeriodBar {
+  display: flex; gap: 4px;
+  padding: 0 28px 16px;
+}
+.histPeriodBtn {
+  padding: 5px 13px; border-radius: 99px; font-size: 12px; font-weight: 600;
+  color: var(--text-muted); background: transparent;
+  border: 1px solid rgba(255,255,255,0.07); cursor: pointer; transition: all 0.2s;
+  font-family: inherit;
+}
+.histPeriodBtn:hover { color: var(--text-secondary); background: rgba(255,255,255,0.06); }
+.histPeriodActive {
+  color: var(--accent-primary) !important;
+  background: rgba(0,229,160,0.1) !important;
+  border-color: rgba(0,229,160,0.25) !important;
+}
+
+/* ── History — resumo por categoria ─────────────────────────────────────── */
+.histCatSummary {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 0 28px 20px;
+}
+.histCatPill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 99px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  font-size: 11px; font-weight: 600; color: var(--text-secondary);
+  white-space: nowrap;
+}
+.histCatDot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.histCatAmount { font-family: var(--font-mono); color: var(--text-secondary); }
+
+/* ── History — cabeçalho do dia ─────────────────────────────────────────── */
+.histDayHeader {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 8px;
+}
+.histDayDate {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.histDayLine { flex: 1; height: 1px; background: var(--border-glass); }
+.histDayTotal {
+  font-size: 12px; font-weight: 700;
+  font-family: var(--font-mono); flex-shrink: 0;
+  color: #f59e0b; /* amarelo — total diário */
+}
+
+/* ── History — linha de entrada ─────────────────────────────────────────── */
+.histEntry {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: background 0.15s;
+}
+.histEntry:hover { background: rgba(255,255,255,0.05); }
+.histEntryIcon { font-size: 15px; flex-shrink: 0; line-height: 1; }
+.histEntryCategory {
+  flex: 1; font-size: 13px; font-weight: 500; color: var(--text-secondary);
+}
+.histEntryAmount {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ── Categoria grid (modal) ──────────────────────────────────────────────── */
+.catGrid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 4px; }
+.catBtn { padding: 10px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); transition: all 0.15s; text-align: left; cursor: pointer; }
+.catBtn:hover { background: rgba(255,255,255,0.07); }
+.catBtnActive { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #10b981; }
+.catBtnRest { font-size: 10px; display: block; color: rgba(255,255,255,0.25); margin-top: 2px; font-weight: 400; }
+.catBtnRestActive { color: rgba(16,185,129,0.55); }
+
+/* ── Visão Geral — layout 2 colunas no desktop ───────────────────────────── */
+.overviewLayout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+@media (min-width: 1024px) {
+  .overviewLayout {
+    grid-template-columns: 3fr 2fr;
+    align-items: stretch;
+  }
+}
+
+/* ── Visão Geral — stat cards ────────────────────────────────────────────── */
+.overviewStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.overviewStatCard {
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.overviewStatLabel {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+.overviewStatValue {
+  font-size: 18px; font-weight: 800;
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* ── Busca (usado em history page) ──────────────────────────────────────── */
+.searchBar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  transition: border-color 0.2s;
+}
+.searchBar:focus-within { border-color: var(--border-active); }
+.searchInput {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text-primary); font-size: 14px; font-family: var(--font-sans);
+}
+.searchInput::placeholder { color: var(--text-muted); }
+.searchClear {
+  color: var(--text-muted); font-size: 18px; padding: 0 4px;
+  cursor: pointer; transition: color 0.2s; background: none; border: none;
+}
+.searchClear:hover { color: var(--text-secondary); }
+
+/* ── Gráficos / Análises ─────────────────────────────────────────────────── */
+.analyses {
+  padding: 0 28px 48px;
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.chartCard {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 18px 16px 14px;
+  position: relative;
+}
+
+.chartTitle {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+/* Legenda custom (poupança) */
+.chartLegend {
+  display: flex; align-items: center; gap: 14px;
+  margin-top: 8px;
+  font-size: 11px; color: var(--text-muted);
+}
+.legendDot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* Saldos do gráfico de cenários */
+.cenarioSaldos {
+  display: flex; gap: 16px; justify-content: center;
+  margin-top: 10px;
+}
+.cenarioSaldo {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.cenarioSaldoLabel {
+  font-size: 10px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+/* Tablet */
+@media (max-width: 1200px) and (min-width: 769px) {
+  .chartsGrid { grid-template-columns: 1fr; }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .analyses { padding: 0 16px 40px; }
+  .chartsGrid { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* ── Loading / Error ─────────────────────────────────────────────────────── */
+.loading, .placeholder { text-align: center; padding: 60px 28px; color: rgba(255,255,255,0.2); font-size: 13px; }
+.errorCard { margin: 0 28px; padding: 20px; border-radius: 16px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); color: rgba(255,255,255,0.8); font-size: 13px; margin-bottom: 16px; }
+.retryBtn { margin-top: 12px; padding: 6px 14px; border-radius: 8px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.6); font-size: 12px; font-weight: 600; }
+
+/* ── Tablet ──────────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) and (min-width: 769px) {
+  .body { grid-template-columns: 2fr 1fr; }
+  .sideCol { padding: 16px 16px 60px 6px; }
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) and (min-width: 769px) {
+  .overviewStats { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .container { margin-left: 0; }
+  .body { grid-template-columns: 1fr; }
+  .mainCol { padding: 0 0 90px; }
+  .sideCol { display: none; }
+  .header { padding: 16px 16px 12px; }
+  .content { padding: 0 16px; }
+  .scenarioRow { grid-template-columns: 1fr; }
+  .metasRow { grid-template-columns: 1fr; }
+  .savingsValue { font-size: 28px; }
+  .overviewStats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .overviewStatValue { font-size: 15px; }
+}

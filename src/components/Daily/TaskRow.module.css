@@ -1,0 +1,111 @@
+/* ── Container ─────────────────────────────────────────────────────────── */
+.taskContainer { margin-bottom: 6px; transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out); }
+.fadingOut     { transform: translateX(60px) scale(0.97); opacity: 0; pointer-events: none; }
+.busy          { opacity: 0.45; pointer-events: none; }
+
+/* ── Row ────────────────────────────────────────────────────────────────── */
+.taskRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  transition: background 0.2s, border-color 0.2s;
+  position: relative;
+}
+.taskRow:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.1);
+}
+
+/* Cores por estado */
+.overdue { border-left: 3px solid var(--status-late) !important; background: rgba(255,77,77,0.04); }
+.urgent  { border-left: 3px solid var(--status-late); }
+.high    { border-left: 3px solid var(--status-p2); }
+.pulse   { animation: taskPulse 2.5s ease-in-out infinite; }
+@keyframes taskPulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+/* ── Conteúdo da tarefa ──────────────────────────────────────────────────── */
+.taskLink  { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; cursor: pointer; }
+.taskTime  {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  padding: 3px 8px; background: rgba(0,229,160,0.1); border-radius: 7px;
+  color: var(--accent-primary); flex-shrink: 0; white-space: nowrap;
+}
+.taskMeta  { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.taskName  { font-size: 14px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+.taskSub   { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Badges ─────────────────────────────────────────────────────────────── */
+.badges { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+.badge  { 
+  font-size: 9px; font-weight: 800; text-transform: uppercase; 
+  letter-spacing: 0.05em; padding: 2px 7px; border-radius: 5px; 
+  font-family: var(--font-mono);
+}
+.badgeContext { background: rgba(255,255,255,0.06); color: var(--text-muted); }
+.badgeOverdue { background: rgba(255,77,77,0.15);  color: var(--status-late); border: 1px solid rgba(255,77,77,0.25); }
+.badgeUrgent  { background: rgba(255,77,77,0.12);  color: var(--status-p1); border: 1px solid rgba(255,77,77,0.2); }
+.badgeHigh    { background: rgba(249,115,22,0.12); color: var(--status-p2); border: 1px solid rgba(249,115,22,0.2); }
+.badgeNormal  { background: rgba(251,191,36,0.1);  color: var(--status-p3); border: 1px solid rgba(251,191,36,0.2); }
+.badgeLow     { background: rgba(148,163,184,0.08); color: var(--status-p4); border: 1px solid rgba(148,163,184,0.12); }
+
+/* ── Botões de ação (44×44 mínimo touch target) ─────────────────────────── */
+.actionBtn {
+  width: 44px; height: 44px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px; font-size: 15px; font-weight: 700;
+  color: var(--text-muted);
+  transition: all 0.2s var(--ease-out);
+  border: 1px solid transparent;
+}
+.rescheduleBtn { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.07); }
+.rescheduleBtn:hover { background: rgba(255,255,255,0.08); color: var(--text-secondary); border-color: rgba(255,255,255,0.12); }
+.rescheduleOpenBtn { background: rgba(0,229,160,0.1); color: var(--accent-primary); border-color: rgba(0,229,160,0.25); }
+.completeBtn { background: rgba(0,229,160,0.06); border-color: rgba(0,229,160,0.15); color: var(--accent-primary); }
+.completeBtn:hover { 
+  background: rgba(0,229,160,0.16); 
+  border-color: rgba(0,229,160,0.35); 
+  transform: scale(1.08);
+  box-shadow: 0 0 16px rgba(0,229,160,0.25);
+}
+
+/* ── Painel de reagendar ─────────────────────────────────────────────────── */
+.reschedulePanel {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-top: none;
+  border-radius: 0 0 14px 14px;
+  margin-top: -4px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.reschedulePanel::-webkit-scrollbar { display: none; }
+.rescheduleChip {
+  padding: 6px 13px; border-radius: 99px;
+  font-size: 11px; font-weight: 600;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-secondary);
+  white-space: nowrap; transition: all 0.2s;
+}
+.rescheduleChip:hover { background: rgba(0,229,160,0.1); color: var(--accent-primary); border-color: rgba(0,229,160,0.3); }
+
+/* ── Responsivo ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .taskRow   { padding: 10px 10px; gap: 8px; }
+  .taskName  { font-size: 13px; }
+  .taskSub   { font-size: 9px; }
+  /* Ocultar badge de contexto secundário para economizar espaço */
+  .badgeContext { display: none; }
+  .actionBtn { width: 40px; height: 40px; }
+}
+
+@media (max-width: 480px) {
+  .taskTime  { font-size: 10px; padding: 2px 6px; }
+  .badges    { gap: 3px; }
+  .badge     { font-size: 8px; padding: 2px 5px; }
+  .rescheduleChip { padding: 5px 10px; font-size: 10px; }
+}
+

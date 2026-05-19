@@ -1,0 +1,132 @@
+/* ── Wrapper geral ───────────────────────────────────────────────────────── */
+.wrap {
+  margin-left: 220px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Layout 2 colunas (desktop) ─────────────────────────────────────────── */
+.body {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 0;
+  flex: 1;
+  align-items: start;
+}
+
+.mainCol {
+  padding: 24px 28px 80px 28px;
+  min-width: 0;
+}
+
+.sideCol {
+  padding: 24px 24px 80px 0;
+  position: sticky;
+  top: 56px; /* altura do ModuleHeader */
+  max-height: calc(100vh - 56px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scrollbar-width: none;
+}
+.sideCol::-webkit-scrollbar { display: none; }
+
+/* ── Painel lateral de métricas ─────────────────────────────────────────── */
+.sidePanel {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.sidePanelTitle {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-muted);
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+/* ── Métricas no painel lateral ─────────────────────────────────────────── */
+.metricsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.metricItem {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.metricItem:last-child { border-bottom: none; }
+.metricItem:hover { background: rgba(255,255,255,0.07); }
+.metricItemActive { background: rgba(0,229,160,0.06) !important; }
+.metricLabel {
+  font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+}
+.metricItemActive .metricLabel { color: var(--accent-primary); }
+.metricCount {
+  font-size: 18px; font-weight: 800;
+  font-family: var(--font-mono);
+  color: rgba(255,255,255,0.3);
+}
+.metricItemActive .metricCount { color: var(--accent-primary); }
+
+/* ── Métricas inline: ocultas no desktop (ficam no sideCol), visíveis mobile ── */
+.metricsInline { display: none; }
+@media (max-width: 768px) { .metricsInline { display: block; } }
+
+/* ── Loading ────────────────────────────────────────────────────────────── */
+.loading {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 60vh;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px; letter-spacing: 0.2em;
+  text-transform: uppercase; gap: 16px;
+}
+.loading::after {
+  content: '';
+  width: 24px; height: 24px;
+  border: 2px solid var(--accent-primary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Divider ────────────────────────────────────────────────────────────── */
+.divider {
+  border: none; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-glass), transparent);
+  margin: 16px 0;
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+.emptyState {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+  padding: 48px 24px; text-align: center;
+}
+.emptyIcon { font-size: 36px; line-height: 1; margin-bottom: 4px; }
+.emptyState p { font-size: 15px; font-weight: 700; color: var(--text-secondary); }
+.emptyHint { font-size: 12px; color: var(--text-muted); }
+
+/* ── Tablet ─────────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) and (min-width: 769px) {
+  .body { grid-template-columns: 1fr 260px; }
+  .mainCol { padding: 20px 20px 60px 20px; }
+  .sideCol { padding: 20px 16px 60px 0; }
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .wrap { margin-left: 0; }
+  .body { grid-template-columns: 1fr; }
+  .mainCol { padding: 14px 14px 100px; }
+  .sideCol { display: none; } /* métricas ficam inline no mobile via Metrics.js */
+}

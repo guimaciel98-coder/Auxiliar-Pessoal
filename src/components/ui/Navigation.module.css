@@ -1,0 +1,231 @@
+/* ── Sidebar Desktop ─────────────────────────────────────────────────────── */
+.nav {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 220px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 12px 20px;
+  background: rgba(13, 17, 23, 0.98);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-right: 1px solid rgba(55, 65, 81, 0.4);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+.nav::-webkit-scrollbar { display: none; }
+
+/* ── Brand ──────────────────────────────────────────────────────────────── */
+.brand {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.brand:hover { background: rgba(255,255,255,0.05); }
+
+.brandMark {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, #00e5a0, #00b37e);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 900; color: #0a0d14;
+  flex-shrink: 0;
+}
+.brandText { display: flex; flex-direction: column; gap: 1px; }
+.brandName {
+  font-size: 15px; font-weight: 800; color: var(--text-primary);
+  letter-spacing: -0.02em; line-height: 1;
+}
+.brandSub {
+  font-size: 10px; font-weight: 500; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+/* ── Divider ────────────────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: rgba(55, 65, 81, 0.5);
+  margin: 12px 4px;
+  flex-shrink: 0;
+}
+
+/* ── Items containers ───────────────────────────────────────────────────── */
+.items {
+  display: flex; flex-direction: column; gap: 2px;
+}
+
+/* Desktop: accordion visível, mobile list oculta */
+.desktopItems { flex: 1; }
+.mobileItems  { display: none; }
+
+/* ── Item group (parent + accordion) ───────────────────────────────────── */
+.itemGroup {
+  display: flex; flex-direction: column;
+}
+
+/* ── Section label ──────────────────────────────────────────────────────── */
+.sectionLabel {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 14px 12px 4px;
+  display: block;
+}
+
+/* ── Nav item principal ─────────────────────────────────────────────────── */
+.item {
+  width: 100%; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center;
+  padding: 0 12px;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--text-muted);
+  transition: background 0.18s, color 0.18s;
+  position: relative;
+  flex-shrink: 0;
+  font-family: inherit;
+  background: none; border: none; cursor: pointer;
+}
+.item:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-secondary);
+}
+
+.active {
+  background: rgba(0, 229, 160, 0.1);
+  color: var(--accent-primary);
+}
+.active::before {
+  content: "";
+  position: absolute; left: 0; top: 8px; bottom: 8px;
+  width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--accent-primary);
+}
+.active:hover { background: rgba(0, 229, 160, 0.14); }
+
+.icon {
+  font-size: 15px; line-height: 1; flex-shrink: 0;
+  width: 20px; text-align: center;
+}
+.label {
+  font-size: 13px; font-weight: 600;
+  white-space: nowrap; letter-spacing: -0.01em;
+  flex: 1;
+}
+
+/* ── Chevron indicador ──────────────────────────────────────────────────── */
+.chevron {
+  color: var(--text-muted);
+  display: flex; align-items: center;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.18s;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.chevronOpen {
+  transform: rotate(180deg);
+  color: var(--accent-primary);
+}
+
+/* ── Accordion sub-itens ────────────────────────────────────────────────── */
+.subItems {
+  display: flex; flex-direction: column; gap: 1px;
+  /* Collapsed: height 0, opacity 0, não ocupa espaço */
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.25s ease;
+}
+.subItemsOpen {
+  /* Expanded: 5 itens × 36px ≈ 180px + margem */
+  max-height: 220px;
+  opacity: 1;
+}
+
+.subItem {
+  display: flex; align-items: center;
+  gap: 10px;
+  height: 34px;
+  /* Indentação visual: alinha com o texto do item pai */
+  padding: 0 10px 0 44px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 12px; font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  position: relative;
+}
+.subItem:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary);
+}
+.subItemActive {
+  color: var(--accent-primary);
+  background: rgba(0, 229, 160, 0.07);
+}
+.subItemActive::before {
+  content: "";
+  position: absolute; left: 30px; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 3px; border-radius: 50%;
+  background: var(--accent-primary);
+}
+
+.subIcon {
+  font-size: 13px; line-height: 1; flex-shrink: 0;
+  width: 16px; text-align: center;
+}
+.subLabel {
+  font-size: 12px; font-weight: 500;
+  white-space: nowrap; letter-spacing: -0.01em;
+}
+
+/* ── Mobile: barra inferior ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .nav {
+    position: fixed;
+    left: 0; right: 0;
+    top: auto; bottom: 0;
+    width: auto; height: auto;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: space-around;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    border-right: none;
+    border-top: 1px solid rgba(55, 65, 81, 0.5);
+    gap: 0;
+    overflow: visible;
+  }
+  .brand   { display: none; }
+  .divider { display: none; }
+
+  /* No mobile: esconde sidebar desktop, mostra barra flat */
+  .desktopItems { display: none; }
+  .mobileItems  {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%; flex: 1;
+    gap: 0;
+  }
+
+  .sectionLabel { display: none; }
+
+  .item {
+    width: auto; flex: 1; height: auto; min-height: 52px;
+    border-radius: 10px; padding: 6px 4px;
+    flex-direction: column; gap: 3px;
+    justify-content: center; align-items: center;
+  }
+  .item::before { display: none; }
+  .active { box-shadow: inset 0 3px 0 0 var(--accent-primary); background: transparent; }
+  .active:hover { background: transparent; }
+  .icon { font-size: 18px; width: auto; }
+  .label { font-size: 10px; font-weight: 600; letter-spacing: 0; }
+  .chevron { display: none; }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "guida-daily",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "canvas-confetti": "^1.9.4",
+    "googleapis": "^171.4.0",
+    "next": "14.2.3",
+    "react": "^18",
+    "react-dom": "^18",
+    "recharts": "^3.8.1"
+  }
+}

@@ -1,0 +1,227 @@
+.container {
+  margin-left: 220px;
+  padding: 40px 40px 80px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 48px;
+}
+
+.backBtn {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.backBtn:hover {
+  color: var(--text-primary);
+  transform: translateX(-4px);
+}
+
+.header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(to right, #fff, var(--text-muted));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .container { margin-left: 0; padding: 20px 16px 90px; }
+  .header { flex-wrap: wrap; gap: 12px; margin-bottom: 28px; }
+  .header h1 { font-size: 22px; }
+  .statsRow { flex-wrap: wrap; }
+  .statBox { min-width: calc(50% - 8px); }
+  .statVal { font-size: 24px; }
+  .form { padding: 20px; }
+  .list { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .statsRow { gap: 8px; }
+  .statBox { min-width: 100%; }
+}
+
+.formSection h2, .listSection h2 {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.form {
+  background: var(--bg-card);
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-premium);
+}
+
+.field {
+  margin-bottom: 24px;
+}
+
+.field label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.field input, .field select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-glass);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 14px;
+  transition: var(--transition);
+}
+
+.field input:focus, .field select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.submitBtn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent-primary), #7c3aed);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+
+.submitBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: var(--transition);
+}
+
+.card:hover {
+  border-color: var(--border-glass-hover, rgba(255, 255, 255, 0.15));
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cardInfo strong {
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.cardInfo span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statsRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.statBox {
+  flex: 1;
+  background: var(--bg-card);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-glass);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statVal {
+  font-size: 32px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--accent-primary);
+}
+
+.statLab {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.listHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.listHead h2 {
+  margin-bottom: 0 !important;
+}
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.cardVca { border-left: 4px solid var(--accent-primary); }
+.cardPdv { border-left: 4px solid var(--accent-secondary); }
+
+.cardProjectDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  display: none; /* Reservado para uso futuro se necessário */
+}

@@ -1,0 +1,105 @@
+/* TaskEditModal — estilos próprios (não depende mais do QuickAddModal.module.css) */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.25s ease-out;
+}
+@media (min-width: 769px) { .overlay { align-items: center; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 24px 24px 0 0;
+  padding: 28px 20px calc(28px + env(safe-area-inset-bottom));
+  width: 100%;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+  animation: slideUpModal 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 94dvh; overflow-y: auto;
+}
+@media (min-width: 769px) {
+  .modal { border-radius: 24px; max-width: 480px; padding: 32px; box-shadow: var(--shadow-premium); }
+}
+@keyframes slideUpModal {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+.title { font-size: 19px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em; }
+
+.formGroup { margin-bottom: 18px; }
+.label {
+  display: block; font-size: 10px; font-weight: 700;
+  color: var(--text-muted); margin-bottom: 7px;
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+.input, .select {
+  width: 100%; background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-subtle); color: var(--text-primary);
+  border-radius: 12px; padding: 11px 14px;
+  font-family: var(--font-sans); font-size: 14px;
+  transition: border-color 0.2s, background 0.2s; color-scheme: dark;
+}
+.select option { background-color: var(--bg-elevated); color: var(--text-primary); }
+.input:focus, .select:focus {
+  outline: none; border-color: var(--border-active); background: rgba(0,229,160,0.04);
+}
+
+.priorityPicker { display: flex; gap: 6px; flex-wrap: wrap; }
+.priorityOption {
+  padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; border: 1px solid transparent;
+  font-family: var(--font-sans);
+}
+.priorityNone   { background: rgba(255,255,255,0.04); color: var(--text-muted); border-color: rgba(255,255,255,0.08); }
+.priorityNone.selected { background: rgba(255,255,255,0.1); color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+.priorityP1     { background: rgba(255,77,77,0.08); color: var(--status-p1); border-color: rgba(255,77,77,0.15); }
+.priorityP1.selected { background: rgba(255,77,77,0.18); border-color: rgba(255,77,77,0.35); }
+.priorityP2     { background: rgba(249,115,22,0.08); color: var(--status-p2); border-color: rgba(249,115,22,0.15); }
+.priorityP2.selected { background: rgba(249,115,22,0.18); border-color: rgba(249,115,22,0.35); }
+.priorityP3     { background: rgba(251,191,36,0.08); color: var(--status-p3); border-color: rgba(251,191,36,0.15); }
+.priorityP3.selected { background: rgba(251,191,36,0.18); border-color: rgba(251,191,36,0.35); }
+.priorityP4     { background: rgba(148,163,184,0.06); color: var(--status-p4); border-color: rgba(148,163,184,0.12); }
+.priorityP4.selected { background: rgba(148,163,184,0.14); border-color: rgba(148,163,184,0.25); }
+
+.footerDivider { height: 1px; background: var(--border-glass); margin: 20px 0 16px; }
+.footerDelete { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.deleteConfirmRow { display: flex; align-items: center; gap: 8px; }
+.deleteConfirmLabel { font-size: 12px; color: var(--accent-danger); font-weight: 600; }
+.btnDelete {
+  font-size: 11px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 5px 10px; border-radius: 8px;
+  background: transparent; border: 1px solid rgba(255,255,255,0.07); transition: all 0.2s;
+}
+.btnDelete:hover { color: var(--accent-danger); background: rgba(255,77,77,0.08); border-color: rgba(255,77,77,0.2); }
+.btnDeleteConfirm {
+  padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700;
+  background: rgba(255,77,77,0.15); color: var(--accent-danger);
+  border: 1px solid rgba(255,77,77,0.3); cursor: pointer; transition: all 0.2s;
+}
+.btnDeleteCancel {
+  padding: 6px 10px; border-radius: 8px; font-size: 12px;
+  background: rgba(255,255,255,0.04); color: var(--text-muted);
+  border: 1px solid rgba(255,255,255,0.08); cursor: pointer;
+}
+.footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.btnCancel {
+  font-size: 14px; font-weight: 600; color: var(--text-muted);
+  padding: 10px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.07); transition: all 0.2s;
+}
+.btnCancel:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+.btnSubmit {
+  background: rgba(0,229,160,0.15); color: var(--accent-primary);
+  border: 1px solid rgba(0,229,160,0.3); font-weight: 700; font-size: 14px;
+  padding: 10px 22px; border-radius: 12px; transition: all 0.2s;
+}
+.btnSubmit:hover { background: rgba(0,229,160,0.22); }
+.btnSubmit:disabled {
+  background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.06);
+  color: var(--text-muted); cursor: not-allowed;
+}

@@ -1,0 +1,93 @@
+.container{
+  margin-left: 220px;
+  padding: 0 32px 120px;
+}
+
+@media (max-width: 768px) {
+  .container { margin-left: 0; padding: 0 16px 90px; }
+  .daySelector { gap: 2px; }
+  .dayBtn { padding: 6px 2px; border-radius: 10px; }
+  .dayShort { font-size: 9px; }
+  .dayNum { font-size: 11px; }
+}
+
+@media (max-width: 400px) {
+  .currentActivity { font-size: 17px; }
+  .header h1 { font-size: 20px; }
+  .timeCol { width: 36px; }
+  .timeLabel { font-size: 10px; }
+}
+.header{padding:24px 0 16px}
+.header h1{font-size:24px;font-weight:800;letter-spacing:-0.03em;margin-bottom:4px}
+.header p{color:rgba(255,255,255,0.3);font-size:13px}
+
+.tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;background:rgba(255,255,255,0.09);border-radius:12px;padding:4px;margin-bottom:20px}
+.tab{padding:8px 4px;border-radius:8px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.35);transition:all 0.2s;text-align:center;cursor:pointer}
+.tabActive{background:rgba(255,255,255,0.09);color:#fff}
+
+.daySelector{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:16px}
+.dayBtn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:12px;border:1px solid transparent;transition:all 0.2s;cursor:pointer;background:transparent}
+.dayBtnToday{border-color:rgba(6,182,212,0.25)}
+.dayBtnSelected{background:rgba(129,140,248,0.12);border-color:rgba(129,140,248,0.35)}
+.dayShort{font-size:10px;font-weight:700;color:rgba(255,255,255,0.5)}
+.dayShortSelected{color:#818cf8}
+.dayNum{font-size:12px;font-weight:700;color:rgba(255,255,255,0.4)}
+.dayNumToday{color:#06b6d4}
+.dayNumSelected{color:#818cf8}
+
+.dayHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:0 2px}
+.dayTitle{font-size:17px;font-weight:700}
+.dayRight{display:flex;align-items:center;gap:8px}
+.todayBadge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(6,182,212,0.12);color:#06b6d4;border:1px solid rgba(6,182,212,0.2)}
+.dayCount{font-size:12px;color:rgba(255,255,255,0.3);font-family:var(--font-mono)}
+.progressBar{height:3px;border-radius:99px;background:rgba(255,255,255,0.06);overflow:hidden;margin-bottom:16px}
+.progressFill{height:100%;background:#818cf8;border-radius:99px;transition:width 0.5s ease}
+
+.currentBlock{padding:16px 18px;border-radius:16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.08);margin-bottom:12px}
+.currentLabel{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.35);display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.currentDot{width:6px;height:6px;border-radius:50%;flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.currentActivity{font-size:20px;font-weight:800;color:rgba(255,255,255,0.92);margin-bottom:4px}
+.currentNext{font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:12px}
+.blockProgress{height:3px;border-radius:99px;background:rgba(255,255,255,0.06);overflow:hidden}
+.blockProgressFill{height:100%;border-radius:99px;transition:width 0.5s ease}
+.currentCatTag{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px}
+
+.timeline{position:relative}
+.timelineLine{position:absolute;left:50px;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,rgba(255,255,255,0.06) 10%,rgba(255,255,255,0.06) 90%,transparent);pointer-events:none}
+.timelineItem{display:flex;gap:0;margin-bottom:4px;transition:opacity 0.3s}
+.timelineItemDone{opacity:0.35}
+.timeCol{width:46px;flex-shrink:0;padding:10px 0;text-align:right;padding-right:12px}
+.timeLabel{font-size:11px;font-family:var(--font-mono);font-weight:500;color:rgba(255,255,255,0.3)}
+.timeLabelCurrent{color:#06b6d4;font-weight:700}
+.timeLabelPast{color:rgba(255,255,255,0.18)}
+.dotCol{width:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.timelineDot{width:7px;height:7px;border-radius:50%;transition:all 0.3s;flex-shrink:0}
+.timelineDotCurrent{width:10px;height:10px;box-shadow:0 0 10px currentColor}
+.itemContent{flex:1;padding-left:12px}
+.itemBtn{width:100%;text-align:left;padding:8px 12px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;transition:all 0.2s;border:1px solid transparent}
+.itemBtnCurrent{border-color:rgba(6,182,212,0.2)}
+.itemBtnDone{}
+.itemBtnDefault:hover{background:rgba(255,255,255,0.07)}
+.itemName{font-size:13px;font-weight:500;color:rgba(255,255,255,0.75)}
+.itemNameDone{text-decoration:line-through;color:rgba(255,255,255,0.22)}
+.categoryTag{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0}
+
+.weekGrid{display:flex;flex-direction:column;gap:8px}
+.weekDayCard{padding:14px 16px;border-radius:14px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.2s}
+.weekDayCard:hover{background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.1)}
+.weekDayCardToday{background:rgba(6,182,212,0.05);border-color:rgba(6,182,212,0.2)}
+.weekDayTop{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.weekDayName{font-size:14px;font-weight:700;color:rgba(255,255,255,0.8)}
+.weekDayNameToday{color:#06b6d4}
+.weekDayBadge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(6,182,212,0.12);color:#06b6d4;border:1px solid rgba(6,182,212,0.2)}
+.weekDayBlocks{font-size:11px;color:rgba(255,255,255,0.3)}
+.weekActivities{display:flex;flex-wrap:wrap;gap:5px}
+.weekActivityPill{display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.09);padding:3px 8px;border-radius:99px}
+.weekActivityDot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.weekEmpty{font-size:12px;color:rgba(255,255,255,0.2);font-style:italic}
+
+.placeholder,.loading{text-align:center;padding:60px;color:rgba(255,255,255,0.2);font-size:13px}
+.empty{text-align:center;padding:40px;color:rgba(255,255,255,0.25);font-size:13px}
+.errorCard{padding:20px;border-radius:16px;background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.2);color:rgba(255,255,255,0.8);font-size:13px;margin-bottom:16px}
+.retryBtn{margin-top:12px;padding:6px 14px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);font-size:12px;font-weight:600}

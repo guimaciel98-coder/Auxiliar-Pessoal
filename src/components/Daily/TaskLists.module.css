@@ -1,0 +1,50 @@
+/* ── Seção principal (Pessoal / VCA / PDV) ────────────────────────────── */
+.section { margin-bottom: 24px; }
+
+.secHead {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px; padding: 0 2px;
+}
+.secDot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.secLabel { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+.secCount {
+  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+  color: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.07);
+  padding: 1px 8px; border-radius: 99px;
+  margin-left: auto;
+}
+
+/* ── Sub-seção (marca VCA / cliente PDV) ───────────────────────────────── */
+.subSection { margin-bottom: 18px; }
+
+.clientHeader {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px; padding: 0 2px;
+}
+.clientLabel {
+  font-size: 12px; font-weight: 600;
+  color: rgba(255,255,255,0.45);
+  padding: 3px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 99px;
+}
+
+/* ── Lista de tarefas ──────────────────────────────────────────────────── */
+.taskList { display: flex; flex-direction: column; gap: 0; }
+
+/* ── Visão semanal ─────────────────────────────────────────────────────── */
+.weekSection { margin-bottom: 28px; }
+.weekDay {
+  font-size: 12px; font-weight: 700;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 10px; padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.emptyState {
+  text-align: center; padding: 40px;
+  color: rgba(255,255,255,0.2); font-size: 13px;
+}

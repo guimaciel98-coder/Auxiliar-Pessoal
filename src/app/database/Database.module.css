@@ -1,0 +1,125 @@
+.container {
+  margin-left: 220px;
+  padding: 0 32px 120px;
+}
+
+/* Stats row */
+.statsRow {
+  display: flex; gap: 8px; margin: 20px 0 16px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.statsRow::-webkit-scrollbar { display: none; }
+.stat {
+  flex: 1; min-width: 80px; padding: 14px 12px; border-radius: 14px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  flex-shrink: 0;
+}
+.statNum { font-size: 24px; font-weight: 800; font-family: var(--font-mono); line-height: 1; }
+.statLabel { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.06em; text-align: center; }
+
+/* Toolbar */
+.toolbar {
+  display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;
+}
+.search {
+  width: 100%; padding: 10px 14px; border-radius: 12px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  color: #fff; font-size: 13px; font-family: inherit; outline: none;
+  transition: border-color 0.2s;
+}
+.search:focus { border-color: rgba(6,182,212,0.4); }
+.search::placeholder { color: rgba(255,255,255,0.25); }
+.toolbarRight { display: flex; gap: 6px; flex-wrap: wrap; }
+.sel {
+  flex: 1; min-width: 120px; padding: 8px 10px; border-radius: 10px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7); font-size: 12px; font-family: inherit; outline: none;
+  cursor: pointer;
+}
+.exportBtn {
+  padding: 8px 14px; border-radius: 10px; white-space: nowrap;
+  background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.2);
+  color: #34d399; font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: all 0.2s;
+}
+.exportBtn:hover { background: rgba(52,211,153,0.18); }
+
+.resultCount { font-size: 11px; color: rgba(255,255,255,0.25); margin-bottom: 8px; font-family: var(--font-mono); }
+
+/* Table */
+.tableWrap {
+  border-radius: 16px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow-x: auto;
+}
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table thead tr { background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.07); }
+.table th {
+  padding: 10px 12px; text-align: left;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: rgba(255,255,255,0.3); white-space: nowrap;
+}
+.table tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+}
+.table tbody tr:hover { background: rgba(255,255,255,0.025); }
+.table tbody tr:last-child { border-bottom: none; }
+.table td { padding: 9px 12px; color: rgba(255,255,255,0.7); vertical-align: middle; }
+
+.taskName { font-weight: 500; color: rgba(255,255,255,0.85) !important; display: flex; align-items: center; gap: 6px; }
+.checkMark { color: #34d399; font-size: 11px; flex-shrink: 0; }
+
+.rowDone td { opacity: 0.4; }
+.rowDone .taskName { text-decoration: line-through; }
+.rowOverdue { background: rgba(248,113,113,0.04) !important; }
+.overdueText { color: #f87171 !important; }
+
+.tag {
+  display: inline-block; padding: 2px 7px; border-radius: 6px;
+  font-size: 10px; font-weight: 700; border: 1px solid; white-space: nowrap;
+}
+
+.mono { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+
+.statusBadge {
+  padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;
+  background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); white-space: nowrap;
+}
+.statusDone { background: rgba(52,211,153,0.1); color: #34d399; }
+
+.prioDot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+
+.emptyRow { text-align: center; padding: 40px; color: rgba(255,255,255,0.2); font-size: 13px; }
+.loading { text-align: center; padding: 60px; color: rgba(255,255,255,0.2); font-size: 13px; }
+
+@media (max-width: 768px) {
+  .container { margin-left: 0; padding: 0 12px 90px; }
+  .toolbarRight { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .toolbarRight::-webkit-scrollbar { display: none; }
+  .sel { min-width: 100px; }
+
+  /* Tabela → cards em mobile */
+  .tableWrap { border-radius: 12px; }
+  .table thead { display: none; }
+  .table tbody tr {
+    display: flex; flex-direction: column;
+    padding: 12px 14px; gap: 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .table td {
+    padding: 2px 0; border: none;
+    display: flex; align-items: center; gap: 6px;
+  }
+  /* Adicionar label via data-attr já que thead foi ocultado */
+  .table td:before {
+    content: attr(data-label);
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: rgba(255,255,255,0.25);
+    min-width: 70px; flex-shrink: 0;
+  }
+  .statsRow { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+  .statsRow::-webkit-scrollbar { display: none; }
+  .stat { min-width: 80px; }
+}
