@@ -101,8 +101,9 @@ export default function IncomePage() {
                 <div className={styles.incomeCardGrid}>
                   {group.items.map((item, i) => (
                     <div key={i} style={{
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      background: item.confirmado ? "rgba(255,255,255,0.03)" : "rgba(245,158,11,0.05)",
+                      border: item.confirmado ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(245,158,11,0.25)",
+                      borderLeft: item.confirmado ? undefined : "3px solid rgba(245,158,11,0.6)",
                       borderRadius: 16,
                       padding: 22,
                       display: "flex",
