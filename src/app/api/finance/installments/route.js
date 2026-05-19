@@ -63,14 +63,16 @@ export async function GET() {
         const vTotal  = parseNum(valorTotal);
         const vMensal = parseNum(valorMensal);
         const nTotal  = Math.max(0, parseInt(totalParcelas ?? "0") || 0);
+        const isAuto   = String(autoCol ?? "FALSE").toUpperCase() === "TRUE";
         const rawPagas = Math.min(nTotal, Math.max(0, parseInt(parcelasPagas ?? "0") || 0));
-        // Cap inline: mês atual não fechado → só conta até fim do mês anterior
+        // Cap de meses decorridos só se aplica a parcelas automáticas;
+        // manuais confiam no valor gravado pelo usuário
         const _now = new Date();
         const _pm  = _now.getMonth() === 0 ? 12 : _now.getMonth();
         const _py  = _now.getMonth() === 0 ? _now.getFullYear() - 1 : _now.getFullYear();
         const _parts = String(dataInicio ?? "0/0").split("/");
         const _ms = parseInt(_parts[0]), _ys = parseInt(_parts[1]);
-        const _maxP  = (_ms && _ys) ? Math.max(0, Math.min(nTotal, (_py - _ys) * 12 + (_pm - _ms) + 1)) : nTotal;
+        const _maxP  = (isAuto && _ms && _ys) ? Math.max(0, Math.min(nTotal, (_py - _ys) * 12 + (_pm - _ms) + 1)) : nTotal;
         const nPagas = Math.min(rawPagas, _maxP);
 
         return {
@@ -85,7 +87,7 @@ export async function GET() {
           parcelasRestantes: nTotal - nPagas,
           totalPago:         vMensal * nPagas,
           restante:          vMensal * (nTotal - nPagas),
-          auto:              String(autoCol ?? "FALSE").toUpperCase() === "TRUE",
+          auto:              isAuto,
         };
       })
       .filter(Boolean);
