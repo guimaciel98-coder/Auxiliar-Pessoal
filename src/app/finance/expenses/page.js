@@ -844,7 +844,7 @@ export default function ExpensesPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {/* Linha 1: nome + auto badge + valor */}
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: "#e5e7eb", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: 15, fontWeight: item.pago ? 400 : 700, color: item.pago ? "rgba(255,255,255,0.35)" : "#e5e7eb", textDecoration: item.pago ? "line-through" : "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", transition: "all 0.2s" }}>
                         {item.nome}
                       </span>
                       {item.auto && (
