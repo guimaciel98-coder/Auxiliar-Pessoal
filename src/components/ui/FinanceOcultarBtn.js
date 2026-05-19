@@ -13,6 +13,7 @@ export default function FinanceOcultarBtn({ className, style }) {
         borderColor: hideNumbers ? "rgba(245,158,11,0.3)"  : "rgba(255,255,255,0.1)",
         fontSize: 13,
         ...style,
+        opacity: hideNumbers ? 1 : (style?.opacity ?? 1),
       }}
     >
       {hideNumbers ? "◉ Mostrar" : "◎ Ocultar"}
