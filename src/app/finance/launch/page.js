@@ -201,7 +201,6 @@ export default function LaunchPage() {
             {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </p>
         </div>
-        <FinanceOcultarBtn className={finStyles.addBtn} />
       </header>
 
       {/* ── Layout 2 colunas igual Gastos/Ganhos ── */}

@@ -1,14 +1,30 @@
 "use client";
+import { useState, useCallback } from "react";
 import Navigation from "@/components/ui/Navigation";
 import ModuleHeader from "@/components/ui/ModuleHeader";
 import styles from "../Finance.module.css";
 import { useFinance } from "@/hooks/useFinance";
 import { fmtFin } from "@/lib/fmtFin";
-import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
 
 export default function IncomePage() {
-  const { data, loading, error, hideNumbers } = useFinance();
+  const { data, loading, error, hideNumbers, refetch } = useFinance();
   const fmt = (v) => fmtFin(v, hideNumbers);
+  const [toggling, setToggling] = useState(new Set());
+
+  const handleToggle = useCallback(async (item) => {
+    if (toggling.has(item.item)) return;
+    setToggling(p => new Set(p).add(item.item));
+    try {
+      const res = await fetch("/api/finance/ganho/toggle", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item: item.item, confirmado: !item.confirmado }),
+      });
+      const j = await res.json();
+      if (j.ok) refetch();
+    } finally {
+      setToggling(p => { const s = new Set(p); s.delete(item.item); return s; });
+    }
+  }, [toggling, refetch]);
 
   const ganhos = data?.ganhos ?? {};
 
@@ -30,7 +46,6 @@ export default function IncomePage() {
           <h1>Ganhos</h1>
           <p>{new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</p>
         </div>
-        <FinanceOcultarBtn className={styles.addBtn} />
       </header>
 
       {loading && <div className={styles.loading}>Carregando...</div>}
@@ -113,14 +128,22 @@ export default function IncomePage() {
 
                       {/* Rodapé: status + botões */}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto" }}>
-                        <span style={{
-                          fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 99,
-                          background: item.confirmado ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.06)",
-                          color: item.confirmado ? "#10b981" : "rgba(255,255,255,0.38)",
-                          border: item.confirmado ? "1px solid rgba(16,185,129,0.25)" : "1px solid rgba(255,255,255,0.08)",
-                        }}>
-                          {item.confirmado ? "✓ recebido" : "○ pendente"}
-                        </span>
+                        <div
+                          onClick={() => handleToggle(item)}
+                          style={{
+                            width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 16, fontWeight: 900,
+                            background: item.confirmado ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.04)",
+                            color:      item.confirmado ? "#10b981"                : "rgba(255,255,255,0.3)",
+                            border:    `1.5px solid ${item.confirmado ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.12)"}`,
+                            cursor:    toggling.has(item.item) ? "wait" : "pointer",
+                            opacity:   toggling.has(item.item) ? 0.4 : 1,
+                            transition: "all 0.2s",
+                          }}
+                        >
+                          {toggling.has(item.item) ? "…" : item.confirmado ? "✓" : "○"}
+                        </div>
                         <div style={{ display: "flex", gap: 6 }}>
                           <button style={{
                             fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,

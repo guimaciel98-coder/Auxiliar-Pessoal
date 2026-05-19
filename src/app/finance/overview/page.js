@@ -284,7 +284,6 @@ export default function OverviewPage() {
           <h1>Finanças Pessoais</h1>
           <p style={{ textTransform: "capitalize" }}>{dataAtual}</p>
         </div>
-        <FinanceOcultarBtn className={styles.addBtn} />
         <button
           onClick={refetch}
           className={styles.addBtn}

@@ -278,7 +278,6 @@ export default function ExpensesPage() {
           <h1>Gastos</h1>
           <p>{new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</p>
         </div>
-        <FinanceOcultarBtn className={styles.addBtn} style={{ marginRight: 8 }} />
         <button className={styles.addBtn} onClick={() => { setCreateModal(true); setCreateTab("variavel"); setCreateForm({ nome: "", grupo: "Pessoal", previsao: "" }); }}>+ Registrar</button>
       </header>
 
