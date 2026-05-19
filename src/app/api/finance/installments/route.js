@@ -50,13 +50,13 @@ export async function GET() {
 
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `'${SHEET}'!A2:I300`,
+      range: `'${SHEET}'!A2:J300`,
     });
 
     const rows = res.data.values ?? [];
     const items = rows
       .map((row, i) => {
-        const [nome, dataFim, valorTotal, valorMensal, totalParcelas, parcelasPagas, dataInicio, ativo, autoCol] = row;
+        const [nome, dataFim, valorTotal, valorMensal, totalParcelas, parcelasPagas, dataInicio, ativo, autoCol, pagoCol] = row;
         if (String(ativo ?? "TRUE").toUpperCase() === "FALSE") return null;
         if (!nome?.trim()) return null;
 
@@ -88,6 +88,7 @@ export async function GET() {
           totalPago:         vMensal * nPagas,
           restante:          vMensal * (nTotal - nPagas),
           auto:              isAuto,
+          pago:              String(pagoCol ?? "FALSE").toUpperCase() === "TRUE",
         };
       })
       .filter(Boolean);
@@ -263,13 +264,19 @@ export async function PATCH(req) {
     const sheets        = await getSheetsClient();
     const spreadsheetId = getSpreadsheetId();
 
-    // ── Reset: zera F ────────────────────────────────────────────────────────
+    // ── Reset: desfaz último pagamento (F-1, J=FALSE) ────────────────────────
     if (action === "reset") {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId, range: `'${SHEET}'!F${sheetRow}`,
-        valueInputOption: "RAW", requestBody: { values: [["0"]] },
+      const resF = await sheets.spreadsheets.values.get({ spreadsheetId, range: `'${SHEET}'!F${sheetRow}` });
+      const cur  = parseInt(resF.data.values?.[0]?.[0] ?? "0") || 0;
+      const prev = Math.max(0, cur - 1);
+      await sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId,
+        requestBody: { valueInputOption: "RAW", data: [
+          { range: `'${SHEET}'!F${sheetRow}`, values: [[String(prev)]] },
+          { range: `'${SHEET}'!J${sheetRow}`, values: [["FALSE"]] },
+        ]},
       });
-      return Response.json({ ok: true, newPagas: 0, concluida: false });
+      return Response.json({ ok: true, newPagas: prev, concluida: false });
     }
 
     // ── Incremento: lê E (total) e F com FORMULA para detectar fórmula ──────
@@ -284,7 +291,10 @@ export async function PATCH(req) {
     const pagas      = hasFormula ? 0 : (parseInt(String(fCell)) || 0);
     const newPagas   = pagas + 1;
 
-    const updates = [{ range: `'${SHEET}'!F${sheetRow}`, values: [[String(newPagas)]] }];
+    const updates = [
+      { range: `'${SHEET}'!F${sheetRow}`, values: [[String(newPagas)]] },
+      { range: `'${SHEET}'!J${sheetRow}`, values: [["TRUE"]] },
+    ];
     if (total > 0 && newPagas >= total) {
       updates.push({ range: `'${SHEET}'!H${sheetRow}`, values: [["FALSE"]] });
     }

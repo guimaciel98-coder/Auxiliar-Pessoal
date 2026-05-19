@@ -806,25 +806,25 @@ export default function ExpensesPage() {
                   {!item.auto && (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0, marginTop: 1 }}>
                       <div
-                        onClick={() => !isPaying && handleParcPay(item)}
+                        onClick={() => !isPaying && !item.pago && handleParcPay(item)}
                         style={{
                           width: 34, height: 34, borderRadius: "50%",
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 15, fontWeight: 900,
-                          background: "rgba(139,92,246,0.12)",
-                          color: "#a78bfa",
-                          border: "1.5px solid rgba(139,92,246,0.35)",
-                          cursor: isPaying ? "wait" : "pointer",
+                          fontSize: item.pago ? 16 : 15, fontWeight: 900,
+                          background: item.pago ? "rgba(16,185,129,0.12)" : "rgba(139,92,246,0.12)",
+                          color:      item.pago ? "#10b981"                : "#a78bfa",
+                          border:    `1.5px solid ${item.pago ? "rgba(16,185,129,0.3)" : "rgba(139,92,246,0.35)"}`,
+                          cursor: isPaying ? "wait" : item.pago ? "default" : "pointer",
                           opacity: isPaying ? 0.4 : 1,
                           transition: "all 0.2s",
                         }}
                       >
-                        {isPaying ? "…" : "○"}
+                        {isPaying ? "…" : item.pago ? "✓" : "○"}
                       </div>
-                      {item.parcelasPagas > 0 && (
+                      {item.pago && (
                         <div
                           onClick={() => !isPaying && handleParcReset(item)}
-                          title="Zerar contagem"
+                          title="Desfazer pagamento"
                           style={{
                             fontSize: 10, color: "rgba(255,255,255,0.2)",
                             cursor: isPaying ? "wait" : "pointer",

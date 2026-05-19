@@ -115,7 +115,7 @@ export async function POST(req) {
       readSheet(sheets, spreadsheetId, `'${GANHOS}'!A2:D500`),
       readSheet(sheets, spreadsheetId, `'${POUPANCA}'!A2:C100`),
       readSheet(sheets, spreadsheetId, `'${VARIAVEIS}'!A2:D100`),
-      readSheet(sheets, spreadsheetId, `'${PARCELAS}'!A2:I300`).catch(() => []),
+      readSheet(sheets, spreadsheetId, `'${PARCELAS}'!A2:J300`).catch(() => []),
       sheets.spreadsheets.values.get({ spreadsheetId, range: `'${CONFIG}'!A1:B20` })
         .then(r => r.data.values ?? []).catch(() => []),
     ]);
@@ -165,24 +165,29 @@ export async function POST(req) {
     });
     resultado.ganhosResetados = ganhosResetados;
 
-    // ── 3. Parcelas: avança ParcelasPagas + 1; conclui se esgotadas ─────────────
-    // App_Parcelas: A:Nome B:Desc C:ValorTotal D:ValorMensal E:TotalParc F:ParcelasPagas G:DataInicio H:Ativo I:Auto
+    // ── 3. Parcelas: auto → avança F+1; todas → reseta Pago(J)=FALSE ────────────
+    // App_Parcelas: A:Nome B:DataFim C:ValorTotal D:ValorMensal E:TotalParc F:ParcelasPagas G:DataInicio H:Ativo I:Auto J:Pago
     let parcelasAvancadas = 0, parcelasConcluidas = 0;
     parcelasRows.forEach((row, i) => {
       const nome   = String(row[0] ?? "").trim();
-      const ativo  = String(row[7] ?? "TRUE").toUpperCase(); // col H
+      const ativo  = String(row[7] ?? "TRUE").toUpperCase();
+      const isAuto = String(row[8] ?? "FALSE").toUpperCase() === "TRUE";
       if (!nome || ativo === "FALSE") return;
 
-      const totalParc  = parseInt(row[4] ?? "0") || 0;
-      const pagas      = parseInt(row[5] ?? "0") || 0;
-      const newPagas   = pagas + 1;
+      // Reseta Pago (J) para todas as parcelas ativas
+      updates.push({ range: `'${PARCELAS}'!J${i + 2}`, values: [["FALSE"]] });
 
-      updates.push({ range: `'${PARCELAS}'!F${i + 2}`, values: [[String(newPagas)]] });
-      parcelasAvancadas++;
-
-      if (totalParc > 0 && newPagas >= totalParc) {
-        updates.push({ range: `'${PARCELAS}'!H${i + 2}`, values: [["FALSE"]] });
-        parcelasConcluidas++;
+      // Incrementa F apenas para parcelas automáticas
+      if (isAuto) {
+        const totalParc = parseInt(row[4] ?? "0") || 0;
+        const pagas     = parseInt(row[5] ?? "0") || 0;
+        const newPagas  = pagas + 1;
+        updates.push({ range: `'${PARCELAS}'!F${i + 2}`, values: [[String(newPagas)]] });
+        parcelasAvancadas++;
+        if (totalParc > 0 && newPagas >= totalParc) {
+          updates.push({ range: `'${PARCELAS}'!H${i + 2}`, values: [["FALSE"]] });
+          parcelasConcluidas++;
+        }
       }
     });
     resultado.parcelasAvancadas  = parcelasAvancadas;
