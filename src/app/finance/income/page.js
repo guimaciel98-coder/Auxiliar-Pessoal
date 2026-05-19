@@ -4,9 +4,10 @@ import ModuleHeader from "@/components/ui/ModuleHeader";
 import styles from "../Finance.module.css";
 import { useFinance } from "@/hooks/useFinance";
 import { fmtFin } from "@/lib/fmtFin";
+import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
 
 export default function IncomePage() {
-  const { data, loading, error, hideNumbers, toggleHide } = useFinance();
+  const { data, loading, error, hideNumbers } = useFinance();
   const fmt = (v) => fmtFin(v, hideNumbers);
 
   const ganhos = data?.ganhos ?? {};
@@ -29,18 +30,7 @@ export default function IncomePage() {
           <h1>Ganhos</h1>
           <p>{new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</p>
         </div>
-        <button
-          onClick={toggleHide}
-          className={styles.addBtn}
-          style={{
-            background: hideNumbers ? "rgba(245,158,11,0.12)" : "rgba(255,255,255,0.05)",
-            color: hideNumbers ? "#f59e0b" : "var(--text-secondary)",
-            borderColor: hideNumbers ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.1)",
-            fontSize: 13,
-          }}
-        >
-          {hideNumbers ? "◉ Mostrar" : "◎ Tampar"}
-        </button>
+        <FinanceOcultarBtn className={styles.addBtn} />
       </header>
 
       {loading && <div className={styles.loading}>Carregando...</div>}

@@ -5,6 +5,7 @@ import ModuleHeader from "@/components/ui/ModuleHeader";
 import styles from "../Finance.module.css";
 import { useFinance } from "@/hooks/useFinance";
 import { fmtFin } from "@/lib/fmtFin";
+import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend,
   PieChart, Pie, Cell,
@@ -111,7 +112,7 @@ function buildProjection(acumulado, poupancaRealBase, commitments) {
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function OverviewPage() {
-  const { data, loading, error, refetch, hideNumbers, toggleHide } = useFinance();
+  const { data, loading, error, refetch, hideNumbers } = useFinance();
   const fmt      = (v) => fmtFin(v, hideNumbers);
   const fmtShort = (v) => fmtFin(v, hideNumbers);
 
@@ -283,18 +284,7 @@ export default function OverviewPage() {
           <h1>Finanças Pessoais</h1>
           <p style={{ textTransform: "capitalize" }}>{dataAtual}</p>
         </div>
-        <button
-          onClick={toggleHide}
-          className={styles.addBtn}
-          style={{
-            background: hideNumbers ? "rgba(245,158,11,0.12)" : "rgba(255,255,255,0.05)",
-            color: hideNumbers ? "#f59e0b" : "var(--text-secondary)",
-            borderColor: hideNumbers ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.1)",
-            fontSize: 13,
-          }}
-        >
-          {hideNumbers ? "◉ Mostrar" : "◎ Ocultar"}
-        </button>
+        <FinanceOcultarBtn className={styles.addBtn} />
         <button
           onClick={refetch}
           className={styles.addBtn}

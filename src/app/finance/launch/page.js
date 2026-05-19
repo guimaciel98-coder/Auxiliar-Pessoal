@@ -5,6 +5,7 @@ import ModuleHeader from "@/components/ui/ModuleHeader";
 import finStyles from "../Finance.module.css";
 import { useFinance } from "@/hooks/useFinance";
 import { fmtFin } from "@/lib/fmtFin";
+import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
 
 // ── Formatadores ──────────────────────────────────────────────────────────────
 function todayISO() { return new Date().toISOString().slice(0, 10); }
@@ -51,7 +52,7 @@ const labelSt = {
 };
 
 export default function LaunchPage() {
-  const { data: finData, loading: finLoading, hideNumbers, toggleHide } = useFinance();
+  const { data: finData, loading: finLoading, hideNumbers } = useFinance();
   const fmt      = (v) => fmtFin(v, hideNumbers);
   const fmtShort = (v) => fmtFin(v, hideNumbers);
 
@@ -77,8 +78,10 @@ export default function LaunchPage() {
 
   // ── Estado: lista ────────────────────────────────────────────────────────
   const [entries,     setEntries]    = useState([]);
-  const [entriesLoad, setEntriesLoad] = useState(true);
-  const [openCiclos,  setOpenCiclos] = useState({});
+  const [entriesLoad,    setEntriesLoad]    = useState(true);
+  const [openCiclos,     setOpenCiclos]     = useState({});
+  const [monthsHistory,  setMonthsHistory]  = useState([]);
+  const [monthsLoad,     setMonthsLoad]     = useState(true);
 
   // ── Toast ────────────────────────────────────────────────────────────────
   const [toast, setToast] = useState(null);
@@ -97,13 +100,23 @@ export default function LaunchPage() {
     } finally { setEntriesLoad(false); }
   }, []);
 
+  const loadMonthsHistory = useCallback(async () => {
+    setMonthsLoad(true);
+    try {
+      const r = await fetch("/api/finance/months-history", { cache: "no-store" });
+      const d = await r.json();
+      if (d.ok) setMonthsHistory(d.months);
+    } finally { setMonthsLoad(false); }
+  }, []);
+
   useEffect(() => {
     loadEntries();
+    loadMonthsHistory();
     fetch("/api/finance/close-month", { cache: "no-store" })
       .then(r => r.json())
       .then(d => { if (d.ok) setClosePreview(d); })
       .catch(() => {});
-  }, [loadEntries]);
+  }, [loadEntries, loadMonthsHistory]);
 
   // ── Cálculos fechamento ──────────────────────────────────────────────────
   const totalPoup = [poup1, poup2, poup3, benef].reduce((s, v) => s + (parseFloat(v) || 0), 0);
@@ -145,6 +158,7 @@ export default function LaunchPage() {
       showToast("✓ Mês fechado com sucesso!");
       setPoup1(""); setPoup2(""); setPoup3(""); setBenef(""); setBrad(""); setNub("");
       setClosePreview(null);
+      loadMonthsHistory();
     } catch (err) { showToast(`⚠ ${err.message}`, true); }
     finally { setClosing(false); }
   }
@@ -187,18 +201,7 @@ export default function LaunchPage() {
             {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </p>
         </div>
-        <button
-          onClick={toggleHide}
-          className={finStyles.addBtn}
-          style={{
-            background: hideNumbers ? "rgba(245,158,11,0.12)" : "rgba(255,255,255,0.05)",
-            color: hideNumbers ? "#f59e0b" : "var(--text-secondary)",
-            borderColor: hideNumbers ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.1)",
-            fontSize: 13,
-          }}
-        >
-          {hideNumbers ? "◉ Mostrar" : "◎ Tampar"}
-        </button>
+        <FinanceOcultarBtn className={finStyles.addBtn} />
       </header>
 
       {/* ── Layout 2 colunas igual Gastos/Ganhos ── */}
@@ -482,6 +485,46 @@ export default function LaunchPage() {
               )}
             </div>
           </div>
+
+          {/* ── Painel 3: Histórico de Fechamentos ── */}
+          {(monthsLoad || monthsHistory.length > 0) && (
+            <div className={finStyles.sidePanel} style={{ marginTop: 12 }}>
+              <div className={finStyles.sidePanelTitle}>
+                <span>📅 Fechamentos</span>
+              </div>
+              <div style={{ padding: "10px 16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+                {monthsLoad ? (
+                  <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "8px 0" }}>Carregando...</p>
+                ) : monthsHistory.map((m, i) => (
+                  <div key={i} style={{
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    borderRadius: 12, padding: "12px 14px",
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, textTransform: "capitalize", color: "var(--text-primary)" }}>{m.ciclo}</span>
+                      <span style={{ fontSize: 10, color: "var(--text-muted)" }}>fechado {m.fechadoEm}</span>
+                    </div>
+                    {[
+                      ["💰 Ganhos",    m.ganhos,    "#10b981"],
+                      ["📋 Fixos",     m.fixos,     "var(--text-secondary)"],
+                      ["💸 Variáveis", m.variaveis, "#f59e0b"],
+                      ["🏦 Poupança",  m.poupanca,  "#3b82f6"],
+                    ].map(([label, val, color]) => (
+                      <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 11 }}>
+                        <span style={{ color: "var(--text-muted)" }}>{label}</span>
+                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color }}>{fmt(val)}</span>
+                      </div>
+                    ))}
+                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 6, paddingTop: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Saldo</span>
+                      <span style={{ fontSize: 13, fontFamily: "var(--font-mono)", fontWeight: 900, color: m.saldo >= 0 ? "#10b981" : "#ef4444" }}>{fmt(m.saldo)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
         </div>
       </div>

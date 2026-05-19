@@ -5,6 +5,7 @@ import ModuleHeader from "@/components/ui/ModuleHeader";
 import styles from "../Finance.module.css";
 import { useFinance } from "@/hooks/useFinance";
 import { fmtFin } from "@/lib/fmtFin";
+import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
 import {
   PieChart, Pie, Cell, Label, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -83,7 +84,7 @@ function renderDonutLabel({ cx, cy, midAngle, outerRadius, percent, name }) {
 }
 
 export default function ExpensesPage() {
-  const { data, loading, error, refetch, hideNumbers, toggleHide } = useFinance();
+  const { data, loading, error, refetch, hideNumbers } = useFinance();
   const fmt = (v) => fmtFin(v, hideNumbers);
   const [tab, setTab]               = useState("variaveis");
   const [openGroups, setOpenGroups] = useState({});
@@ -277,18 +278,7 @@ export default function ExpensesPage() {
           <h1>Gastos</h1>
           <p>{new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</p>
         </div>
-        <button
-          onClick={toggleHide}
-          className={styles.addBtn}
-          style={{
-            background: hideNumbers ? "rgba(245,158,11,0.12)" : "rgba(255,255,255,0.05)",
-            color: hideNumbers ? "#f59e0b" : "var(--text-secondary)",
-            borderColor: hideNumbers ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.1)",
-            fontSize: 13, marginRight: 8,
-          }}
-        >
-          {hideNumbers ? "◉ Mostrar" : "◎ Tampar"}
-        </button>
+        <FinanceOcultarBtn className={styles.addBtn} style={{ marginRight: 8 }} />
         <button className={styles.addBtn} onClick={() => { setCreateModal(true); setCreateTab("variavel"); setCreateForm({ nome: "", grupo: "Pessoal", previsao: "" }); }}>+ Registrar</button>
       </header>
 

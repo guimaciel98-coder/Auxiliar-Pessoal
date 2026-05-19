@@ -114,7 +114,7 @@ export async function POST(req) {
       readSheet(sheets, spreadsheetId, `'${FIXOS}'!A2:E500`),
       readSheet(sheets, spreadsheetId, `'${GANHOS}'!A2:D500`),
       readSheet(sheets, spreadsheetId, `'${POUPANCA}'!A2:C100`),
-      readSheet(sheets, spreadsheetId, `'${VARIAVEIS}'!A2:B100`),
+      readSheet(sheets, spreadsheetId, `'${VARIAVEIS}'!A2:D100`),
       readSheet(sheets, spreadsheetId, `'${PARCELAS}'!A2:I300`).catch(() => []),
       sheets.spreadsheets.values.get({ spreadsheetId, range: `'${CONFIG}'!A1:B20` })
         .then(r => r.data.values ?? []).catch(() => []),
@@ -233,6 +233,43 @@ export async function POST(req) {
         });
       }
     }
+
+    // ── Salva histórico do fechamento em App_Historico_Meses ─────────────────────
+    const HIST = "App_Historico_Meses";
+    const totalGanhos        = ganhosRows.reduce((s, r) => r[1]?.trim() ? s + parseNum(r[2]) : s, 0);
+    const totalFixosReal     = fixosRows.reduce((s, r) => r[1]?.trim() ? s + parseNum(r[3]) : s, 0);
+    const totalVariaveisReal = variaveisRows.reduce((s, r) => r[1]?.trim() ? s + parseNum(r[3]) : s, 0);
+    const poupLiquida        = poupancaTotal !== undefined ? (Number(poupancaTotal) - (Number(poupancaFatura) || 0)) : 0;
+    const saldoMes           = totalGanhos - totalFixosReal - totalVariaveisReal;
+    const dataHoje           = new Date().toLocaleDateString("pt-BR");
+    const histRow            = [[mesAtual, dataHoje, toSheetNum(totalGanhos), toSheetNum(totalFixosReal), toSheetNum(totalVariaveisReal), toSheetNum(poupLiquida), toSheetNum(saldoMes)]];
+
+    try {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `'${HIST}'!A:G`,
+        valueInputOption: "USER_ENTERED",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: histRow },
+      });
+    } catch {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: { requests: [{ addSheet: { properties: { title: HIST } } }] },
+      });
+      await sheets.spreadsheets.values.update({
+        spreadsheetId, range: `'${HIST}'!A1:G1`, valueInputOption: "RAW",
+        requestBody: { values: [["Ciclo","DataFechamento","Ganhos","GastosFixos","GastosVariaveis","Poupanca","Saldo"]] },
+      });
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `'${HIST}'!A:G`,
+        valueInputOption: "USER_ENTERED",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: histRow },
+      });
+    }
+    resultado.historicoSalvo = { ciclo: mesAtual, ganhos: totalGanhos, fixos: totalFixosReal, variaveis: totalVariaveisReal, poupanca: poupLiquida, saldo: saldoMes };
 
     // ── Salva ciclo_inicio na App_Config (separado do batch principal) ───────────
     if (cycleStartDate) {
