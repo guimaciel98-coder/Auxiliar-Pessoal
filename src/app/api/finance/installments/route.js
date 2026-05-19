@@ -147,8 +147,9 @@ export async function POST(req) {
         valueRenderOption:  "FORMULA",
       });
       const srcCells = formulaRes.data.values?.[0] ?? [];
+      // col 5 = F (ParcelasPagas): parcelas criadas via POST são sempre manuais → não copia fórmula
       const formulaCols = srcCells.reduce((acc, cell, idx) => {
-        if (typeof cell === "string" && cell.startsWith("=")) acc.push(idx);
+        if (typeof cell === "string" && cell.startsWith("=") && idx !== 5) acc.push(idx);
         return acc;
       }, []);
 
@@ -262,13 +263,17 @@ export async function PATCH(req) {
     const sheets        = await getSheetsClient();
     const spreadsheetId = getSpreadsheetId();
 
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId, range: `'${SHEET}'!E${sheetRow}:F${sheetRow}`,
-    });
-    const [totalStr, pagasStr] = res.data.values?.[0] ?? ["0", "0"];
-    const total    = parseInt(totalStr) || 0;
-    const pagas    = parseInt(pagasStr)  || 0;
-    const newPagas = pagas + 1;
+    // Lê E (valor calculado) e F com FORMULA para detectar se F ainda tem fórmula automática
+    const [resE, resF] = await Promise.all([
+      sheets.spreadsheets.values.get({ spreadsheetId, range: `'${SHEET}'!E${sheetRow}` }),
+      sheets.spreadsheets.values.get({ spreadsheetId, range: `'${SHEET}'!F${sheetRow}`, valueRenderOption: "FORMULA" }),
+    ]);
+    const totalStr   = resE.data.values?.[0]?.[0] ?? "0";
+    const fCell      = resF.data.values?.[0]?.[0] ?? "0";
+    const hasFormula = typeof fCell === "string" && fCell.startsWith("=");
+    const total      = parseInt(totalStr) || 0;
+    const pagas      = hasFormula ? 0 : (parseInt(String(fCell)) || 0);
+    const newPagas   = pagas + 1;
 
     const updates = [{ range: `'${SHEET}'!F${sheetRow}`, values: [[String(newPagas)]] }];
     if (total > 0 && newPagas >= total) {
