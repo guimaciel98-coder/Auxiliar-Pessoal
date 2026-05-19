@@ -304,9 +304,61 @@ export async function fetchWeekRoutine() {
 
 /**
  * fetchSpecialAgenda()
- * Esta planilha não tem seção de agenda especial.
- * Mantido para compatibilidade com a rota de API.
+ * Lê "App_Eventos" na planilha de rotina.
+ * Colunas: A=Data(DD/MM/YYYY) | B=Evento | C=Tipo(opcional)
  */
 export async function fetchSpecialAgenda() {
-  return [];
+  try {
+    const sheets = await getSheetsClient();
+    const res    = await sheets.spreadsheets.values.get({
+      spreadsheetId: ROUTINE_SPREADSHEET_ID,
+      range:         "'App_Eventos'!A2:C500",
+    });
+
+    const rows  = res.data.values ?? [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    const events = rows
+      .filter(r => r[0]?.trim() && r[1]?.trim())
+      .map(r => {
+        const parts = r[0].trim().split("/").map(Number);
+        if (parts.length < 2 || parts.some(isNaN)) return null;
+
+        let date;
+        if (parts.length === 3) {
+          date = new Date(parts[2], parts[1] - 1, parts[0]);
+        } else {
+          const yr = new Date(today.getFullYear(), parts[1] - 1, parts[0]) < today
+            ? today.getFullYear() + 1 : today.getFullYear();
+          date = new Date(yr, parts[1] - 1, parts[0]);
+        }
+        date.setHours(0, 0, 0, 0);
+
+        const daysFromNow = Math.round((date - today) / 86400000);
+        const weekday     = date.toLocaleDateString("pt-BR", { weekday: "long" });
+        const dateLabel   = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+        const monthYear   = date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
+        return {
+          date:        date.toISOString().slice(0, 10),
+          dateLabel,
+          weekday,
+          activity:    r[1].trim(),
+          tipo:        r[2]?.trim() || null,
+          daysFromNow,
+          isPast:      daysFromNow < 0,
+          isToday:     daysFromNow === 0,
+          isTomorrow:  daysFromNow === 1,
+          isThisWeek:  daysFromNow >= 0 && daysFromNow <= 6,
+          monthYear,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.daysFromNow - b.daysFromNow);
+
+    return events;
+  } catch (e) {
+    if (e.message?.includes("Unable to parse range") || String(e.code) === "400") return [];
+    throw e;
+  }
 }
