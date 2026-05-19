@@ -169,6 +169,22 @@ export default function ExpensesPage() {
     finally { setParcPaying(p => { const s = new Set(p); s.delete(item.sheetRow); return s; }); }
   }
 
+  async function handleParcReset(item) {
+    if (parcPaying.has(item.sheetRow)) return;
+    setParcPaying(p => new Set(p).add(item.sheetRow));
+    try {
+      const res  = await fetch("/api/finance/installments", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sheetRow: item.sheetRow, action: "reset" }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      showToast("↺ Contagem zerada");
+      loadParcelas();
+    } catch (e) { showToast(`⚠ ${e.message}`, true); }
+    finally { setParcPaying(p => { const s = new Set(p); s.delete(item.sheetRow); return s; }); }
+  }
+
   async function handleParcRemove(item) {
     if (parcConfirm !== item.sheetRow) { setParcConfirm(item.sheetRow); return; }
     setParcConfirm(null);
@@ -786,24 +802,41 @@ export default function ExpensesPage() {
                   borderLeft: `3px solid ${cor}`,
                   display: "flex", alignItems: "flex-start", gap: 14,
                 }}>
-                  {/* Círculo de pagar — só manuais, estilo igual ao Fixos */}
+                  {/* Círculo de pagar + reset — só manuais */}
                   {!item.auto && (
-                    <div
-                      onClick={() => !isPaying && handleParcPay(item)}
-                      style={{
-                        width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 15, fontWeight: 900,
-                        background: "rgba(139,92,246,0.12)",
-                        color: "#a78bfa",
-                        border: "1.5px solid rgba(139,92,246,0.35)",
-                        cursor: isPaying ? "wait" : "pointer",
-                        opacity: isPaying ? 0.4 : 1,
-                        transition: "all 0.2s",
-                        marginTop: 1,
-                      }}
-                    >
-                      {isPaying ? "…" : "○"}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0, marginTop: 1 }}>
+                      <div
+                        onClick={() => !isPaying && handleParcPay(item)}
+                        style={{
+                          width: 34, height: 34, borderRadius: "50%",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 15, fontWeight: 900,
+                          background: "rgba(139,92,246,0.12)",
+                          color: "#a78bfa",
+                          border: "1.5px solid rgba(139,92,246,0.35)",
+                          cursor: isPaying ? "wait" : "pointer",
+                          opacity: isPaying ? 0.4 : 1,
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        {isPaying ? "…" : "○"}
+                      </div>
+                      {item.parcelasPagas > 0 && (
+                        <div
+                          onClick={() => !isPaying && handleParcReset(item)}
+                          title="Zerar contagem"
+                          style={{
+                            fontSize: 10, color: "rgba(255,255,255,0.2)",
+                            cursor: isPaying ? "wait" : "pointer",
+                            lineHeight: 1, userSelect: "none",
+                            transition: "color 0.15s",
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.color = "#ef4444"}
+                          onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.2)"}
+                        >
+                          ↺
+                        </div>
+                      )}
                     </div>
                   )}
 

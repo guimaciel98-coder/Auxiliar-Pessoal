@@ -254,16 +254,25 @@ export async function PUT() {
   }
 }
 
-// PATCH — registra pagamento manual de 1 parcela (incrementa F em +1, desativa se concluída)
+// PATCH — registra pagamento manual (+1) ou reseta contagem (action:"reset")
 export async function PATCH(req) {
   try {
-    const { sheetRow } = await req.json();
+    const { sheetRow, action } = await req.json();
     if (!sheetRow) return Response.json({ ok: false, error: "sheetRow obrigatório" }, { status: 400 });
 
     const sheets        = await getSheetsClient();
     const spreadsheetId = getSpreadsheetId();
 
-    // Lê E (valor calculado) e F com FORMULA para detectar se F ainda tem fórmula automática
+    // ── Reset: zera F ────────────────────────────────────────────────────────
+    if (action === "reset") {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId, range: `'${SHEET}'!F${sheetRow}`,
+        valueInputOption: "RAW", requestBody: { values: [["0"]] },
+      });
+      return Response.json({ ok: true, newPagas: 0, concluida: false });
+    }
+
+    // ── Incremento: lê E (total) e F com FORMULA para detectar fórmula ──────
     const [resE, resF] = await Promise.all([
       sheets.spreadsheets.values.get({ spreadsheetId, range: `'${SHEET}'!E${sheetRow}` }),
       sheets.spreadsheets.values.get({ spreadsheetId, range: `'${SHEET}'!F${sheetRow}`, valueRenderOption: "FORMULA" }),
@@ -280,8 +289,7 @@ export async function PATCH(req) {
       updates.push({ range: `'${SHEET}'!H${sheetRow}`, values: [["FALSE"]] });
     }
     await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId,
-      requestBody: { valueInputOption: "RAW", data: updates },
+      spreadsheetId, requestBody: { valueInputOption: "RAW", data: updates },
     });
 
     return Response.json({ ok: true, newPagas, concluida: total > 0 && newPagas >= total });
