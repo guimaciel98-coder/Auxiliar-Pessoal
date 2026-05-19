@@ -866,7 +866,7 @@ export default function ExpensesPage() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                         <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 9px", borderRadius: 99, background: `${cor}15`, color: cor, border: `1px solid ${cor}30` }}>
-                          {item.parcelasPagas + 1}/{item.totalParcelas}
+                          {item.parcelasPagas}/{item.totalParcelas}
                         </span>
                         {item.dataFim && (
                           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>encerra {fmtMonthYear(item.dataFim)}</span>
