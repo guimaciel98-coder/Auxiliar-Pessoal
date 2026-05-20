@@ -313,9 +313,9 @@ function TabDia({ selectedDay, onDayChange }) {
                   <div
                     className={styles.itemRow}
                     style={{
-                      borderLeftColor: isPast ? "transparent" : cat.color + (isCurr ? "ee" : "45"),
-                      background:      isCurr ? cat.color + "0e" : "transparent",
-                      borderColor:     isCurr ? cat.color + "28" : "transparent",
+                      background:      cat.color + (isCurr ? "22" : "0e"),
+                      borderColor:     cat.color + (isCurr ? "50" : "28"),
+                      borderLeftColor: cat.color + (isCurr ? "ff" : "80"),
                     }}
                   >
                     <span className={`${styles.itemName} ${isPast ? styles.itemNameDone : ""}`}>
