@@ -415,8 +415,8 @@ function TabSemana({ onSelectDay }) {
   );
 }
 
-// ─── Aba: Eventos ─────────────────────────────────────────────────────────────
-function TabEventos() {
+// ─── (Eventos movido para /routine/events/page.js) ────────────────────────────
+function _TabEventos_REMOVED() {
   const [events,   setEvents]   = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [showPast, setShowPast] = useState(false);
@@ -556,7 +556,7 @@ export default function RoutinePage() {
 
       {/* Tabs */}
       <div className={styles.tabs}>
-        {[["dia","Dia"],["semana","Semana"],["eventos","Eventos"]].map(([key,label]) => (
+        {[["dia","Dia"],["semana","Semana"]].map(([key,label]) => (
           <button
             key={key}
             className={`${styles.tab} ${tab === key ? styles.tabActive : ""}`}
@@ -567,9 +567,8 @@ export default function RoutinePage() {
         ))}
       </div>
 
-      {tab === "dia"     && <TabDia selectedDay={selectedDay} onDayChange={setSelectedDay} />}
-      {tab === "semana"  && <TabSemana onSelectDay={handleDayFromWeek} />}
-      {tab === "eventos" && <TabEventos />}
+      {tab === "dia"    && <TabDia selectedDay={selectedDay} onDayChange={setSelectedDay} />}
+      {tab === "semana" && <TabSemana onSelectDay={handleDayFromWeek} />}
 
       <Navigation />
     </div>
