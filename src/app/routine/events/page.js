@@ -42,8 +42,16 @@ function tipoStyle(tipo) {
   return { color: "rgba(255,255,255,0.6)", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.1)", pill: "rgba(255,255,255,0.4)" };
 }
 
+const TIPO_OPTIONS = ["família","feriado","saúde","social","lazer","pessoal","trabalho"];
+
+const TIPO_COLORS = {
+  "feriado":  "#ef4444", "família": "#f59e0b", "saude": "#10b981",
+  "saúde":    "#10b981", "social":  "#818cf8", "lazer": "#60a5fa",
+  "pessoal":  "#00e5a0", "trabalho":"#2196f3",
+};
+
 // ── Hero card de um dia do FDS ──────────────────────────────────────────────
-function DayCard({ date, evts, isToday }) {
+function DayCard({ date, evts, isToday, onAdd, onDelete }) {
   const dow   = date.getDay();
   const day   = date.getDate();
   const month = MES_ABR[date.getMonth()];
@@ -84,11 +92,8 @@ function DayCard({ date, evts, isToday }) {
           {evts.map((e, i) => {
             const ts = tipoStyle(e.tipo);
             return (
-              <div key={i} style={{
-                background: ts.bg, border: `1px solid ${ts.border}`,
-                borderRadius: 10, padding: "7px 10px", textAlign: "center",
-              }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#f0f0f8", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div key={i} style={{ position: "relative", background: ts.bg, border: `1px solid ${ts.border}`, borderRadius: 10, padding: "7px 10px 7px 10px", textAlign: "center" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#f0f0f8", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 16 }}>
                   {e.activity}
                 </div>
                 {e.tipo && (
@@ -96,14 +101,23 @@ function DayCard({ date, evts, isToday }) {
                     {e.tipo}
                   </div>
                 )}
+                {e.sheetRow && (
+                  <span onClick={ev => { ev.stopPropagation(); onDelete(e.sheetRow); }}
+                    style={{ position: "absolute", top: 4, right: 6, fontSize: 10, color: "rgba(255,255,255,0.2)", cursor: "pointer", lineHeight: 1 }}
+                    onMouseEnter={e => e.currentTarget.style.color = "#ef4444"}
+                    onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.2)"}
+                  >✕</span>
+                )}
               </div>
             );
           })}
+          <button onClick={() => onAdd(date)} style={{ marginTop: 2, padding: "6px 0", borderRadius: 8, border: "1px dashed rgba(255,255,255,0.15)", background: "transparent", color: "rgba(255,255,255,0.25)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>+</button>
         </div>
       ) : (
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.18)", fontStyle: "italic", marginTop: "auto" }}>
-          livre
-        </div>
+        <button onClick={() => onAdd(date)} style={{ marginTop: "auto", width: "100%", padding: "10px 0", borderRadius: 10, border: "1px dashed rgba(255,255,255,0.15)", background: "transparent", color: "rgba(255,255,255,0.3)", fontSize: 18, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(245,158,11,0.4)"; e.currentTarget.style.color = "#f59e0b"; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; e.currentTarget.style.color = "rgba(255,255,255,0.3)"; }}
+        >+</button>
       )}
     </div>
   );
@@ -167,13 +181,51 @@ export default function EventosPage() {
   const [events,   setEvents]   = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [showPast, setShowPast] = useState(false);
+  const [modal,    setModal]    = useState(null); // { date: Date } | null
+  const [form,     setForm]     = useState({ evento: "", tipo: "" });
+  const [saving,   setSaving]   = useState(false);
 
-  useEffect(() => {
+  const reload = () => {
+    setLoading(true);
     fetch("/api/routine?agenda=1", { cache: "no-store" })
       .then(r => r.json())
       .then(d => { if (d.ok) setEvents(d.events); })
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { reload(); }, []);
+
+  function openAdd(date) {
+    setForm({ evento: "", tipo: "" });
+    setModal({ date });
+  }
+
+  async function handleSave() {
+    if (!form.evento.trim()) return;
+    setSaving(true);
+    try {
+      const d = modal.date;
+      const dd = String(d.getDate()).padStart(2,"0");
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const yyyy = d.getFullYear();
+      await fetch("/api/routine/events", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: `${dd}/${mm}/${yyyy}`, evento: form.evento, tipo: form.tipo }),
+      });
+      setModal(null);
+      reload();
+    } finally { setSaving(false); }
+  }
+
+  async function handleDelete(sheetRow) {
+    await fetch("/api/routine/events", {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sheetRow }),
+    });
+    reload();
+  }
+
+  const inputSt = { width: "100%", padding: "9px 12px", borderRadius: 10, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#f0f0f8", fontSize: 14, fontFamily: "inherit", outline: "none" };
 
   const today   = new Date(); today.setHours(0,0,0,0);
   const todayISO = toISO(today);
@@ -222,11 +274,71 @@ export default function EventosPage() {
       <ModuleHeader title="Eventos" />
       <Navigation />
 
+      {/* Modal adicionar evento */}
+      {modal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: 24, width: "100%", maxWidth: 360 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "capitalize" }}>
+              {modal.date.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 20 }}>Novo Evento</div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>EVENTO</div>
+                <input
+                  autoFocus value={form.evento}
+                  onChange={e => setForm(p => ({ ...p, evento: e.target.value }))}
+                  onKeyDown={e => e.key === "Enter" && handleSave()}
+                  placeholder="Ex: Almoço em família"
+                  style={inputSt}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 8 }}>TIPO</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {TIPO_OPTIONS.map(t => {
+                    const col = TIPO_COLORS[t] ?? "rgba(255,255,255,0.4)";
+                    const sel = form.tipo === t;
+                    return (
+                      <button key={t} onClick={() => setForm(p => ({ ...p, tipo: sel ? "" : t }))}
+                        style={{ padding: "5px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", textTransform: "capitalize",
+                          background: sel ? col + "22" : "rgba(255,255,255,0.04)",
+                          color:      sel ? col : "rgba(255,255,255,0.4)",
+                          border:     `1px solid ${sel ? col + "55" : "rgba(255,255,255,0.08)"}`,
+                        }}>
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 22 }}>
+              <button onClick={() => setModal(null)} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                Cancelar
+              </button>
+              <button onClick={handleSave} disabled={!form.evento.trim() || saving}
+                style={{ flex: 2, padding: "11px 0", borderRadius: 10, border: "none",
+                  background: (form.evento.trim() && !saving) ? "linear-gradient(135deg,#f59e0b,#d97706)" : "rgba(255,255,255,0.06)",
+                  color: "#fff", fontSize: 13, fontWeight: 700, cursor: (form.evento.trim() && !saving) ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
+                {saving ? "Salvando…" : "Salvar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className={styles.header}>
         <div>
           <h1>Eventos</h1>
           <p>{today.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</p>
         </div>
+        <button onClick={() => openAdd(today)}
+          style={{ padding: "8px 16px", borderRadius: 99, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)", color: "#f59e0b", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+          + Evento
+        </button>
       </header>
 
       {loading && <div className={styles.loading}>Carregando eventos...</div>}
@@ -251,6 +363,8 @@ export default function EventosPage() {
                   date={d}
                   evts={eventMap[toISO(d)] ?? []}
                   isToday={toISO(d) === todayISO}
+                  onAdd={openAdd}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>
