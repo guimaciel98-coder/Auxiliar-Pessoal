@@ -9,10 +9,10 @@ const DAYS_SHORT = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 const DAYS_FULL  = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
 
 const CAT = {
-  treino:   { color: "#9c27b0", label: "Treino"   },
-  trabalho: { color: "#2196f3", label: "Trabalho" },
-  pessoal:  { color: "#00e5a0", label: "Pessoal"  },
-  livre:    { color: "#484f58", label: "Livre"    },
+  treino:   { color: "#a855f7", label: "Treino"   },
+  trabalho: { color: "#3b82f6", label: "Trabalho" },
+  pessoal:  { color: "#10b981", label: "Pessoal"  },
+  livre:    { color: "#94a3b8", label: "Livre"    },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -313,9 +313,9 @@ function TabDia({ selectedDay, onDayChange }) {
                   <div
                     className={styles.itemRow}
                     style={{
-                      background:      cat.color + (isCurr ? "22" : "0e"),
-                      borderColor:     cat.color + (isCurr ? "50" : "28"),
-                      borderLeftColor: cat.color + (isCurr ? "ff" : "80"),
+                      background:      cat.color + (isCurr ? "30" : "18"),
+                      borderColor:     cat.color + (isCurr ? "60" : "35"),
+                      borderLeftColor: cat.color + (isCurr ? "ff" : "aa"),
                     }}
                   >
                     <span className={`${styles.itemName} ${isPast ? styles.itemNameDone : ""}`}>
