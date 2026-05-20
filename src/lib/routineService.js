@@ -432,7 +432,7 @@ export async function fetchSpecialAgenda() {
 
     const events = rows
       .filter(r => r[0]?.trim() && r[1]?.trim())
-      .map(r => {
+      .map((r, idx) => {
         const parts = r[0].trim().split("/").map(Number);
         if (parts.length < 2 || parts.some(isNaN)) return null;
 
@@ -452,6 +452,7 @@ export async function fetchSpecialAgenda() {
         const monthYear   = date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
         return {
+          sheetRow:    idx + 2,
           date:        date.toISOString().slice(0, 10),
           dateLabel,
           weekday,
