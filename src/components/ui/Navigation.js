@@ -40,6 +40,11 @@ const NAV = [
     label: "Rotina",
     path: "/routine",
     icon: "⏱",
+    prefixes: ["/routine"],
+    children: [
+      { label: "Minha Rotina", path: "/routine",        icon: "📅", exact: true },
+      { label: "Eventos",      path: "/routine/events", icon: "🗓" },
+    ],
   },
 ];
 
@@ -52,23 +57,28 @@ function isItemActive(item, pathname) {
 // Prefixos de seções com accordion
 const TASK_PREFIXES    = NAV.find(i => i.label === "Tarefas")?.prefixes    ?? [];
 const FINANCE_PREFIXES = NAV.find(i => i.label === "Financeiro")?.prefixes ?? [];
+const ROUTINE_PREFIXES = NAV.find(i => i.label === "Rotina")?.prefixes    ?? [];
 
 // Listas flat para barra mobile
 const MOBILE_GLOBAL   = NAV.filter(i => !i.exact);
 const MOBILE_TASKS    = NAV.find(i => i.label === "Tarefas")?.children    ?? [];
 const MOBILE_FINANCE  = NAV.find(i => i.label === "Financeiro")?.children ?? [];
+const MOBILE_ROUTINE  = NAV.find(i => i.label === "Rotina")?.children     ?? [];
 
 export default function Navigation() {
   const pathname = usePathname();
   const isTaskSection    = TASK_PREFIXES.some(p => pathname.startsWith(p));
   const isFinanceSection = FINANCE_PREFIXES.some(p => pathname.startsWith(p));
+  const isRoutineSection = ROUTINE_PREFIXES.some(p => pathname.startsWith(p));
 
   // Mobile: mostra sub-itens do contexto ativo, senão itens globais
   const mobileItems = isTaskSection
     ? MOBILE_TASKS
     : isFinanceSection
       ? MOBILE_FINANCE
-      : MOBILE_GLOBAL;
+      : isRoutineSection
+        ? MOBILE_ROUTINE
+        : MOBILE_GLOBAL;
 
   return (
     <nav className={styles.nav}>

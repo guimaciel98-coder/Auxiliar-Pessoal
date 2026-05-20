@@ -24,7 +24,7 @@
 .header p  { color: rgba(255,255,255,0.3); font-size: 13px; }
 
 /* ── Tabs ── */
-.tabs { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; background: rgba(255,255,255,0.06); border-radius: 12px; padding: 4px; margin-bottom: 20px; }
+.tabs { display: grid; grid-template-columns: repeat(2,1fr); gap: 4px; background: rgba(255,255,255,0.06); border-radius: 12px; padding: 4px; margin-bottom: 20px; }
 .tab  { padding: 8px 4px; border-radius: 8px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.35); transition: all 0.2s; text-align: center; cursor: pointer; }
 .tabActive { background: rgba(255,255,255,0.1); color: #fff; }
 
