@@ -161,33 +161,46 @@ function parseTimeRange(rangeStr) {
 async function readRoutineSheet() {
   const sheets = await getSheetsClient();
 
-  // Duas leituras paralelas:
-  // 1. values.get — respeita células mescladas (retorna o valor em todas as células da fusão)
-  // 2. spreadsheets.get com includeGridData — para pegar cores de fundo por célula
-  const [valRes, colorRes] = await Promise.all([
-    sheets.spreadsheets.values.get({
-      spreadsheetId:     ROUTINE_SPREADSHEET_ID,
-      range:             `'${ROUTINE_SHEET_NAME}'!A:H`,
-      valueRenderOption: "FORMATTED_VALUE",
+  // Lê dados + metadados de merges em paralelo
+  const [dataRes, metaRes] = await Promise.all([
+    sheets.spreadsheets.get({
+      spreadsheetId:   ROUTINE_SPREADSHEET_ID,
+      ranges:          [`'${ROUTINE_SHEET_NAME}'!A:H`],
+      includeGridData: true,
+      fields:          "sheets.data.rowData.values(formattedValue,effectiveFormat.backgroundColor)",
     }),
     sheets.spreadsheets.get({
-      spreadsheetId: ROUTINE_SPREADSHEET_ID,
-      ranges:        [`'${ROUTINE_SHEET_NAME}'!A:H`],
-      includeGridData: true,
-      fields:        "sheets.data.rowData.values(effectiveFormat.backgroundColor)",
+      spreadsheetId:   ROUTINE_SPREADSHEET_ID,
+      includeGridData: false,
+      fields:          "sheets(properties.title,merges)",
     }),
   ]);
 
-  const values  = valRes.data.values ?? [];
-  const rowData = colorRes.data.sheets?.[0]?.data?.[0]?.rowData ?? [];
+  const rawRows = dataRes.data.sheets?.[0]?.data?.[0]?.rowData ?? [];
+  const merges  = metaRes.data.sheets?.find(s => s.properties.title === ROUTINE_SHEET_NAME)?.merges ?? [];
 
-  // Combina: valor correto (com merge) + cor de cada célula
-  return values.map((row, i) => ({
-    values: row.map((cellValue, j) => ({
-      formattedValue:  String(cellValue ?? ""),
-      effectiveFormat: rowData[i]?.values?.[j]?.effectiveFormat ?? null,
-    })),
-  }));
+  // Constrói grid mutável
+  const grid = rawRows.map(r => (r.values ?? []).map(c => ({
+    formattedValue:  c.formattedValue  ?? "",
+    effectiveFormat: c.effectiveFormat ?? null,
+  })));
+
+  // Propaga o valor/cor da célula topo-esquerda de cada fusão para todas as células da fusão
+  for (const { startRowIndex: sr, endRowIndex: er, startColumnIndex: sc, endColumnIndex: ec } of merges) {
+    const baseVal   = grid[sr]?.[sc]?.formattedValue  ?? "";
+    const baseColor = grid[sr]?.[sc]?.effectiveFormat ?? null;
+    for (let r = sr; r < er; r++) {
+      for (let c = sc; c < ec; c++) {
+        if (r === sr && c === sc) continue;
+        if (!grid[r]) grid[r] = [];
+        if (!grid[r][c]) grid[r][c] = { formattedValue: "", effectiveFormat: null };
+        if (!grid[r][c].formattedValue) grid[r][c].formattedValue  = baseVal;
+        if (!grid[r][c].effectiveFormat) grid[r][c].effectiveFormat = baseColor;
+      }
+    }
+  }
+
+  return grid.map(row => ({ values: row }));
 }
 
 // ─── Parser da tabela principal ───────────────────────────────────────────────
