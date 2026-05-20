@@ -226,29 +226,48 @@ function TabDia({ selectedDay, onDayChange }) {
       )}
 
       {/* Bloco atual */}
-      {isToday && current && !loading && (
-        <div className={styles.currentBlock} style={{ borderColor: (CAT[current.category]?.color ?? "#484f58") + "30" }}>
-          <div className={styles.currentBlockTop}>
-            <div className={styles.currentLabel}>
-              <span className={styles.currentDot} style={{ background: CAT[current.category]?.color ?? "#484f58" }} />
-              AGORA
-            </div>
-          </div>
-          <div className={styles.currentBlockBody}>
-            <div className={styles.currentCatTag} style={{ color: CAT[current.category]?.color ?? "#484f58", background: (CAT[current.category]?.color ?? "#484f58") + "18", borderColor: (CAT[current.category]?.color ?? "#484f58") + "35" }}>
-              {CAT[current.category]?.label ?? "Livre"}
-            </div>
-            <div className={styles.currentActivity}>{current.activity}</div>
-            <div className={styles.currentTimeRange}>{current.time}{next ? ` → ${next.time}` : ""}</div>
-            {next && <div className={styles.currentNext}>A seguir: {next.activity}</div>}
-            {current.duration > 0 && (
-              <div className={styles.blockProgress}>
-                <div className={styles.blockProgressFill} style={{ width: `${progressPct}%`, background: CAT[current.category]?.color ?? "#818cf8" }} />
+      {isToday && current && !loading && (() => {
+        const cc = CAT[current.category]?.color ?? "#818cf8";
+        return (
+          <div className={styles.currentBlock} style={{ borderColor: cc + "30", background: `linear-gradient(135deg, ${cc}12, ${cc}06)` }}>
+            {/* Glow */}
+            <div className={styles.currentGlow} style={{ background: cc }} />
+
+            {/* Topo */}
+            <div className={styles.currentBlockTop} style={{ borderBottomColor: cc + "18" }}>
+              <div className={styles.currentLabel} style={{ color: cc }}>
+                <span className={styles.currentDot} style={{ background: cc }} />
+                Agora
               </div>
-            )}
+              <span className={styles.currentTimeRange}>{current.time}{next ? ` → ${next.time}` : ""}</span>
+            </div>
+
+            {/* Corpo */}
+            <div className={styles.currentBlockBody}>
+              <div className={styles.currentCatTag} style={{ color: cc, background: cc + "1a", borderColor: cc + "40" }}>
+                {CAT[current.category]?.label ?? "Livre"}
+              </div>
+              <div className={styles.currentActivity}>{current.activity}</div>
+              {next && (
+                <div className={styles.currentNext}>
+                  A seguir: <span className={styles.currentNextName}>{next.activity}</span>
+                </div>
+              )}
+              {current.duration > 0 && (
+                <div className={styles.blockProgressWrap}>
+                  <div className={styles.blockProgressMeta}>
+                    <span>progresso do bloco</span>
+                    <span>{progressPct}%</span>
+                  </div>
+                  <div className={styles.blockProgress}>
+                    <div className={styles.blockProgressFill} style={{ width: `${progressPct}%`, background: cc, boxShadow: `0 0 8px ${cc}80` }} />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Loading / Erro */}
       {loading && <div className={styles.loading}>Carregando rotina...</div>}
@@ -265,15 +284,17 @@ function TabDia({ selectedDay, onDayChange }) {
         <div className={styles.timeline}>
           <div className={styles.timelineLine} />
           {blocks.map((block, i) => {
-            const isPast  = isToday && block.minutes + block.duration <= mins;
-            const isCurr  = isToday && current?.time === block.time;
-            const cat     = CAT[block.category] ?? CAT.livre;
+            const isPast = isToday && block.minutes + block.duration <= mins;
+            const isCurr = isToday && current?.time === block.time;
+            const cat    = CAT[block.category] ?? CAT.livre;
+            const dur    = block.duration < 60
+              ? `${block.duration}m`
+              : block.duration % 60 === 0
+                ? `${block.duration / 60}h`
+                : `${Math.floor(block.duration/60)}h${block.duration%60}m`;
 
             return (
-              <div
-                key={i}
-                className={`${styles.timelineItem} ${isPast ? styles.timelineItemDone : ""}`}
-              >
+              <div key={i} className={`${styles.timelineItem} ${isPast ? styles.timelineItemDone : ""}`}>
                 <div className={styles.timeCol}>
                   <span className={`${styles.timeLabel} ${isCurr ? styles.timeLabelCurrent : ""} ${isPast ? styles.timeLabelPast : ""}`}>
                     {block.time}
@@ -283,28 +304,25 @@ function TabDia({ selectedDay, onDayChange }) {
                   <div
                     className={`${styles.timelineDot} ${isCurr ? styles.timelineDotCurrent : ""}`}
                     style={{
-                      background: isPast
-                        ? cat.color + "55"
-                        : isCurr
-                        ? cat.color
-                        : "rgba(255,255,255,0.12)",
+                      background: isPast ? cat.color + "44" : isCurr ? cat.color : "rgba(255,255,255,0.1)",
                       color: cat.color,
                     }}
                   />
                 </div>
                 <div className={styles.itemContent}>
                   <div
-                    className={`${styles.itemBtn} ${isCurr ? styles.itemBtnCurrent : styles.itemBtnDefault}`}
+                    className={styles.itemRow}
                     style={{
-                      borderLeftColor: isPast ? "transparent" : cat.color + (isCurr ? "dd" : "50"),
-                      background:      isCurr ? cat.color + "0d" : "transparent",
-                      borderColor:     isCurr ? cat.color + "30" : "transparent",
+                      borderLeftColor: isPast ? "transparent" : cat.color + (isCurr ? "ee" : "45"),
+                      background:      isCurr ? cat.color + "0e" : "transparent",
+                      borderColor:     isCurr ? cat.color + "28" : "transparent",
                     }}
                   >
                     <span className={`${styles.itemName} ${isPast ? styles.itemNameDone : ""}`}>
                       {block.activity}
                     </span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div className={styles.itemMeta}>
+                      <span className={styles.itemDur}>{dur}</span>
                       {!isPast && (
                         <span className={styles.categoryTag} style={{ color: cat.color, background: cat.color + "18" }}>
                           {cat.label}
@@ -312,10 +330,8 @@ function TabDia({ selectedDay, onDayChange }) {
                       )}
                       {fromAppRotina && block.sheetRow && (
                         <span
+                          className={styles.editBtn}
                           onClick={e => { e.stopPropagation(); setEditing({ sheetRow: block.sheetRow, atividade: block.activity, categoria: block.category, inicio: block.time, fim: "" }); }}
-                          style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", cursor: "pointer", padding: "2px 4px", borderRadius: 4, transition: "color 0.15s", lineHeight: 1 }}
-                          onMouseEnter={e => e.currentTarget.style.color = "#818cf8"}
-                          onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.2)"}
                         >✎</span>
                       )}
                     </div>
@@ -377,6 +393,13 @@ function TabSemana({ onSelectDay }) {
         const key3    = keyBlocks(blocks, 3);
         const dateNum = getDateOfWeekday(idx);
 
+        // Composição de categorias para a barra colorida
+        const catMins = {};
+        for (const b of blocks) catMins[b.category] = (catMins[b.category] || 0) + b.duration;
+        const totalMins = Object.values(catMins).reduce((s, v) => s + v, 0);
+        const catOrder  = ["trabalho","treino","pessoal","livre"];
+        const catSegs   = catOrder.filter(c => catMins[c]).map(c => ({ cat: c, pct: (catMins[c] / totalMins) * 100 }));
+
         return (
           <div
             key={idx}
@@ -384,14 +407,27 @@ function TabSemana({ onSelectDay }) {
             onClick={() => onSelectDay(idx)}
           >
             <div className={styles.weekDayTop}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span className={`${styles.weekDayName} ${isT ? styles.weekDayNameToday : ""}`}>
-                  {DAYS_FULL[idx]}
-                </span>
-                {isT && <span className={styles.weekDayBadge}>HOJE</span>}
+              <div className={styles.weekDayLeft}>
+                <span className={`${styles.weekDayDate} ${isT ? styles.weekDayDateToday : ""}`}>{dateNum}</span>
+                <div className={styles.weekDayInfo}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span className={`${styles.weekDayName} ${isT ? styles.weekDayNameToday : ""}`}>{DAYS_FULL[idx]}</span>
+                    {isT && <span className={styles.weekDayBadge}>HOJE</span>}
+                  </div>
+                </div>
               </div>
               <span className={styles.weekDayBlocks}>{blocks.length} blocos</span>
             </div>
+
+            {/* Barra de composição de categorias */}
+            {catSegs.length > 0 && (
+              <div className={styles.weekCatBar}>
+                {catSegs.map(({ cat, pct }) => (
+                  <div key={cat} className={styles.weekCatSegment}
+                    style={{ width: `${pct}%`, background: CAT[cat]?.color ?? "#484f58" }} />
+                ))}
+              </div>
+            )}
 
             {key3.length > 0 ? (
               <div className={styles.weekActivities}>
