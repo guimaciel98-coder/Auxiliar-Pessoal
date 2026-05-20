@@ -161,16 +161,33 @@ function parseTimeRange(rangeStr) {
 async function readRoutineSheet() {
   const sheets = await getSheetsClient();
 
-  // Lê valores + formatação (cores) em uma única chamada
-  const res = await sheets.spreadsheets.get({
-    spreadsheetId: ROUTINE_SPREADSHEET_ID,
-    ranges: [`'${ROUTINE_SHEET_NAME}'!A:H`],
-    includeGridData: true,
-    fields: "sheets.data.rowData.values(formattedValue,effectiveFormat.backgroundColor)",
-  });
+  // Duas leituras paralelas:
+  // 1. values.get — respeita células mescladas (retorna o valor em todas as células da fusão)
+  // 2. spreadsheets.get com includeGridData — para pegar cores de fundo por célula
+  const [valRes, colorRes] = await Promise.all([
+    sheets.spreadsheets.values.get({
+      spreadsheetId:     ROUTINE_SPREADSHEET_ID,
+      range:             `'${ROUTINE_SHEET_NAME}'!A:H`,
+      valueRenderOption: "FORMATTED_VALUE",
+    }),
+    sheets.spreadsheets.get({
+      spreadsheetId: ROUTINE_SPREADSHEET_ID,
+      ranges:        [`'${ROUTINE_SHEET_NAME}'!A:H`],
+      includeGridData: true,
+      fields:        "sheets.data.rowData.values(effectiveFormat.backgroundColor)",
+    }),
+  ]);
 
-  const rowData = res.data.sheets?.[0]?.data?.[0]?.rowData ?? [];
-  return rowData;
+  const values  = valRes.data.values ?? [];
+  const rowData = colorRes.data.sheets?.[0]?.data?.[0]?.rowData ?? [];
+
+  // Combina: valor correto (com merge) + cor de cada célula
+  return values.map((row, i) => ({
+    values: row.map((cellValue, j) => ({
+      formattedValue:  String(cellValue ?? ""),
+      effectiveFormat: rowData[i]?.values?.[j]?.effectiveFormat ?? null,
+    })),
+  }));
 }
 
 // ─── Parser da tabela principal ───────────────────────────────────────────────
