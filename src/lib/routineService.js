@@ -323,38 +323,89 @@ export function getCurrentTimeBlock(blocks, nowMinutes) {
   return { current, next, progressPct };
 }
 
+// ─── Leitura de App_Rotina (aba editável) ────────────────────────────────────
+
+function hhmmToMins(str) {
+  const [h, m] = String(str ?? "").split(":").map(Number);
+  return isNaN(h) ? -1 : h * 60 + (m || 0);
+}
+
+async function readAppRotina() {
+  const sheets = await getSheetsClient();
+  try {
+    const res  = await sheets.spreadsheets.values.get({
+      spreadsheetId: ROUTINE_SPREADSHEET_ID,
+      range:         "'App_Rotina'!A2:E1000",
+    });
+    const rows = res.data.values ?? [];
+    if (rows.length === 0) return null;
+
+    const byDay = {};
+    rows.forEach((r, i) => {
+      const dia  = parseInt(r[0]);
+      const ini  = hhmmToMins(r[1]);
+      const fim  = hhmmToMins(r[2]);
+      const act  = String(r[3] ?? "").trim();
+      const cat  = String(r[4] ?? "livre").trim();
+      if (isNaN(dia) || ini < 0 || !act) return;
+      const dur = fim >= 0 ? (fim >= ini ? fim - ini : fim + 1440 - ini) : 60;
+      if (!byDay[dia]) byDay[dia] = [];
+      byDay[dia].push({
+        sheetRow: i + 2,
+        time:     r[1] ?? "",
+        minutes:  ini,
+        activity: act,
+        category: cat,
+        meta:     CATEGORIES[cat] ?? CATEGORIES.livre,
+        duration: Math.max(dur, 1),
+      });
+    });
+    return byDay;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * fetchDayRoutine(weekday?)
- * Retorna a timeline completa de um dia da semana.
- *
- * @param {number} [weekday] - 0=Dom … 6=Sáb (padrão: hoje em BRT)
+ * Tenta App_Rotina primeiro, depois fallback para a planilha mesclada.
  */
 export async function fetchDayRoutine(weekday) {
-  const now    = new Date(Date.now() - 3 * 3600 * 1000);
-  const day    = weekday ?? now.getUTCDay();
-  const dayCol = WEEKDAY_TO_COL[day] ?? 2;
+  const now = new Date(Date.now() - 3 * 3600 * 1000);
+  const day = weekday ?? now.getUTCDay();
 
-  const rowData = await readRoutineSheet();
-  const blocks  = parseMainTable(rowData, dayCol);
-  const { current, next, progressPct } = getCurrentTimeBlock(blocks);
+  const appRotina = await readAppRotina();
+  const blocks    = appRotina?.[day] ?? await (async () => {
+    const dayCol = WEEKDAY_TO_COL[day] ?? 2;
+    return parseMainTable(await readRoutineSheet(), dayCol);
+  })();
+
+  const sorted = [...blocks].sort((a, b) => a.minutes - b.minutes);
+  const { current, next, progressPct } = getCurrentTimeBlock(sorted);
 
   return {
-    dayName:      WEEKDAY_NAMES[day],
-    dayIndex:     day,
-    blocks,
-    current,
-    next,
-    progressPct,
-    specialEvents: [],
-    todayEvents:   [],
+    dayName:  WEEKDAY_NAMES[day],
+    dayIndex: day,
+    blocks:   sorted,
+    current, next, progressPct,
+    specialEvents: [], todayEvents: [],
+    fromAppRotina: !!appRotina,
   };
 }
 
 /**
  * fetchWeekRoutine()
- * Retorna a timeline dos 7 dias em uma única chamada à API.
+ * Tenta App_Rotina primeiro, depois fallback para a planilha mesclada.
  */
 export async function fetchWeekRoutine() {
+  const appRotina = await readAppRotina();
+  if (appRotina) {
+    const week = {};
+    for (let d = 0; d <= 6; d++) {
+      week[d] = (appRotina[d] ?? []).sort((a, b) => a.minutes - b.minutes);
+    }
+    return week;
+  }
   const rowData = await readRoutineSheet();
   const week    = {};
   for (const [jsDay, colIdx] of Object.entries(WEEKDAY_TO_COL)) {
