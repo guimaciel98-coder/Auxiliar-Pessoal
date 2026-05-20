@@ -243,7 +243,37 @@ function parseMainTable(rowData, dayCol) {
     });
   }
 
-  return blocks;
+  return consolidateBlocks(blocks);
+}
+
+// Une blocos consecutivos com a mesma atividade em um único bloco
+function consolidateBlocks(blocks) {
+  const result = [];
+  for (let i = 0; i < blocks.length; ) {
+    const cur = blocks[i];
+
+    // Avança enquanto a atividade for igual (consecutivos)
+    let j = i + 1;
+    while (j < blocks.length && blocks[j].activity === cur.activity) j++;
+
+    if (cur.activity && cur.activity !== "—") {
+      // Duração = do início deste bloco até o início do próximo bloco diferente
+      const nextMins = blocks[j]?.minutes;
+      let dur;
+      if (nextMins !== undefined) {
+        dur = nextMins >= cur.minutes
+          ? nextMins - cur.minutes
+          : nextMins + 1440 - cur.minutes; // cruza meia-noite
+      } else {
+        dur = blocks.slice(i, j).reduce((s, b) => s + b.duration, 0);
+      }
+      result.push({ ...cur, duration: Math.max(dur, 1) });
+    }
+    // blocos "—" são descartados (slots vazios sem atividade)
+
+    i = j;
+  }
+  return result;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
