@@ -54,6 +54,8 @@ function keyBlocks(blocks, n = 3) {
   return result;
 }
 
+const CAT_OPTIONS = ["pessoal","trabalho","treino","livre"];
+
 // ─── Aba: Dia ─────────────────────────────────────────────────────────────────
 function TabDia({ selectedDay, onDayChange }) {
   const todayIdx = todayIndexBRT();
@@ -61,6 +63,8 @@ function TabDia({ selectedDay, onDayChange }) {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const [tick, setTick]       = useState(0);
+  const [editing,  setEditing]  = useState(null); // { sheetRow, atividade, categoria, inicio, fim }
+  const [saving,   setSaving]   = useState(false);
 
   const load = useCallback(async (day) => {
     setLoading(true); setError(null);
@@ -88,14 +92,100 @@ function TabDia({ selectedDay, onDayChange }) {
   const current = data?.current ?? null;
   const next    = data?.next    ?? null;
   const progressPct = data?.progressPct ?? 0;
+  const fromAppRotina = data?.fromAppRotina ?? false;
 
   const mins    = nowBRT();
   const donePct = blocks.length > 0 && isToday
     ? Math.round((blocks.filter(b => b.minutes + b.duration <= mins).length / blocks.length) * 100)
     : 0;
 
+  async function handleSaveEdit() {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/routine/blocks", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editing),
+      });
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error);
+      setEditing(null);
+      load(selectedDay);
+    } finally { setSaving(false); }
+  }
+
+  async function handleDeleteBlock() {
+    if (!editing?.sheetRow) return;
+    setSaving(true);
+    try {
+      await fetch("/api/routine/blocks", {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sheetRow: editing.sheetRow }),
+      });
+      setEditing(null);
+      load(selectedDay);
+    } finally { setSaving(false); }
+  }
+
+  const inputSt = { width: "100%", padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#f0f0f8", fontSize: 13, fontFamily: "inherit", outline: "none" };
+
   return (
     <>
+      {/* Modal de edição */}
+      {editing && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: 24, width: "100%", maxWidth: 380 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>Editar Bloco</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>ATIVIDADE</div>
+                <input value={editing.atividade} onChange={e => setEditing(p => ({ ...p, atividade: e.target.value }))} style={inputSt} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>INÍCIO</div>
+                  <input value={editing.inicio} onChange={e => setEditing(p => ({ ...p, inicio: e.target.value }))} placeholder="HH:MM" style={inputSt} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>FIM</div>
+                  <input value={editing.fim} onChange={e => setEditing(p => ({ ...p, fim: e.target.value }))} placeholder="HH:MM" style={inputSt} />
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>CATEGORIA</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
+                  {CAT_OPTIONS.map(c => (
+                    <button key={c} onClick={() => setEditing(p => ({ ...p, categoria: c }))}
+                      style={{ padding: "6px 4px", borderRadius: 8, fontSize: 11, fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
+                        background: editing.categoria === c ? (CAT[c]?.color ?? "#484f58") + "22" : "rgba(255,255,255,0.04)",
+                        color: editing.categoria === c ? (CAT[c]?.color ?? "#fff") : "rgba(255,255,255,0.4)",
+                        border: `1px solid ${editing.categoria === c ? (CAT[c]?.color ?? "#484f58") + "55" : "rgba(255,255,255,0.08)"}`,
+                      }}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+              {editing.sheetRow && (
+                <button onClick={handleDeleteBlock} disabled={saving}
+                  style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.07)", color: "#ef4444", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  Remover
+                </button>
+              )}
+              <button onClick={() => setEditing(null)} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                Cancelar
+              </button>
+              <button onClick={handleSaveEdit} disabled={saving}
+                style={{ flex: 2, padding: "10px 0", borderRadius: 10, border: "none", background: saving ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg,#818cf8,#6366f1)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                {saving ? "Salvando…" : "Salvar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Seletor de dias */}
       <div className={styles.daySelector}>
         {DAYS_SHORT.map((short, idx) => {
@@ -206,20 +296,29 @@ function TabDia({ selectedDay, onDayChange }) {
                   <div
                     className={`${styles.itemBtn} ${isCurr ? styles.itemBtnCurrent : styles.itemBtnDefault}`}
                     style={{
-                      borderLeftColor: isPast ? "transparent" : cat.color + (isCurr ? "dd" : "55"),
+                      borderLeftColor: isPast ? "transparent" : cat.color + (isCurr ? "dd" : "50"),
                       background:      isCurr ? cat.color + "0d" : "transparent",
                       borderColor:     isCurr ? cat.color + "30" : "transparent",
-                      borderLeftColor: isPast ? "transparent" : cat.color + (isCurr ? "dd" : "50"),
                     }}
                   >
                     <span className={`${styles.itemName} ${isPast ? styles.itemNameDone : ""}`}>
                       {block.activity}
                     </span>
-                    {!isPast && (
-                      <span className={styles.categoryTag} style={{ color: cat.color, background: cat.color + "18" }}>
-                        {cat.label}
-                      </span>
-                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {!isPast && (
+                        <span className={styles.categoryTag} style={{ color: cat.color, background: cat.color + "18" }}>
+                          {cat.label}
+                        </span>
+                      )}
+                      {fromAppRotina && block.sheetRow && (
+                        <span
+                          onClick={e => { e.stopPropagation(); setEditing({ sheetRow: block.sheetRow, atividade: block.activity, categoria: block.category, inicio: block.time, fim: "" }); }}
+                          style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", cursor: "pointer", padding: "2px 4px", borderRadius: 4, transition: "color 0.15s", lineHeight: 1 }}
+                          onMouseEnter={e => e.currentTarget.style.color = "#818cf8"}
+                          onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.2)"}
+                        >✎</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
