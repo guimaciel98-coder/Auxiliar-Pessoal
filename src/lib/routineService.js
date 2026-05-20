@@ -29,17 +29,18 @@ const ROUTINE_SPREADSHEET_ID =
   process.env.GOOGLE_ROUTINE_SPREADSHEET_ID ??
   "13y2HHURgSwQp9k29w8IF6V8_QEZNskMF7j0ENOM8Gpk";
 
-const ROUTINE_SHEET_NAME = "Rotina";
+// "Rotina Treino Manhâ": A=horário | B=Seg | C=Ter | D=Qua | E=Qui | F=Sex | G=Sáb | H=Dom
+const ROUTINE_SHEET_NAME = "Rotina Treino Manhâ";
 
 // ─── Mapeamento dia JS (0=Dom) → índice de coluna na planilha ─────────────────
 const WEEKDAY_TO_COL = {
-  0: 8, // Domingo   → I
-  1: 2, // Segunda   → C
-  2: 3, // Terça     → D
-  3: 4, // Quarta    → E
-  4: 5, // Quinta    → F
-  5: 6, // Sexta     → G
-  6: 7, // Sábado    → H
+  0: 7, // Domingo   → H
+  1: 1, // Segunda   → B
+  2: 2, // Terça     → C
+  3: 3, // Quarta    → D
+  4: 4, // Quinta    → E
+  5: 5, // Sexta     → F
+  6: 6, // Sábado    → G
 };
 
 const WEEKDAY_NAMES = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
@@ -163,7 +164,7 @@ async function readRoutineSheet() {
   // Lê valores + formatação (cores) em uma única chamada
   const res = await sheets.spreadsheets.get({
     spreadsheetId: ROUTINE_SPREADSHEET_ID,
-    ranges: [`'${ROUTINE_SHEET_NAME}'!A:I`],
+    ranges: [`'${ROUTINE_SHEET_NAME}'!A:H`],
     includeGridData: true,
     fields: "sheets.data.rowData.values(formattedValue,effectiveFormat.backgroundColor)",
   });
@@ -189,7 +190,7 @@ function parseMainTable(rowData, dayCol) {
     // Pula o cabeçalho (linha 1 = índice 0)
     if (i === 0) continue;
 
-    const timeRangeRaw = row.values[1]?.formattedValue ?? ""; // coluna B
+    const timeRangeRaw = row.values[0]?.formattedValue ?? ""; // coluna A
     const activityRaw  = row.values[dayCol]?.formattedValue ?? ""; // coluna do dia
     const bgColor      = row.values[dayCol]?.effectiveFormat?.backgroundColor ?? null;
 

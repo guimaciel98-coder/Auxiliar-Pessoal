@@ -137,40 +137,26 @@ function TabDia({ selectedDay, onDayChange }) {
 
       {/* Bloco atual */}
       {isToday && current && !loading && (
-        <div
-          className={styles.currentBlock}
-          style={{ borderColor: (CAT[current.category]?.color ?? "#484f58") + "40" }}
-        >
-          <div className={styles.currentLabel}>
-            <span
-              className={styles.currentDot}
-              style={{ background: CAT[current.category]?.color ?? "#484f58" }}
-            />
-            AGORA · {current.time}
-          </div>
-          <div
-            className={styles.currentCatTag}
-            style={{
-              color:       CAT[current.category]?.color ?? "#484f58",
-              background:  (CAT[current.category]?.color ?? "#484f58") + "18",
-              borderColor: (CAT[current.category]?.color ?? "#484f58") + "30",
-              border:      "1px solid",
-            }}
-          >
-            {CAT[current.category]?.label ?? "Livre"}
-          </div>
-          <div className={styles.currentActivity}>{current.activity}</div>
-          {next && (
-            <div className={styles.currentNext}>A seguir: {next.time} — {next.activity}</div>
-          )}
-          {current.duration > 0 && (
-            <div className={styles.blockProgress}>
-              <div
-                className={styles.blockProgressFill}
-                style={{ width: `${progressPct}%`, background: CAT[current.category]?.color ?? "#818cf8" }}
-              />
+        <div className={styles.currentBlock} style={{ borderColor: (CAT[current.category]?.color ?? "#484f58") + "30" }}>
+          <div className={styles.currentBlockTop}>
+            <div className={styles.currentLabel}>
+              <span className={styles.currentDot} style={{ background: CAT[current.category]?.color ?? "#484f58" }} />
+              AGORA
             </div>
-          )}
+          </div>
+          <div className={styles.currentBlockBody}>
+            <div className={styles.currentCatTag} style={{ color: CAT[current.category]?.color ?? "#484f58", background: (CAT[current.category]?.color ?? "#484f58") + "18", borderColor: (CAT[current.category]?.color ?? "#484f58") + "35" }}>
+              {CAT[current.category]?.label ?? "Livre"}
+            </div>
+            <div className={styles.currentActivity}>{current.activity}</div>
+            <div className={styles.currentTimeRange}>{current.time}{next ? ` → ${next.time}` : ""}</div>
+            {next && <div className={styles.currentNext}>A seguir: {next.activity}</div>}
+            {current.duration > 0 && (
+              <div className={styles.blockProgress}>
+                <div className={styles.blockProgressFill} style={{ width: `${progressPct}%`, background: CAT[current.category]?.color ?? "#818cf8" }} />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -219,17 +205,21 @@ function TabDia({ selectedDay, onDayChange }) {
                 <div className={styles.itemContent}>
                   <div
                     className={`${styles.itemBtn} ${isCurr ? styles.itemBtnCurrent : styles.itemBtnDefault}`}
-                    style={isCurr ? { borderColor: cat.color + "40", background: cat.color + "0d" } : {}}
+                    style={{
+                      borderLeftColor: isPast ? "transparent" : cat.color + (isCurr ? "dd" : "55"),
+                      background:      isCurr ? cat.color + "0d" : "transparent",
+                      borderColor:     isCurr ? cat.color + "30" : "transparent",
+                      borderLeftColor: isPast ? "transparent" : cat.color + (isCurr ? "dd" : "50"),
+                    }}
                   >
                     <span className={`${styles.itemName} ${isPast ? styles.itemNameDone : ""}`}>
                       {block.activity}
                     </span>
-                    <span
-                      className={styles.categoryTag}
-                      style={{ color: cat.color, background: cat.color + "18" }}
-                    >
-                      {cat.label}
-                    </span>
+                    {!isPast && (
+                      <span className={styles.categoryTag} style={{ color: cat.color, background: cat.color + "18" }}>
+                        {cat.label}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
