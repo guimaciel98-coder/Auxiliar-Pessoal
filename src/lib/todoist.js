@@ -101,10 +101,10 @@ export async function fetchAllProjectTasks(params = {}) {
 
   const results = await Promise.all(
     allProjectIds.map(projectId =>
-      // Passamos is_completed=false explicitamente para garantir que o Todoist
-      // retorne apenas tarefas abertas, independente do comportamento padrão da API.
-      // O spread de `params` depois permite sobrescrever (ex: history mode usa true).
-      tdFetchAll("/tasks", { project_id: projectId, is_completed: "false", ...params }).catch(e => {
+      // Sem is_completed na query: o Todoist REST retorna apenas tasks ativas por padrão.
+      // Passar is_completed="false" (string) pode ser interpretado como truthy e retornar
+      // tasks concluídas em vez de filtrá-las.
+      tdFetchAll("/tasks", { project_id: projectId, ...params }).catch(e => {
         console.error(`[todoist] erro projeto ${projectId}:`, e.message);
         return [];
       })
