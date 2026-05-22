@@ -100,3 +100,31 @@ export function sortTasks(arr) {
     return 0;
   });
 }
+
+// Ordenação para a aba Projetos: data → prioridade → horário.
+// Usa BRT como referência de dia (meia-noite BRT = 3h UTC).
+export function sortTasksBoard(arr) {
+  const P = { p1: 0, p2: 1, p3: 2, p4: 3 };
+  const BRT_OFFSET = 3 * 3600 * 1000;
+  const DAY_MS     = 86400000;
+  return [...arr].sort((a, b) => {
+    const msA = Number(a.due_date || a.ts || 0);
+    const msB = Number(b.due_date || b.ts || 0);
+    // Sem data vai para o final
+    if (!msA && msB) return 1;
+    if (msA && !msB) return -1;
+    // Bucket de dia em BRT
+    const dayA = msA ? Math.floor((msA - BRT_OFFSET) / DAY_MS) : Infinity;
+    const dayB = msB ? Math.floor((msB - BRT_OFFSET) / DAY_MS) : Infinity;
+    if (dayA !== dayB) return dayA - dayB;
+    // Mesmo dia: por prioridade
+    const pa = P[a.prio ?? a._priority] ?? 3;
+    const pb = P[b.prio ?? b._priority] ?? 3;
+    if (pa !== pb) return pa - pb;
+    // Mesma prioridade: tasks com horário definido primeiro, depois pelo timestamp
+    const timedA = a.timed ?? a.due_date_time ?? false;
+    const timedB = b.timed ?? b.due_date_time ?? false;
+    if (timedA !== timedB) return timedA ? -1 : 1;
+    return msA - msB;
+  });
+}
