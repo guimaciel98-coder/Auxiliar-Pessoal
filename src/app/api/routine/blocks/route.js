@@ -79,6 +79,10 @@ export async function POST(req) {
 
   // Migração completa
   if (body.migrate) {
+    // fromOriginal: limpa App_Rotina antes de ler, forçando fallback para a planilha original
+    if (body.fromOriginal) {
+      await sheets.spreadsheets.values.clear({ spreadsheetId: ID, range: `'${SHEET}'!A2:E1000` });
+    }
     const week = await fetchWeekRoutine();
 
     const rows = [];
