@@ -9,6 +9,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { CSS } from "@dnd-kit/utilities";
 import Navigation from "@/components/ui/Navigation";
 import ModuleHeader from "@/components/ui/ModuleHeader";
+import Toast from "@/components/ui/Toast";
 import styles from "./Board.module.css";
 import QuickAddModal from "@/components/Daily/QuickAddModal";
 import TaskEditModal from "@/components/Daily/TaskEditModal";
@@ -182,7 +183,14 @@ export default function ProjectsPage() {
   const [maxDays, setMaxDays]           = useState(7);
   const [activeTask, setActiveTask]     = useState(null);
   const [editTask, setEditTask]         = useState(null);
+  const [toast, setToast]               = useState(null);
   const boardRef = useRef(null);
+
+  function showToast(message, type = "success") {
+    const key = Date.now();
+    setToast({ message, type, key });
+    setTimeout(() => setToast(t => t?.key === key ? null : t), 2500);
+  }
 
   // Scroll horizontal por roda do mouse (não conflita com dnd-kit)
   useEffect(() => {
@@ -240,8 +248,34 @@ export default function ProjectsPage() {
 
   useEffect(() => { load(); }, []);
 
+  // Auto-refresh ao voltar para a aba ou ganhar foco (usuário edita no Todoist e volta)
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") load(); };
+    const onFocus   = () => load();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
+  // Pull-to-refresh no mobile (swipe down a partir do topo)
+  useEffect(() => {
+    let startY = 0;
+    const onStart = (e) => { startY = e.touches[0].clientY; };
+    const onEnd   = (e) => {
+      if (e.changedTouches[0].clientY - startY > 80 && window.scrollY === 0) load();
+    };
+    document.addEventListener("touchstart", onStart, { passive: true });
+    document.addEventListener("touchend",   onEnd,   { passive: true });
+    return () => {
+      document.removeEventListener("touchstart", onStart);
+      document.removeEventListener("touchend",   onEnd);
+    };
+  }, []);
+
   async function handleComplete(taskId) {
-    // Remove imediatamente da lista (feedback instantâneo, igual ao Todoist)
     setTasks(prev => prev.filter(t => t.id !== taskId));
     try {
       await fetch("/api/tasks/complete", {
@@ -249,18 +283,26 @@ export default function ProjectsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId }),
       });
-      // Reload em background para sincronizar tarefas recorrentes
+      if (navigator.vibrate) navigator.vibrate(50);
+      showToast("✓ Tarefa concluída");
       setTimeout(load, 1500);
     } catch (e) {
       console.error("Erro ao concluir tarefa:", e);
-      load(); // Restaura se der erro
+      showToast("⚠️ Erro ao concluir. Tente novamente.", "error");
+      load();
     }
   }
 
   async function handleReschedule(taskId) {
     const now = new Date();
     const tomorrowBRT = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 3, 0, 0);
-    await fetch("/api/tasks/reschedule", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ taskId, dueDate: tomorrowBRT, timed: false }) });
+    try {
+      await fetch("/api/tasks/reschedule", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ taskId, dueDate: tomorrowBRT, timed: false }) });
+      showToast("→ Reagendado");
+    } catch (e) {
+      console.error("Erro ao reagendar:", e);
+      showToast("⚠️ Erro ao reagendar.", "error");
+    }
     load();
   }
 
@@ -379,26 +421,27 @@ export default function ProjectsPage() {
   }
 
   function getTasksByDay() {
-    const now   = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // Início do dia em BRT (UTC-3) = 3h UTC, igual à visão Hoje
+    const now = new Date();
+    const todayBRT = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 3, 0, 0);
     const groups = [];
 
-    const overdue = filteredTasks.filter(t => t.due_date && new Date(Number(t.due_date)) < today);
+    const overdue = filteredTasks.filter(t => t.due_date && Number(t.due_date) < todayBRT);
     if (overdue.length) groups.push({ id: "overdue", label: "Atrasada", tasks: overdue, isOverdue: true });
 
     for (let i = 0; i < maxDays; i++) {
-      const cur  = new Date(today); cur.setDate(today.getDate() + i);
-      const next = new Date(cur);   next.setDate(cur.getDate() + 1);
+      const cur  = todayBRT + i * 86400000;
+      const next = cur + 86400000;
       const dayTasks = filteredTasks.filter(t => {
         if (!t.due_date) return false;
-        const d = new Date(Number(t.due_date));
-        return d >= cur && d < next;
+        const ms = Number(t.due_date);
+        return ms >= cur && ms < next;
       });
       groups.push({ id: `day-${i}`, label: getDayColLabel(i), tasks: dayTasks, dayOffset: i });
     }
 
-    const limitDate = new Date(today); limitDate.setDate(today.getDate() + maxDays);
-    const future = filteredTasks.filter(t => t.due_date && new Date(Number(t.due_date)) >= limitDate);
+    const limitBRT = todayBRT + maxDays * 86400000;
+    const future = filteredTasks.filter(t => t.due_date && Number(t.due_date) >= limitBRT);
     if (future.length) groups.push({ id: "future", label: "Futuras", tasks: future, canExpand: true });
 
     const noDate = filteredTasks.filter(t => !t.due_date);
@@ -423,6 +466,7 @@ export default function ProjectsPage() {
 
   return (
     <div className={styles.container}>
+        <Toast message={toast?.message} type={toast?.type} />
         <ModuleHeader title="Projetos" showConfig />
 
         {/* Tabs de projeto + toggle de visão */}
