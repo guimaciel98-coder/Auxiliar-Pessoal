@@ -228,7 +228,7 @@ export default function ProjectsPage() {
   const [viewMode, setViewMode]         = useState("detailed");
   const [isModalOpen, setIsModalOpen]   = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
-  const [maxDays, setMaxDays]           = useState(7);
+  const [maxDays] = useState(14);
   const [activeTask, setActiveTask]     = useState(null);
   const [editTask, setEditTask]         = useState(null);
   const [toast, setToast]               = useState(null);
@@ -655,9 +655,6 @@ export default function ProjectsPage() {
                   <div className={styles.taskSlot}>
                     {sortTasksBoard(group.tasks).map(t => <SortableTaskCard key={t.id} t={t} columnId={group.id} onComplete={handleComplete} onReschedule={handleReschedule} onEdit={setEditTask} showSection={activeProject !== "pessoal"} />)}
                     {group.tasks.length === 0 && <div className={styles.emptySlot}>Livre 🎉</div>}
-                    {group.canExpand && group.tasks.length > 0 && (
-                      <button className={styles.expandBtn} onClick={() => setMaxDays(p => p + 7)}>Ver mais 7 dias</button>
-                    )}
                   </div>
                   {group.dayOffset === 0 && (
                     <button className={styles.addTaskBtn} onClick={() => setIsModalOpen(true)}>
