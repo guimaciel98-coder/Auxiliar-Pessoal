@@ -43,9 +43,9 @@ export default function TaskRow({
   })() : null;
 
   const rescheduleOptions = [
-    { label: "hoje",   ms: startOfTodayBRT               + timeOffset },
-    { label: "amanhã", ms: startOfTodayBRT + 1*86400000  + timeOffset },
-    { label: "semana", ms: startOfTodayBRT + 7*86400000  + timeOffset },
+    { label: "hoje",   toastLabel: "hoje",           ms: startOfTodayBRT               + timeOffset },
+    { label: "amanhã", toastLabel: "amanhã",         ms: startOfTodayBRT + 1*86400000  + timeOffset },
+    { label: "semana", toastLabel: "semana que vem", ms: startOfTodayBRT + 7*86400000  + timeOffset },
   ];
 
   // Estilos da linha
@@ -128,7 +128,7 @@ export default function TaskRow({
         </button>
         
         <button
-          onClick={() => completeTask(t.id)}
+          onClick={() => completeTask(t.id, t.name)}
           disabled={busy || fadingOut}
           className={`${styles.actionBtn} ${styles.completeBtn}`}
           title="Concluir tarefa"
@@ -141,7 +141,7 @@ export default function TaskRow({
         <div className={styles.reschedulePanel}>
           {t._recurrence && t._recurrence !== "none" && (
             <button
-              onClick={() => { setRescheduleOpen(null); completeTask(t.id); }}
+              onClick={() => { setRescheduleOpen(null); completeTask(t.id, t.name); }}
               className={styles.rescheduleChip}
               style={{ background: "rgba(99,102,241,0.25)", borderColor: "rgba(99,102,241,0.5)" }}
             >
@@ -151,7 +151,7 @@ export default function TaskRow({
           {rescheduleOptions.map(opt => (
             <button
               key={opt.label}
-              onClick={() => rescheduleTask(t.id, opt.ms, t.timed, t._repeat_forever, t._recurrence)}
+              onClick={() => rescheduleTask(t.id, opt.ms, t.timed, t._repeat_forever, t._recurrence, opt.toastLabel)}
               className={styles.rescheduleChip}
             >
               {opt.label}
@@ -159,7 +159,8 @@ export default function TaskRow({
           ))}
           <DatePickerButton onSelect={dateStr => {
             const [y,m,d] = dateStr.split("-").map(Number);
-            rescheduleTask(t.id, Date.UTC(y, m-1, d, 3, 0, 0) + timeOffset, t.timed, t._repeat_forever, t._recurrence);
+            const label = `${String(d).padStart(2,"0")}/${String(m).padStart(2,"0")}`;
+            rescheduleTask(t.id, Date.UTC(y, m-1, d, 3, 0, 0) + timeOffset, t.timed, t._repeat_forever, t._recurrence, label);
           }} />
         </div>
       )}

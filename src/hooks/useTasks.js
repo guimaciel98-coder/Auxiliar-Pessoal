@@ -126,7 +126,7 @@ export function useTasks(mode = "today") {
     };
   }, [load]);
 
-  async function rescheduleTask(taskId, newDueDate, timed, isRecurring, recurrence) {
+  async function rescheduleTask(taskId, newDueDate, timed, isRecurring, recurrence, label) {
     setRescheduling(prev => new Set(prev).add(taskId));
     setFading(prev => new Set(prev).add(taskId));
 
@@ -142,7 +142,7 @@ export function useTasks(mode = "today") {
       }
       addHidden(taskId);
       setFading(prev => { const s = new Set(prev); s.delete(taskId); return s; });
-      showToast("→ Reagendado");
+      showToast(`→ Reagendado para ${label ?? "nova data"}`);
       setTimeout(load, 1000);
     } catch (e) {
       setFading(prev => { const s = new Set(prev); s.delete(taskId); return s; });
@@ -154,7 +154,7 @@ export function useTasks(mode = "today") {
     }
   }
 
-  async function completeTask(taskId) {
+  async function completeTask(taskId, taskName) {
     setCompleting(prev => new Set(prev).add(taskId));
     setFading(prev => new Set(prev).add(taskId));
 
@@ -173,7 +173,8 @@ export function useTasks(mode = "today") {
       if (navigator.vibrate) navigator.vibrate(50);
       addHidden(taskId);
       setFading(prev => { const s = new Set(prev); s.delete(taskId); return s; });
-      showToast("✓ Tarefa concluída");
+      const name = taskName;
+      showToast(name ? `✓ Concluída: ${name.length > 28 ? name.slice(0, 28) + "…" : name}` : "✓ Tarefa concluída");
 
       setTimeout(load, 2000); // 2s para o Todoist processar antes do refetch
     } catch (e) {
