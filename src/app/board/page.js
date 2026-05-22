@@ -8,6 +8,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { startOfBRT, sortTasks, sortTasksBoard } from "@/utils/helpers";
+import DatePickerButton from "@/components/ui/DatePickerButton";
 import Navigation from "@/components/ui/Navigation";
 import ModuleHeader from "@/components/ui/ModuleHeader";
 import Toast from "@/components/ui/Toast";
@@ -97,62 +98,110 @@ function PriorityCircle({ prio, onClick }) {
 // ─── Card de tarefa ──────────────────────────────────────────────────────────
 
 function SortableTaskCard({ t, onComplete, onReschedule, onEdit, columnId, showSection }) {
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: t.id, data: { column: columnId } });
 
   const dateInfo = getDateInfo(t.due_date);
 
+  const todayBRT = startOfBRT();
+  const taskDayStartBRT = (() => {
+    const ms = Number(t.due_date);
+    if (!ms) return 0;
+    const d = new Date(ms - 3 * 3600 * 1000);
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 3, 0, 0);
+  })();
+  const timeOffset = t.due_date_time ? (Number(t.due_date) - taskDayStartBRT) : 0;
+
+  const rescheduleOptions = [
+    { label: "hoje",   toastLabel: "hoje",           ms: todayBRT + timeOffset },
+    { label: "amanhã", toastLabel: "amanhã",         ms: todayBRT + 86400000 + timeOffset },
+    { label: "semana", toastLabel: "semana que vem", ms: todayBRT + 7 * 86400000 + timeOffset },
+  ];
+
   return (
-    <div
-      ref={setNodeRef}
-      data-nodrag
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.35 : 1 }}
-      className={styles.card}
-    >
-      {/* Drag handle — aparece só no hover via CSS */}
-      <div className={styles.dragArea} {...attributes} {...listeners}>
-        <span className={styles.dragDots}>⠿</span>
-      </div>
-
-      {/* Círculo prioridade / concluir */}
-      <PriorityCircle prio={t._priority} onClick={() => onComplete(t.id)} />
-
-      {/* Conteúdo */}
+    <div>
       <div
-        className={styles.cardBody}
-        onClick={() => onEdit && onEdit(t)}
-        style={{ cursor: onEdit ? "pointer" : "default" }}
+        ref={setNodeRef}
+        data-nodrag
+        style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.35 : 1 }}
+        className={`${styles.card} ${rescheduleOpen ? styles.cardOpen : ""}`}
       >
-        <span className={styles.cardName}>{t.name}</span>
-
-        <div className={styles.cardMeta}>
-          {dateInfo && (
-            <span className={styles.cardDate} style={{ color: dateInfo.color }}>
-              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="1" y="3" width="14" height="12" rx="2"/>
-                <path d="M5 1v4M11 1v4M1 7h14"/>
-              </svg>
-              {dateInfo.label}
-              {t.due_date_time && t.due_date && (
-                <span style={{ opacity: 0.85 }}> · {formatTime(t.due_date)}</span>
-              )}
-              {t._repeat_forever && <span className={styles.recIcon}>↻</span>}
-            </span>
-          )}
-          {showSection && t._sub_client_label && (
-            <span className={styles.sectionLabel}>/{t._sub_client_label}</span>
-          )}
+        {/* Drag handle — aparece só no hover via CSS */}
+        <div className={styles.dragArea} {...attributes} {...listeners}>
+          <span className={styles.dragDots}>⠿</span>
         </div>
+
+        {/* Círculo prioridade / concluir */}
+        <PriorityCircle prio={t._priority} onClick={() => onComplete(t.id)} />
+
+        {/* Conteúdo */}
+        <div
+          className={styles.cardBody}
+          onClick={() => onEdit && onEdit(t)}
+          style={{ cursor: onEdit ? "pointer" : "default" }}
+        >
+          <span className={styles.cardName}>{t.name}</span>
+
+          <div className={styles.cardMeta}>
+            {dateInfo && (
+              <span className={styles.cardDate} style={{ color: dateInfo.color }}>
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <rect x="1" y="3" width="14" height="12" rx="2"/>
+                  <path d="M5 1v4M11 1v4M1 7h14"/>
+                </svg>
+                {dateInfo.label}
+                {t.due_date_time && t.due_date && (
+                  <span style={{ opacity: 0.85 }}> · {formatTime(t.due_date)}</span>
+                )}
+                {t._repeat_forever && <span className={styles.recIcon}>↻</span>}
+              </span>
+            )}
+            {showSection && t._sub_client_label && (
+              <span className={styles.sectionLabel}>/{t._sub_client_label}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Reagendar — toggle do painel */}
+        <button
+          className={styles.rescheduleBtn}
+          onClick={() => setRescheduleOpen(o => !o)}
+          title="Reagendar"
+        >
+          →
+        </button>
       </div>
 
-      {/* Reagendar — aparece no hover via CSS */}
-      <button
-        className={styles.rescheduleBtn}
-        onClick={() => onReschedule(t.id)}
-        title="Amanhã"
-      >
-        →
-      </button>
+      {rescheduleOpen && (
+        <div className={styles.cardReschedulePanel}>
+          {t._repeat_forever && t._recurrence && t._recurrence !== "none" && (
+            <button
+              onClick={() => { setRescheduleOpen(false); onComplete(t.id); }}
+              className={styles.cardRescheduleChip}
+              style={{ background: "rgba(99,102,241,0.25)", borderColor: "rgba(99,102,241,0.5)" }}
+            >
+              próxima
+            </button>
+          )}
+          {rescheduleOptions.map(opt => (
+            <button
+              key={opt.label}
+              onClick={() => { setRescheduleOpen(false); onReschedule(t.id, opt.ms, t.due_date_time, opt.toastLabel); }}
+              className={styles.cardRescheduleChip}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <DatePickerButton onSelect={dateStr => {
+            const [y, m, d] = dateStr.split("-").map(Number);
+            const targetMs = Date.UTC(y, m - 1, d, 3, 0, 0) + (t.due_date_time ? timeOffset : 0);
+            const lbl = `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}`;
+            setRescheduleOpen(false);
+            onReschedule(t.id, targetMs, t.due_date_time, lbl);
+          }} />
+        </div>
+      )}
     </div>
   );
 }
@@ -275,6 +324,7 @@ export default function ProjectsPage() {
   }, []);
 
   async function handleComplete(taskId) {
+    const task = tasks.find(t => t.id === taskId);
     setTasks(prev => prev.filter(t => t.id !== taskId));
     try {
       await fetch("/api/tasks/complete", {
@@ -283,7 +333,8 @@ export default function ProjectsPage() {
         body: JSON.stringify({ taskId }),
       });
       if (navigator.vibrate) navigator.vibrate(50);
-      showToast("✓ Tarefa concluída");
+      const name = task?.name;
+      showToast(name ? `✓ Concluída: ${name.length > 28 ? name.slice(0, 28) + "…" : name}` : "✓ Tarefa concluída");
       setTimeout(load, 1500);
     } catch (e) {
       console.error("Erro ao concluir tarefa:", e);
@@ -292,11 +343,23 @@ export default function ProjectsPage() {
     }
   }
 
-  async function handleReschedule(taskId) {
-    const tomorrowBRT = startOfBRT(1);
+  async function handleReschedule(taskId, targetMs, timed, label) {
+    const task = tasks.find(t => t.id === taskId);
+    const ms  = targetMs ?? startOfBRT(1);
+    const lbl = label ?? "amanhã";
     try {
-      await fetch("/api/tasks/reschedule", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ taskId, dueDate: tomorrowBRT, timed: false }) });
-      showToast("→ Reagendado");
+      await fetch("/api/tasks/reschedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          taskId,
+          dueDate: ms,
+          timed: !!timed,
+          isRecurring: !!task?._repeat_forever,
+          recurrence: task?._recurrence ?? null,
+        }),
+      });
+      showToast(`→ Reagendado para ${lbl}`);
     } catch (e) {
       console.error("Erro ao reagendar:", e);
       showToast("⚠️ Erro ao reagendar.", "error");
