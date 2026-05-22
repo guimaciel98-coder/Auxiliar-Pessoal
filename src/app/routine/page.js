@@ -331,7 +331,13 @@ function TabDia({ selectedDay, onDayChange }) {
                       {fromAppRotina && block.sheetRow && (
                         <span
                           className={styles.editBtn}
-                          onClick={e => { e.stopPropagation(); setEditing({ sheetRow: block.sheetRow, atividade: block.activity, categoria: block.category, inicio: block.time, fim: "" }); }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            const endMin = block.minutes + block.duration;
+                            const endHH  = String(Math.floor(endMin / 60) % 24).padStart(2, "0");
+                            const endMM  = String(endMin % 60).padStart(2, "0");
+                            setEditing({ sheetRow: block.sheetRow, atividade: block.activity, categoria: block.category, inicio: block.time, fim: `${endHH}:${endMM}` });
+                          }}
                         >✎</span>
                       )}
                     </div>
