@@ -309,10 +309,10 @@ export default function OverviewPage() {
       )}
 
       {!loading && !error && data && (
-        <div className={styles.body}>
+        <div className={styles.body} style={{ display: "block" }}>
 
           {/* ════ Coluna esquerda ════ */}
-          <div className={styles.mainCol} style={{ padding: "0 0 80px" }}>
+          <div className={styles.mainCol} style={{ padding: "0 0 0" }}>
 
             {/* ── Stat Cards ── */}
             <div style={{ marginBottom: 36, padding: "20px 28px 0" }}>
@@ -447,8 +447,8 @@ export default function OverviewPage() {
 
           </div>
 
-          {/* ════ Coluna direita ════ */}
-          <div className={styles.sideCol} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* ════ Conteúdo adicional ════ */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "0 28px 80px" }}>
 
             {/* ── Saldo Variável + Donut de gastos ── */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 0 }}>
