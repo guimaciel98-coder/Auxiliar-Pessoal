@@ -83,7 +83,7 @@ export async function GET(req) {
       getSectionMap(),
     ]);
 
-    const open = raw.filter(t => !t.checked && !t.is_deleted);
+    const open = raw.filter(t => !t.is_completed && !t.checked && !t.is_deleted);
 
     if (mode === "recurrences") {
       const rec = open
@@ -94,7 +94,7 @@ export async function GET(req) {
     }
 
     if (mode === "all") {
-      const sorted = open.map(toShape).sort((a, b) => Number(a.due_date) - Number(b.due_date));
+      const sorted = open.map(t => toShape(t, sectionMap)).sort((a, b) => Number(a.due_date) - Number(b.due_date));
       return Response.json({ tasks: sorted }, NO_CACHE);
     }
 
