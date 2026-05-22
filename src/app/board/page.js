@@ -31,10 +31,14 @@ const WEEKDAYS = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quint
 
 // ─── Helpers de data ────────────────────────────────────────────────────────
 
+function brtToday() {
+  const brt = new Date(Date.now() - 3 * 3600 * 1000);
+  return Date.UTC(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate(), 3, 0, 0);
+}
+
 function getDateInfo(ms) {
   if (!ms) return null;
-  const now       = new Date();
-  const todayMs   = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 3, 0, 0);
+  const todayMs   = brtToday();
   const tomMs     = todayMs + 86400000;
   const taskMs    = Number(ms);
 
@@ -64,13 +68,12 @@ function formatTime(ms) {
 
 // Formata o header de coluna no modo "Por Dia": "8 mai · Hoje"
 function getDayColLabel(dayOffset) {
-  const d = new Date();
-  d.setDate(d.getDate() + dayOffset);
-  const day   = d.getDate();
-  const month = MONTHS[d.getMonth()];
+  const base = new Date(brtToday() - 3 * 3600 * 1000 + dayOffset * 86400000);
+  const day   = base.getUTCDate();
+  const month = MONTHS[base.getUTCMonth()];
   if (dayOffset === 0) return `${day} ${month} · Hoje`;
   if (dayOffset === 1) return `${day} ${month} · Amanhã`;
-  return `${day} ${month} · ${WEEKDAYS[d.getDay()]}`;
+  return `${day} ${month} · ${WEEKDAYS[base.getUTCDay()]}`;
 }
 
 // ─── Círculo de prioridade / botão de concluir ───────────────────────────────
@@ -421,9 +424,7 @@ export default function ProjectsPage() {
   }
 
   function getTasksByDay() {
-    // Início do dia em BRT (UTC-3) = 3h UTC, igual à visão Hoje
-    const now = new Date();
-    const todayBRT = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 3, 0, 0);
+    const todayBRT = brtToday();
     const groups = [];
 
     const overdue = filteredTasks.filter(t => t.due_date && Number(t.due_date) < todayBRT);
