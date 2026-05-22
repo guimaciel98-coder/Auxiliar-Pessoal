@@ -77,26 +77,38 @@ export async function GET(req) {
       return Response.json({ tasks: sorted, overdue: [] }, NO_CACHE);
     }
 
-    // ── Modo ALL: mesmos filtros do Todoist usados em today/tomorrow ────────────
-    // "today | overdue" é o filtro que o Hoje usa e que reflete o estado real.
-    // "next 365 days" busca tarefas futuras. "no date" busca sem vencimento.
-    // Três fetches separados para que "today | overdue" seja idêntico ao Hoje.
+    // ── Modo ALL: hoje/atrasadas via filtro (igual ao Hoje), futuras via projeto ─
+    // "today | overdue" é a única fonte confiável para tarefas de hoje/atrasadas.
+    // Tarefas futuras e sem data vêm do fetch por projeto (sem risco de mostrar
+    // concluídas como "Hoje" já que seus timestamps ficam fora do range de hoje).
     if (mode === "all") {
-      const [secMapAll, rawTodayOvd, rawFuture, rawNoDate] = await Promise.all([
+      const pad = n => String(n).padStart(2, "0");
+      const brtNow = new Date(Date.now() - 3 * 3600 * 1000);
+      const todayStr = `${brtNow.getUTCFullYear()}-${pad(brtNow.getUTCMonth()+1)}-${pad(brtNow.getUTCDate())}`;
+
+      const [secMapAll, rawTodayOvd, rawProjects] = await Promise.all([
         getSectionMap(),
         fetchTasksByFilter("today | overdue"),
-        fetchTasksByFilter("next 365 days"),
-        fetchTasksByFilter("no date"),
+        fetchAllProjectTasks(),
       ]);
+
       const seen = new Set();
-      const openAll = [...rawTodayOvd, ...rawFuture, ...rawNoDate]
-        .filter(t => {
-          if (!KNOWN_PROJECT_IDS.has(t.project_id)) return false;
-          if (t.is_completed || t.checked || t.is_deleted) return false;
-          if (seen.has(t.id)) return false;
-          seen.add(t.id);
-          return true;
-        });
+      const openAll = [
+        // Tarefas de hoje e atrasadas: fonte autoritativa (filtro do Todoist)
+        ...rawTodayOvd,
+        // Tarefas futuras e sem data: via projeto, excluindo qualquer coisa do dia de hoje
+        ...rawProjects.filter(t => {
+          const d = t.due?.date?.slice(0, 10);
+          return !d || d > todayStr; // sem data ou data estritamente futura
+        }),
+      ].filter(t => {
+        if (!KNOWN_PROJECT_IDS.has(t.project_id)) return false;
+        if (t.is_completed || t.checked || t.completed_at || t.is_deleted) return false;
+        if (seen.has(t.id)) return false;
+        seen.add(t.id);
+        return true;
+      });
+
       const sorted = openAll
         .map(t => toShape(t, secMapAll))
         .sort((a, b) => Number(a.due_date) - Number(b.due_date));
