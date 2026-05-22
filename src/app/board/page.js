@@ -495,7 +495,7 @@ export default function ProjectsPage() {
         const ms = Number(t.due_date);
         return ms >= cur && ms < next;
       });
-      groups.push({ id: `day-${i}`, label: getDayColLabel(i), tasks: dayTasks, dayOffset: i });
+      if (dayTasks.length) groups.push({ id: `day-${i}`, label: getDayColLabel(i), tasks: dayTasks, dayOffset: i });
     }
 
     const limitBRT = todayBRT + maxDays * 86400000;
