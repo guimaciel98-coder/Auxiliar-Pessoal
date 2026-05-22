@@ -7,6 +7,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { startOfBRT } from "@/utils/helpers";
 import Navigation from "@/components/ui/Navigation";
 import ModuleHeader from "@/components/ui/ModuleHeader";
 import Toast from "@/components/ui/Toast";
@@ -31,14 +32,9 @@ const WEEKDAYS = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quint
 
 // ─── Helpers de data ────────────────────────────────────────────────────────
 
-function brtToday() {
-  const brt = new Date(Date.now() - 3 * 3600 * 1000);
-  return Date.UTC(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate(), 3, 0, 0);
-}
-
 function getDateInfo(ms) {
   if (!ms) return null;
-  const todayMs   = brtToday();
+  const todayMs   = startOfBRT();
   const tomMs     = todayMs + 86400000;
   const taskMs    = Number(ms);
 
@@ -68,7 +64,7 @@ function formatTime(ms) {
 
 // Formata o header de coluna no modo "Por Dia": "8 mai · Hoje"
 function getDayColLabel(dayOffset) {
-  const base = new Date(brtToday() - 3 * 3600 * 1000 + dayOffset * 86400000);
+  const base = new Date(startOfBRT() - 3 * 3600 * 1000 + dayOffset * 86400000);
   const day   = base.getUTCDate();
   const month = MONTHS[base.getUTCMonth()];
   if (dayOffset === 0) return `${day} ${month} · Hoje`;
@@ -297,8 +293,7 @@ export default function ProjectsPage() {
   }
 
   async function handleReschedule(taskId) {
-    const now = new Date();
-    const tomorrowBRT = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 3, 0, 0);
+    const tomorrowBRT = startOfBRT(1);
     try {
       await fetch("/api/tasks/reschedule", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ taskId, dueDate: tomorrowBRT, timed: false }) });
       showToast("→ Reagendado");
@@ -340,11 +335,10 @@ export default function ProjectsPage() {
 
   // Converte ID de coluna do modo "Por Dia" em timestamp BRT
   function dayGroupToMs(groupId) {
-    const n = new Date();
-    if (groupId === "overdue") return Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), 3, 0, 0);
+    if (groupId === "overdue") return startOfBRT(0);
     if (groupId.startsWith("day-")) {
       const offset = parseInt(groupId.split("-")[1], 10);
-      return Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + offset, 3, 0, 0);
+      return startOfBRT(offset);
     }
     return null; // "future" / "nodate" — sem data definida
   }
@@ -424,7 +418,7 @@ export default function ProjectsPage() {
   }
 
   function getTasksByDay() {
-    const todayBRT = brtToday();
+    const todayBRT = startOfBRT();
     const groups = [];
 
     const overdue = filteredTasks.filter(t => t.due_date && Number(t.due_date) < todayBRT);

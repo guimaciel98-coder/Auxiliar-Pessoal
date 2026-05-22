@@ -1,7 +1,16 @@
 import { PROJ, PRIO_MAP } from "../config/constants";
 
-export function brt(ts) { 
-  return new Date(Number(ts) - 3*3600*1000); 
+export function brt(ts) {
+  return new Date(Number(ts) - 3*3600*1000);
+}
+
+// Retorna o timestamp UTC do início do dia em BRT (meia-noite BRT = 3h UTC).
+// SEMPRE use esta função para calcular "hoje" — nunca use new Date().getDate()
+// diretamente, pois entre 0h-3h UTC o getUTCDate() já retorna o dia seguinte
+// enquanto o BRT ainda está no dia anterior.
+export function startOfBRT(offsetDays = 0) {
+  const d = new Date(Date.now() - 3 * 3600 * 1000);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + offsetDays, 3, 0, 0);
 }
 
 export function toHM(ts) { 
