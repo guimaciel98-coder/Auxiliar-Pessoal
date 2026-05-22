@@ -77,17 +77,26 @@ export async function GET(req) {
       return Response.json({ tasks: sorted, overdue: [] }, NO_CACHE);
     }
 
-    // ── Modo ALL: usa filtro nativo do Todoist (igual ao today/tomorrow) ────────
-    // Busca por project_id retorna tarefas concluídas em alguns cenários da API.
-    // O motor de filtros do Todoist garante apenas tasks ativas.
+    // ── Modo ALL: mesmos filtros do Todoist usados em today/tomorrow ────────────
+    // "today | overdue" é o filtro que o Hoje usa e que reflete o estado real.
+    // "next 365 days" busca tarefas futuras. "no date" busca sem vencimento.
+    // Três fetches separados para que "today | overdue" seja idêntico ao Hoje.
     if (mode === "all") {
-      const [rawAll, secMapAll] = await Promise.all([
-        fetchTasksByFilter("overdue | today | next 365 days | no date"),
+      const [secMapAll, rawTodayOvd, rawFuture, rawNoDate] = await Promise.all([
         getSectionMap(),
+        fetchTasksByFilter("today | overdue"),
+        fetchTasksByFilter("next 365 days"),
+        fetchTasksByFilter("no date"),
       ]);
-      const openAll = rawAll.filter(t =>
-        !t.checked && !t.is_completed && !t.is_deleted && KNOWN_PROJECT_IDS.has(t.project_id)
-      );
+      const seen = new Set();
+      const openAll = [...rawTodayOvd, ...rawFuture, ...rawNoDate]
+        .filter(t => {
+          if (!KNOWN_PROJECT_IDS.has(t.project_id)) return false;
+          if (t.is_completed || t.checked || t.is_deleted) return false;
+          if (seen.has(t.id)) return false;
+          seen.add(t.id);
+          return true;
+        });
       const sorted = openAll
         .map(t => toShape(t, secMapAll))
         .sort((a, b) => Number(a.due_date) - Number(b.due_date));
