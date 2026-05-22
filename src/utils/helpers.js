@@ -84,11 +84,19 @@ export function getNextDueDate(ts, recurrence) {
 }
 
 export function sortTasks(arr) {
-  const o = { priority:0, timed:1, rest:2 };
-  return [...arr].sort((a,b) => {
-    if (o[a.group] !== o[b.group]) return o[a.group] - o[b.group];
-    if (a.group === "priority" && a.urgent !== b.urgent) return a.urgent ? -1 : 1;
-    if (a.group === "timed") return a.ts - b.ts;
+  // Ordem explícita P1→P2→P3→P4. Suporta tanto o campo `prio` (de classify)
+  // quanto `_priority` (de toShape), garantindo consistência em todas as visões.
+  const P = { p1: 0, p2: 1, p3: 2, p4: 3 };
+  return [...arr].sort((a, b) => {
+    const pa = P[a.prio ?? a._priority] ?? 3;
+    const pb = P[b.prio ?? b._priority] ?? 3;
+    if (pa !== pb) return pa - pb;
+    // Mesmo nível de prioridade: tasks com horário definido primeiro
+    if (a.timed !== b.timed) return a.timed ? -1 : 1;
+    // Depois por timestamp (due_date ou ts)
+    const tsA = Number(a.ts || a.due_date || 0);
+    const tsB = Number(b.ts || b.due_date || 0);
+    if (tsA && tsB) return tsA - tsB;
     return 0;
   });
 }
