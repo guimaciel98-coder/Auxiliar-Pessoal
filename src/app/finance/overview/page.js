@@ -671,20 +671,17 @@ export default function OverviewPage() {
                 return d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
               })() : null;
 
-              // SVG meio círculo — sweep-flag=1 (horário) desenha pelo topo do arco
-              const cx = 110, cy = 88, R = 70, sw = 12;
-              // Background: único arco de 180° pelo topo (large-arc=0, sweep=1)
+              const cx = 100, cy = 72, R = 56, sw = 10;
               const bgArc = `M ${cx-R} ${cy} A ${R} ${R} 0 0 1 ${cx+R} ${cy}`;
-              // Fill: arco do ponto esquerdo até a posição proporcional, sempre pelo topo
               const angle = Math.PI * (1 - Math.min(pct, 0.9999));
               const ex = (cx + R * Math.cos(angle)).toFixed(1);
               const ey = (cy - R * Math.sin(angle)).toFixed(1);
 
               return (
-                <div className={styles.savingsHero} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", marginBottom: 0 }}>
+                <div className={styles.savingsHero} style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 0 }}>
 
                   {/* Cabeçalho */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
                       Meta de Poupança
                     </span>
@@ -693,29 +690,22 @@ export default function OverviewPage() {
                     </span>
                   </div>
 
-                  {/* Gauge meio círculo */}
-                  <svg width="100%" viewBox="0 0 220 104" style={{ display: "block" }}>
-                    {/* Trilha (dois 90° para evitar ambiguidade de 180°) */}
-                    <path d={bgArc}
-                      fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={sw} strokeLinecap="round" />
-                    {/* Preenchimento (large-arc sempre 0) */}
+                  {/* Gauge */}
+                  <svg width="100%" viewBox={`0 0 200 ${cy + 14}`} style={{ display: "block" }}>
+                    <path d={bgArc} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={sw} strokeLinecap="round" />
                     {pct > 0 && (
                       <path d={`M ${cx-R} ${cy} A ${R} ${R} 0 0 1 ${ex} ${ey}`}
                         fill="none" stroke={cor} strokeWidth={sw} strokeLinecap="round" />
                     )}
-                    {/* % */}
-                    <text x={cx} y={cy-34} textAnchor="middle" fill={cor} fontSize="12" fontWeight="800">{pctLabel}%</text>
-                    {/* Valor acumulado */}
-                    <text x={cx} y={cy-16} textAnchor="middle" fill="#f9fafb" fontSize="16" fontWeight="900">{fmtShort(poupancaAcumulada)}</text>
-                    {/* Sublabel */}
-                    <text x={cx} y={cy-4} textAnchor="middle" fill="#6b7280" fontSize="9">acumulado</text>
-                    {/* Marcadores 0 e meta */}
-                    <text x={cx-R+2} y={cy+12} textAnchor="middle" fill="#4b5563" fontSize="9">R$0</text>
-                    <text x={cx+R-2} y={cy+12} textAnchor="middle" fill="#4b5563" fontSize="9">50k</text>
+                    <text x={cx} y={cy-28} textAnchor="middle" fill={cor} fontSize="11" fontWeight="800">{pctLabel}%</text>
+                    <text x={cx} y={cy-13} textAnchor="middle" fill="#f9fafb" fontSize="15" fontWeight="900">{fmtShort(poupancaAcumulada)}</text>
+                    <text x={cx} y={cy-2}  textAnchor="middle" fill="#6b7280" fontSize="8">acumulado</text>
+                    <text x={cx-R+4}  y={cy+12} textAnchor="middle" fill="#4b5563" fontSize="8">R$0</text>
+                    <text x={cx+R-4}  y={cy+12} textAnchor="middle" fill="#4b5563" fontSize="8">50k</text>
                   </svg>
 
                   {/* Faltam + previsão */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                     <div>
                       <div style={{ fontSize: 9, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Faltam</div>
                       <div style={{ fontSize: 14, fontWeight: 800, color: faltam > 0 ? "var(--text-secondary)" : "#10b981" }}>
