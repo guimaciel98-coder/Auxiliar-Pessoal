@@ -77,7 +77,24 @@ export async function GET(req) {
       return Response.json({ tasks: sorted, overdue: [] }, NO_CACHE);
     }
 
-    // ── Demais modos: busca por projeto + cache de seções ──────────────────────
+    // ── Modo ALL: usa filtro nativo do Todoist (igual ao today/tomorrow) ────────
+    // Busca por project_id retorna tarefas concluídas em alguns cenários da API.
+    // O motor de filtros do Todoist garante apenas tasks ativas.
+    if (mode === "all") {
+      const [rawAll, secMapAll] = await Promise.all([
+        fetchTasksByFilter("overdue | today | next 365 days | no date"),
+        getSectionMap(),
+      ]);
+      const openAll = rawAll.filter(t =>
+        !t.checked && !t.is_completed && !t.is_deleted && KNOWN_PROJECT_IDS.has(t.project_id)
+      );
+      const sorted = openAll
+        .map(t => toShape(t, secMapAll))
+        .sort((a, b) => Number(a.due_date) - Number(b.due_date));
+      return Response.json({ tasks: sorted }, NO_CACHE);
+    }
+
+    // ── Demais modos (recurrences, week, default): busca por projeto ──────────
     const [raw, sectionMap] = await Promise.all([
       fetchAllProjectTasks(),
       getSectionMap(),
@@ -91,11 +108,6 @@ export async function GET(req) {
         .map(t => toShape(t, sectionMap))
         .sort((a, b) => Number(a.due_date) - Number(b.due_date));
       return Response.json({ tasks: rec }, NO_CACHE);
-    }
-
-    if (mode === "all") {
-      const sorted = open.map(t => toShape(t, sectionMap)).sort((a, b) => Number(a.due_date) - Number(b.due_date));
-      return Response.json({ tasks: sorted }, NO_CACHE);
     }
 
     if (mode === "week") {
