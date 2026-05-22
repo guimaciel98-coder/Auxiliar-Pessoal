@@ -124,10 +124,10 @@ export async function PUT(req) {
   try {
     const sheets = await getSheetsClient();
     const updates = [];
-    if (atividade !== undefined) updates.push({ range: `'${SHEET}'!D${sheetRow}`, values: [[atividade]] });
-    if (categoria !== undefined) updates.push({ range: `'${SHEET}'!E${sheetRow}`, values: [[categoria]] });
-    if (inicio    !== undefined) updates.push({ range: `'${SHEET}'!B${sheetRow}`, values: [[inicio]] });
-    if (fim       !== undefined) updates.push({ range: `'${SHEET}'!C${sheetRow}`, values: [[fim]] });
+    if (atividade !== undefined && atividade !== "") updates.push({ range: `'${SHEET}'!D${sheetRow}`, values: [[atividade]] });
+    if (categoria !== undefined && categoria !== "") updates.push({ range: `'${SHEET}'!E${sheetRow}`, values: [[categoria]] });
+    if (inicio    !== undefined && inicio    !== "") updates.push({ range: `'${SHEET}'!B${sheetRow}`, values: [[inicio]] });
+    if (fim       !== undefined && fim       !== "") updates.push({ range: `'${SHEET}'!C${sheetRow}`, values: [[fim]] });
 
     if (updates.length > 0) {
       await sheets.spreadsheets.values.batchUpdate({
