@@ -7,7 +7,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { startOfBRT } from "@/utils/helpers";
+import { startOfBRT, sortTasks } from "@/utils/helpers";
 import Navigation from "@/components/ui/Navigation";
 import ModuleHeader from "@/components/ui/ModuleHeader";
 import Toast from "@/components/ui/Toast";
@@ -514,7 +514,7 @@ export default function ProjectsPage() {
             {!isDay && (
               <>
                 {activeProject !== "pessoal" && columnsToShow.map(client => {
-                  const ct = getTasksForClient(client.cf_value);
+                  const ct = sortTasks(getTasksForClient(client.cf_value));
                   const pct = filteredTasks.length > 0 ? Math.round((ct.length / Math.max(filteredTasks.length / columnsToShow.length, 1)) * 100) : 0;
                   return (
                     <SortableContext key={client.id} id={client.cf_value} items={ct.map(t => t.id)} strategy={verticalListSortingStrategy}>
@@ -555,7 +555,7 @@ export default function ProjectsPage() {
                         <span className={styles.colCount}>{unassignedTasks.length}</span>
                       </div>
                       <div className={styles.taskSlot}>
-                        {unassignedTasks.map(t => <SortableTaskCard key={t.id} t={t} columnId="unassigned" onComplete={handleComplete} onReschedule={handleReschedule} onEdit={setEditTask} showSection={false} />)}
+                        {sortTasks(unassignedTasks).map(t => <SortableTaskCard key={t.id} t={t} columnId="unassigned" onComplete={handleComplete} onReschedule={handleReschedule} onEdit={setEditTask} showSection={false} />)}
                       </div>
                       <button className={styles.addTaskBtn} onClick={() => { setSelectedClient(null); setIsModalOpen(true); }}>
                         + Adicionar tarefa
@@ -590,7 +590,7 @@ export default function ProjectsPage() {
                     </div>
                   )}
                   <div className={styles.taskSlot}>
-                    {group.tasks.map(t => <SortableTaskCard key={t.id} t={t} columnId={group.id} onComplete={handleComplete} onReschedule={handleReschedule} onEdit={setEditTask} showSection={activeProject !== "pessoal"} />)}
+                    {sortTasks(group.tasks).map(t => <SortableTaskCard key={t.id} t={t} columnId={group.id} onComplete={handleComplete} onReschedule={handleReschedule} onEdit={setEditTask} showSection={activeProject !== "pessoal"} />)}
                     {group.tasks.length === 0 && <div className={styles.emptySlot}>Livre 🎉</div>}
                     {group.canExpand && group.tasks.length > 0 && (
                       <button className={styles.expandBtn} onClick={() => setMaxDays(p => p + 7)}>Ver mais 7 dias</button>
