@@ -83,7 +83,7 @@ export async function GET(req) {
       getSectionMap(),
     ]);
 
-    const open = raw.filter(t => !t.is_completed && !t.checked && !t.is_deleted);
+    const open = raw.filter(t => !t.is_completed && !t.checked && !t.completed_at && !t.is_deleted);
 
     if (mode === "recurrences") {
       const rec = open
