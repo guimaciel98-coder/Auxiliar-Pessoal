@@ -448,7 +448,7 @@ export default function OverviewPage() {
           </div>
 
           {/* ════ Coluna direita ════ */}
-          <div className={styles.sideCol} style={{ display: "flex", flexDirection: "column", gap: 16, maxHeight: "none", overflowY: "visible" }}>
+          <div className={styles.sideCol} style={{ position: "static", maxHeight: "none", overflowY: "visible" }}>
 
             {/* ── Saldo Variável + Donut de gastos ── */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 0 }}>
