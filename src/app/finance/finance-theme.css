@@ -199,7 +199,7 @@
 
 .fin-stat-value {
   font-family: var(--font-mono, monospace);
-  font-size: 19px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.15;
@@ -208,9 +208,9 @@
 }
 
 .fin-stat-label {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.42);
 }

@@ -349,12 +349,12 @@ export default function OverviewPage() {
                         <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>
                           Poupança Real
                         </div>
-                        <div style={{ fontSize: 24, fontWeight: 900, color: cor, lineHeight: 1 }}>
+                        <div style={{ fontSize: 22, fontWeight: 900, color: cor, lineHeight: 1 }}>
                           {fmt(poupancaReal)}
                         </div>
                       </div>
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "right", lineHeight: 1.6 }}>
+                    <div style={{ fontSize: 10, color: "var(--text-muted)", textAlign: "right", lineHeight: 1.6 }}>
                       <div>ganhos − gastos</div>
                       <div>mês atual</div>
                     </div>
@@ -462,15 +462,15 @@ export default function OverviewPage() {
               }}>
                 {/* ── Metade superior: Saldo Variável ── */}
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "center" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: "center" }}>
                     Saldo Variável
                   </div>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 26, fontWeight: 900, color: varColor, lineHeight: 1, marginBottom: 8 }}>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: varColor, lineHeight: 1, marginBottom: 8 }}>
                       {fmt(varSaldo)}
                     </div>
                     {!hideNumbers && (
-                      <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                      <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
                         {varSaldo < 0 ? "acima do previsto" : "disponível para gastar"}
                       </div>
                     )}
@@ -543,12 +543,12 @@ export default function OverviewPage() {
 
                   return (
                     <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "center", marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: "center", marginBottom: 10 }}>
                         {melhorDia ? `Ciclo até dia ${melhorDia - 1}` : "Dias Restantes"}
                       </div>
                       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 5, marginBottom: 10 }}>
                         <span style={{ fontSize: 22, fontWeight: 900, color: dayColor, lineHeight: 1 }}>{daysLeft}</span>
-                        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>de {totalDays} dias</span>
+                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>de {totalDays} dias</span>
                       </div>
                       <div style={{ height: 7, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${pctElapsed}%`, background: barColor, borderRadius: 99, transition: "width 0.8s ease" }} />
@@ -564,7 +564,7 @@ export default function OverviewPage() {
                 border: "1px solid rgba(255,255,255,0.07)",
                 borderRadius: 16, padding: "16px 14px",
               }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
                   Gastos por Grupo
                 </div>
                 {donutData.length > 0 ? (
@@ -621,7 +621,7 @@ export default function OverviewPage() {
 
             {/* ── Projeção de Poupança ── */}
             <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "14px 10px 10px" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10, paddingLeft: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10, paddingLeft: 4 }}>
                 Projeção de Poupança
               </div>
               {chartData.length === 0 ? (
@@ -707,15 +707,15 @@ export default function OverviewPage() {
                   {/* Faltam + previsão */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                     <div>
-                      <div style={{ fontSize: 9, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Faltam</div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: faltam > 0 ? "var(--text-secondary)" : "#10b981" }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Faltam</div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: faltam > 0 ? "var(--text-secondary)" : "#10b981" }}>
                         {faltam > 0 ? fmtShort(faltam) : "Meta! 🎉"}
                       </div>
                     </div>
                     {previsaoLabel && (
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 9, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Previsão</div>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: "#6b7280" }}>{previsaoLabel}</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Previsão</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: "#6b7280" }}>{previsaoLabel}</div>
                       </div>
                     )}
                   </div>
