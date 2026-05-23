@@ -441,7 +441,7 @@ function TabSemana({ onSelectDay }) {
         const catMins = {};
         for (const b of blocks) catMins[b.category] = (catMins[b.category] || 0) + b.duration;
         const totalMins = Object.values(catMins).reduce((s, v) => s + v, 0);
-        const catOrder  = ["trabalho","refeição","treino","pessoal","livre"];
+        const catOrder  = ["trabalho","treino","refeição","pessoal","livre"];
         const catSegs   = catOrder.filter(c => catMins[c]).map(c => ({
           cat: c, pct: (catMins[c] / totalMins) * 100,
         }));
