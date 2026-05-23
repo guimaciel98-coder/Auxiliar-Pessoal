@@ -401,17 +401,27 @@ export async function fetchDayRoutine(weekday) {
  */
 export async function fetchWeekRoutine() {
   const appRotina = await readAppRotina();
-  if (appRotina) {
-    const week = {};
-    for (let d = 0; d <= 6; d++) {
-      week[d] = (appRotina[d] ?? []).sort((a, b) => a.minutes - b.minutes);
-    }
-    return week;
+
+  // Dias sem dados no App_Rotina precisam de fallback para a planilha original
+  const missingDays = Array.from({ length: 7 }, (_, d) => d)
+    .filter(d => !appRotina?.[d]?.length);
+
+  // Só lê a planilha antiga se houver dias faltando
+  let rowData = null;
+  if (missingDays.length > 0) {
+    rowData = await readRoutineSheet().catch(() => null);
   }
-  const rowData = await readRoutineSheet();
-  const week    = {};
-  for (const [jsDay, colIdx] of Object.entries(WEEKDAY_TO_COL)) {
-    week[jsDay] = parseMainTable(rowData, colIdx);
+
+  const week = {};
+  for (let d = 0; d <= 6; d++) {
+    if (appRotina?.[d]?.length > 0) {
+      week[d] = [...appRotina[d]].sort((a, b) => a.minutes - b.minutes);
+    } else if (rowData) {
+      const dayCol = WEEKDAY_TO_COL[d] ?? 2;
+      week[d] = parseMainTable(rowData, dayCol);
+    } else {
+      week[d] = [];
+    }
   }
   return week;
 }
