@@ -134,17 +134,25 @@
 .weekDayCard           { padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: all 0.18s; border-left: 3px solid transparent; }
 .weekDayCard:hover     { background: rgba(255,255,255,0.06); transform: translateX(2px); }
 .weekDayCardToday      { background: rgba(6,182,212,0.04); border-color: rgba(6,182,212,0.12); border-left-color: #06b6d4; }
-.weekDayTop            { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.weekDayLeft           { display: flex; align-items: center; gap: 10px; }
-.weekDayDate           { font-size: 22px; font-weight: 900; color: rgba(255,255,255,0.3); line-height: 1; letter-spacing: -0.02em; }
+.weekDayTop            { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.weekDayLeft           { display: flex; align-items: flex-start; gap: 10px; }
+.weekDayDate           { font-size: 22px; font-weight: 900; color: rgba(255,255,255,0.3); line-height: 1; letter-spacing: -0.02em; flex-shrink: 0; }
 .weekDayDateToday      { color: #06b6d4; }
-.weekDayInfo           { }
 .weekDayName           { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.7); }
 .weekDayNameToday      { color: #06b6d4; }
 .weekDayBadge          { font-size: 9px; font-weight: 800; padding: 2px 7px; border-radius: 99px; background: rgba(6,182,212,0.12); color: #06b6d4; border: 1px solid rgba(6,182,212,0.2); letter-spacing: 0.06em; }
-.weekDayBlocks         { font-size: 11px; color: rgba(255,255,255,0.2); }
-.weekCatBar            { height: 4px; border-radius: 99px; overflow: hidden; display: flex; margin-bottom: 8px; gap: 2px; background: rgba(255,255,255,0.04); }
+.weekDayBlocks         { font-size: 11px; color: rgba(255,255,255,0.2); flex-shrink: 0; padding-top: 2px; }
+.weekDonePct           { font-size: 12px; font-weight: 700; flex-shrink: 0; padding-top: 2px; }
+.weekNowRow            { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; margin-top: 3px; }
+.weekNowDot            { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; animation: pulse 1.8s infinite; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.7); }
+}
+.weekCatBar            { height: 5px; border-radius: 99px; overflow: hidden; display: flex; margin-bottom: 8px; gap: 2px; background: rgba(255,255,255,0.04); }
 .weekCatSegment        { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+.weekCatSummary        { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.weekCatChip           { font-size: 11px; padding: 3px 9px; border-radius: 99px; border: 1px solid; white-space: nowrap; }
 .weekActivities        { display: flex; flex-wrap: wrap; gap: 5px; }
 .weekActivityPill      { display: flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(255,255,255,0.48); background: rgba(255,255,255,0.06); padding: 3px 9px; border-radius: 99px; }
 .weekActivityDot       { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }

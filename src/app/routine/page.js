@@ -386,11 +386,24 @@ function TabDia({ selectedDay, onDayChange }) {
 }
 
 // ─── Aba: Semana ──────────────────────────────────────────────────────────────
+const SKIP_PILLS = new Set(["Dormir"]);
+
+function minsToLabel(m) {
+  const h = Math.floor(m / 60), min = m % 60;
+  return h > 0 ? (min > 0 ? `${h}h${String(min).padStart(2,"0")}` : `${h}h`) : `${min}m`;
+}
+
 function TabSemana({ onSelectDay }) {
   const todayIdx = todayIndexBRT();
   const [week, setWeek]       = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
+  const [mins, setMins]       = useState(nowBRT);
+
+  useEffect(() => {
+    const id = setInterval(() => setMins(nowBRT()), 60000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -416,22 +429,48 @@ function TabSemana({ onSelectDay }) {
       <p style={{ fontSize: 12, opacity: 0.7 }}>{error}</p>
     </div>
   );
-  if (!week)   return null;
+  if (!week) return null;
 
   return (
     <div className={styles.weekGrid}>
-      {DAYS_SHORT.map((short, idx) => {
+      {DAYS_SHORT.map((_, idx) => {
         const isT     = idx === todayIdx;
         const blocks  = week[idx] ?? [];
-        const key3    = keyBlocks(blocks, 3);
         const dateNum = getDateOfWeekday(idx);
 
-        // Composição de categorias para a barra colorida
+        // Pills: exclui Dormir e prioriza treino/trabalho
+        const pillBlocks = keyBlocks(blocks.filter(b => !SKIP_PILLS.has(b.activity)), 4);
+
+        // Composição de categorias
         const catMins = {};
         for (const b of blocks) catMins[b.category] = (catMins[b.category] || 0) + b.duration;
         const totalMins = Object.values(catMins).reduce((s, v) => s + v, 0);
-        const catOrder  = ["trabalho","treino","pessoal","livre"];
-        const catSegs   = catOrder.filter(c => catMins[c]).map(c => ({ cat: c, pct: (catMins[c] / totalMins) * 100 }));
+        const catOrder  = ["trabalho","refeição","treino","pessoal","livre"];
+        const catSegs   = catOrder.filter(c => catMins[c]).map(c => ({
+          cat: c, pct: (catMins[c] / totalMins) * 100,
+        }));
+
+        // Resumo textual: só categorias com ≥30min, exceto livre e pessoal
+        const catSummary = catOrder
+          .filter(c => catMins[c] >= 30 && c !== "livre" && c !== "pessoal")
+          .map(c => ({ cat: c, label: CAT[c]?.label ?? c, time: minsToLabel(catMins[c]) }))
+          .slice(0, 3);
+
+        // Bloco atual e % feito (apenas hoje)
+        let nowBlock = null;
+        let donePct  = 0;
+        if (isT && blocks.length > 0) {
+          nowBlock = blocks.find(b => {
+            const end = b.minutes + b.duration;
+            return end <= 1440
+              ? b.minutes <= mins && mins < end
+              : b.minutes <= mins || mins < end - 1440;
+          });
+          donePct = Math.round(
+            (blocks.filter(b => b.minutes + b.duration <= mins).length / blocks.length) * 100
+          );
+        }
+        const nowCat = nowBlock ? (CAT[nowBlock.category] ?? CAT.livre) : null;
 
         return (
           <div
@@ -439,20 +478,34 @@ function TabSemana({ onSelectDay }) {
             className={`${styles.weekDayCard} ${isT ? styles.weekDayCardToday : ""}`}
             onClick={() => onSelectDay(idx)}
           >
+            {/* ── Cabeçalho ── */}
             <div className={styles.weekDayTop}>
               <div className={styles.weekDayLeft}>
                 <span className={`${styles.weekDayDate} ${isT ? styles.weekDayDateToday : ""}`}>{dateNum}</span>
-                <div className={styles.weekDayInfo}>
+                <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span className={`${styles.weekDayName} ${isT ? styles.weekDayNameToday : ""}`}>{DAYS_FULL[idx]}</span>
                     {isT && <span className={styles.weekDayBadge}>HOJE</span>}
                   </div>
+                  {isT && nowBlock && (
+                    <div className={styles.weekNowRow} style={{ color: nowCat.color }}>
+                      <span className={styles.weekNowDot} style={{ background: nowCat.color }} />
+                      {nowBlock.activity}
+                    </div>
+                  )}
                 </div>
               </div>
-              <span className={styles.weekDayBlocks}>{blocks.length} blocos</span>
+              {isT && blocks.length > 0 ? (
+                <span className={styles.weekDonePct}
+                  style={{ color: donePct >= 80 ? "#10b981" : donePct >= 40 ? "#f59e0b" : "rgba(255,255,255,0.28)" }}>
+                  {donePct}% feito
+                </span>
+              ) : (
+                <span className={styles.weekDayBlocks}>{blocks.length} blocos</span>
+              )}
             </div>
 
-            {/* Barra de composição de categorias */}
+            {/* ── Barra de categorias ── */}
             {catSegs.length > 0 && (
               <div className={styles.weekCatBar}>
                 {catSegs.map(({ cat, pct }) => (
@@ -462,9 +515,23 @@ function TabSemana({ onSelectDay }) {
               </div>
             )}
 
-            {key3.length > 0 ? (
+            {/* ── Resumo de tempo por categoria ── */}
+            {catSummary.length > 0 && (
+              <div className={styles.weekCatSummary}>
+                {catSummary.map(({ cat, label, time }) => (
+                  <span key={cat} className={styles.weekCatChip}
+                    style={{ color: CAT[cat]?.color, background: (CAT[cat]?.color ?? "#484f58") + "18",
+                             borderColor: (CAT[cat]?.color ?? "#484f58") + "30" }}>
+                    {label} <strong>{time}</strong>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* ── Pills de atividades ── */}
+            {pillBlocks.length > 0 ? (
               <div className={styles.weekActivities}>
-                {key3.map((b, i) => {
+                {pillBlocks.map((b, i) => {
                   const cat = CAT[b.category] ?? CAT.livre;
                   return (
                     <span key={i} className={styles.weekActivityPill}>
