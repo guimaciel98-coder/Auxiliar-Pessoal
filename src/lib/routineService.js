@@ -277,6 +277,31 @@ function consolidateBlocks(blocks) {
   return result;
 }
 
+/**
+ * sortBlocksNatural(blocks)
+ * Ordena blocos pela "ordem natural do dia": encontra o maior intervalo entre
+ * blocos consecutivos (tratando a virada de meia-noite) e usa esse ponto como
+ * início do dia. Assim, blocos noturnos (ex: Dormir 01h-08h) ficam no final.
+ */
+function sortBlocksNatural(blocks) {
+  if (blocks.length <= 1) return [...blocks];
+
+  const sorted = [...blocks].sort((a, b) => a.minutes - b.minutes);
+
+  // Maior gap entre starts consecutivos (incluindo virada de meia-noite)
+  let maxGap  = -1;
+  let startIdx = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    const cur  = sorted[i].minutes;
+    const next = sorted[(i + 1) % sorted.length].minutes
+               + (i + 1 === sorted.length ? 1440 : 0);
+    const gap  = next - cur;
+    if (gap > maxGap) { maxGap = gap; startIdx = (i + 1) % sorted.length; }
+  }
+
+  return [...sorted.slice(startIdx), ...sorted.slice(0, startIdx)];
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Funções exportadas
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -382,7 +407,7 @@ export async function fetchDayRoutine(weekday) {
     return parseMainTable(await readRoutineSheet(), dayCol);
   })();
 
-  const sorted = [...blocks].sort((a, b) => a.minutes - b.minutes);
+  const sorted = sortBlocksNatural(blocks);
   const { current, next, progressPct } = getCurrentTimeBlock(sorted);
 
   return {
@@ -415,10 +440,10 @@ export async function fetchWeekRoutine() {
   const week = {};
   for (let d = 0; d <= 6; d++) {
     if (appRotina?.[d]?.length > 0) {
-      week[d] = [...appRotina[d]].sort((a, b) => a.minutes - b.minutes);
+      week[d] = sortBlocksNatural(appRotina[d]);
     } else if (rowData) {
       const dayCol = WEEKDAY_TO_COL[d] ?? 2;
-      week[d] = parseMainTable(rowData, dayCol);
+      week[d] = sortBlocksNatural(parseMainTable(rowData, dayCol));
     } else {
       week[d] = [];
     }
