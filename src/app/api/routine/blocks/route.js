@@ -126,12 +126,13 @@ export async function POST(req) {
 
 // PUT — atualiza bloco existente
 export async function PUT(req) {
-  const { sheetRow, atividade, categoria, inicio, fim } = await req.json();
+  const { sheetRow, atividade, categoria, inicio, fim, dia } = await req.json();
   if (!sheetRow) return Response.json({ ok: false, error: "sheetRow obrigatório" }, { status: 400 });
 
   try {
     const sheets = await getSheetsClient();
     const updates = [];
+    if (dia       !== undefined && dia       !== "")  updates.push({ range: `'${SHEET}'!A${sheetRow}`, values: [[Number(dia)]] });
     if (atividade !== undefined && atividade !== "") updates.push({ range: `'${SHEET}'!D${sheetRow}`, values: [[atividade]] });
     if (categoria !== undefined && categoria !== "") updates.push({ range: `'${SHEET}'!E${sheetRow}`, values: [[categoria]] });
     if (inicio    !== undefined && inicio    !== "") updates.push({ range: `'${SHEET}'!B${sheetRow}`, values: [[inicio]] });

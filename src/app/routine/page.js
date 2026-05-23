@@ -101,7 +101,7 @@ function TabDia({ selectedDay, onDayChange }) {
     : 0;
 
   function openNewBlock() {
-    setEditing({ sheetRow: null, atividade: "", categoria: "pessoal", inicio: "", fim: "" });
+    setEditing({ sheetRow: null, dia: selectedDay, atividade: "", categoria: "pessoal", inicio: "", fim: "" });
   }
 
   async function handleSaveEdit() {
@@ -118,7 +118,7 @@ function TabDia({ selectedDay, onDayChange }) {
         res = await fetch("/api/routine/blocks", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            dia:       selectedDay,
+            dia:       editing.dia ?? selectedDay,
             inicio:    editing.inicio,
             fim:       editing.fim,
             atividade: editing.atividade,
@@ -183,6 +183,21 @@ function TabDia({ selectedDay, onDayChange }) {
                         border: `1px solid ${editing.categoria === c ? (CAT[c]?.color ?? "#484f58") + "55" : "rgba(255,255,255,0.08)"}`,
                       }}>
                       {CAT[c]?.label ?? c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>DIA DA SEMANA</div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {DAYS_SHORT.map((short, idx) => (
+                    <button key={idx} onClick={() => setEditing(p => ({ ...p, dia: idx }))}
+                      style={{ flex: 1, padding: "6px 2px", borderRadius: 8, fontSize: 10, fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
+                        background: editing.dia === idx ? "rgba(129,140,248,0.2)" : "rgba(255,255,255,0.04)",
+                        color: editing.dia === idx ? "#818cf8" : "rgba(255,255,255,0.35)",
+                        border: `1px solid ${editing.dia === idx ? "rgba(129,140,248,0.4)" : "rgba(255,255,255,0.08)"}`,
+                      }}>
+                      {short}
                     </button>
                   ))}
                 </div>
@@ -357,7 +372,7 @@ function TabDia({ selectedDay, onDayChange }) {
                             const endMin = block.minutes + block.duration;
                             const endHH  = String(Math.floor(endMin / 60) % 24).padStart(2, "0");
                             const endMM  = String(endMin % 60).padStart(2, "0");
-                            setEditing({ sheetRow: block.sheetRow, atividade: block.activity, categoria: block.category, inicio: block.time, fim: `${endHH}:${endMM}` });
+                            setEditing({ sheetRow: block.sheetRow, dia: selectedDay, atividade: block.activity, categoria: block.category, inicio: block.time, fim: `${endHH}:${endMM}` });
                           }}
                         >✎</span>
                       )}
