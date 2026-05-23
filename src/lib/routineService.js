@@ -47,10 +47,11 @@ const WEEKDAY_NAMES = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","S
 
 // ─── Categorias ────────────────────────────────────────────────────────────────
 const CATEGORIES = {
-  treino:   { label: "Treino",   color: "#9c27b0" },
-  trabalho: { label: "Trabalho", color: "#2196f3" },
-  pessoal:  { label: "Pessoal",  color: "#00e5a0" },
-  livre:    { label: "Livre",    color: "#484f58" },
+  treino:    { label: "Treino",   color: "#9c27b0" },
+  trabalho:  { label: "Trabalho", color: "#2196f3" },
+  pessoal:   { label: "Pessoal",  color: "#00e5a0" },
+  livre:     { label: "Livre",    color: "#484f58" },
+  "refeição":{ label: "Refeição", color: "#f59e0b" },
 };
 
 // Palavras-chave para detecção por texto (fallback quando sem cor)
@@ -346,7 +347,7 @@ async function readAppRotina() {
       const ini  = hhmmToMins(r[1]);
       const fim  = hhmmToMins(r[2]);
       const act  = String(r[3] ?? "").trim();
-      const cat  = String(r[4] ?? "livre").trim();
+      const cat  = String(r[4] ?? "livre").trim().toLowerCase();
       if (isNaN(dia) || ini < 0 || !act) return;
       const dur = fim >= 0 ? (fim >= ini ? fim - ini : fim + 1440 - ini) : 60;
       if (!byDay[dia]) byDay[dia] = [];

@@ -9,10 +9,11 @@ const DAYS_SHORT = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 const DAYS_FULL  = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
 
 const CAT = {
-  treino:   { color: "#a855f7", label: "Treino"   },
-  trabalho: { color: "#3b82f6", label: "Trabalho" },
-  pessoal:  { color: "#10b981", label: "Pessoal"  },
-  livre:    { color: "#94a3b8", label: "Livre"    },
+  treino:      { color: "#a855f7", label: "Treino"   },
+  trabalho:    { color: "#3b82f6", label: "Trabalho" },
+  pessoal:     { color: "#10b981", label: "Pessoal"  },
+  livre:       { color: "#94a3b8", label: "Livre"    },
+  "refeição":  { color: "#f59e0b", label: "Refeição" },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -36,8 +37,8 @@ function getDateOfWeekday(jsDay) {
 
 // Retorna os N blocos mais representativos de um dia para o resumo da semana
 function keyBlocks(blocks, n = 3) {
-  // Prioriza trabalho, treino, pessoal sobre livre
-  const priority = ["treino", "trabalho", "pessoal", "livre"];
+  // Prioriza trabalho, treino, pessoal sobre livre e refeição
+  const priority = ["treino", "trabalho", "pessoal", "livre", "refeição"];
   const sorted = [...blocks]
     .filter(b => b.activity && b.activity !== "—")
     .sort((a, b) => priority.indexOf(a.category) - priority.indexOf(b.category));
@@ -54,7 +55,7 @@ function keyBlocks(blocks, n = 3) {
   return result;
 }
 
-const CAT_OPTIONS = ["pessoal","trabalho","treino","livre"];
+const CAT_OPTIONS = ["pessoal","trabalho","treino","livre","refeição"];
 
 // ─── Aba: Dia ─────────────────────────────────────────────────────────────────
 function TabDia({ selectedDay, onDayChange }) {
