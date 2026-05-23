@@ -130,3 +130,30 @@
   .mainCol { padding: 14px 14px 100px; }
   .sideCol { display: none; } /* métricas ficam inline no mobile via Metrics.js */
 }
+
+/* ── Daily mobile — ADITIVO ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Padding lateral mínimo 16px (era 14px) + safe-area lateral */
+  .mainCol {
+    padding: 14px max(16px, env(safe-area-inset-left, 16px)) 100px max(16px, env(safe-area-inset-right, 16px));
+  }
+}
+
+/* Links Hoje/Amanhã: classe para touch target 44px no mobile */
+.navDayLink {
+  /* Desktop: sem estilo próprio, mantém inline style do JSX */
+}
+@media (max-width: 768px) {
+  .navDayLink {
+    min-height: 44px;
+    display: inline-flex !important;
+    align-items: center;
+    font-size: 12px !important;
+    padding-top: 11px !important;
+    padding-bottom: 11px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .mainCol { padding: 12px 16px calc(100px + env(safe-area-inset-bottom, 0px)); }
+}

@@ -148,6 +148,7 @@ export default function DailyOrchestrator({ mode = "today" }) {
       <div style={{ display:"flex", gap:6, padding:"0 16px 8px", marginTop:-4 }}>
         <Link
           href="/daily"
+          className={styles.navDayLink}
           style={{
             fontSize:11, fontWeight:700, letterSpacing:"0.04em",
             padding:"4px 10px", borderRadius:6, textDecoration:"none",
@@ -160,6 +161,7 @@ export default function DailyOrchestrator({ mode = "today" }) {
         </Link>
         <Link
           href="/tomorrow"
+          className={styles.navDayLink}
           style={{
             fontSize:11, fontWeight:700, letterSpacing:"0.04em",
             padding:"4px 10px", borderRadius:6, textDecoration:"none",
