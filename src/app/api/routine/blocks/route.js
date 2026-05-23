@@ -79,25 +79,29 @@ export async function POST(req) {
 
   // Migração completa
   if (body.migrate) {
-    // fromOriginal: limpa App_Rotina antes de ler, forçando fallback para a planilha original
-    if (body.fromOriginal) {
-      await sheets.spreadsheets.values.clear({ spreadsheetId: ID, range: `'${SHEET}'!A2:E1000` });
-    }
-    const week = await fetchWeekRoutine();
+    let rows;
 
-    const rows = [];
-    for (const [jsDay, blocks] of Object.entries(week)) {
-      const day = parseInt(jsDay);
-      for (let i = 0; i < blocks.length; i++) {
-        const b    = blocks[i];
-        const next = blocks[i + 1];
-        const fim  = next ? minsToHHMM(next.minutes) : minsToHHMM((b.minutes + b.duration) % 1440);
-        rows.push([day, minsToHHMM(b.minutes), fim, b.activity, b.category]);
+    if (Array.isArray(body.rows)) {
+      // Dados explícitos fornecidos diretamente — limpa e reescreve sem ler planilha
+      rows = body.rows;
+    } else {
+      // fromOriginal: limpa App_Rotina antes de ler, forçando fallback para a planilha original
+      if (body.fromOriginal) {
+        await sheets.spreadsheets.values.clear({ spreadsheetId: ID, range: `'${SHEET}'!A2:E1000` });
       }
+      const week = await fetchWeekRoutine();
+      rows = [];
+      for (const [jsDay, blocks] of Object.entries(week)) {
+        const day = parseInt(jsDay);
+        for (let i = 0; i < blocks.length; i++) {
+          const b    = blocks[i];
+          const next = blocks[i + 1];
+          const fim  = next ? minsToHHMM(next.minutes) : minsToHHMM((b.minutes + b.duration) % 1440);
+          rows.push([day, minsToHHMM(b.minutes), fim, b.activity, b.category]);
+        }
+      }
+      rows.sort((a, b) => a[0] !== b[0] ? a[0] - b[0] : a[1].localeCompare(b[1]));
     }
-
-    // Ordena: dia, depois hora
-    rows.sort((a, b) => a[0] !== b[0] ? a[0] - b[0] : a[1].localeCompare(b[1]));
 
     await sheets.spreadsheets.values.clear({ spreadsheetId: ID, range: `'${SHEET}'!A2:E1000` });
     if (rows.length > 0) {
