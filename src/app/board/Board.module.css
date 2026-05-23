@@ -316,7 +316,7 @@
   padding-left: 88px;
 }
 
-/* ── Responsive ──────────────────────────────────────────────────────────── */
+/* ── Responsive (existente) ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .container { margin-left: 0; padding-bottom: 80px; }
   .column { width: 82vw; min-width: 260px; }
@@ -331,4 +331,64 @@
 @media (max-width: 480px) {
   .column { width: 88vw; }
   .columns { padding: 12px 20px 40px 12px; }
+}
+
+/* ── Mobile touch & UX — ADITIVO (não altera nada acima) ────────────────── */
+@media (max-width: 768px) {
+  /* Scroll snap: colunas encaixam como carrossel ao deslizar */
+  .boardWrap {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .column { scroll-snap-align: start; }
+
+  /* Tabs de projeto: 44px de altura mínima */
+  .tabBtn { padding: 10px 13px; }
+
+  /* Toggle Por Marca / Por Dia: 44px */
+  .toggleBtn { padding: 9px 14px; }
+
+  /* Sub-filtro VCA: 44px */
+  .subBtn { padding: 9px 13px; font-size: 12px; }
+
+  /* Botão "Reagendar todos" no header da coluna atrasada */
+  .rescheduleAllBtn { padding: 8px 12px; font-size: 10px; }
+
+  /* Círculo de concluir (16×16 visual, 44px hit area via ::after) */
+  .circle::after {
+    content: ''; position: absolute;
+    inset: -14px; /* expande área clicável para 44px sem mudar visual */
+  }
+
+  /* Botão → reagendar: sempre visível no mobile (não depende de hover) */
+  .rescheduleBtn {
+    opacity: 1;
+    position: relative;
+  }
+  /* Hit area 44px */
+  .rescheduleBtn::after {
+    content: ''; position: absolute;
+    inset: -11px;
+  }
+  /* Mantém visível quando painel aberto */
+  .cardOpen .rescheduleBtn { opacity: 1; }
+
+  /* Chips de reagendamento: mínimo 44px de altura */
+  .cardRescheduleChip {
+    padding: 10px 14px;
+    font-size: 12px;
+    min-height: 44px;
+    display: flex; align-items: center;
+  }
+
+  /* Botão "Adicionar tarefa": 44px */
+  .addTaskBtn { padding: 13px 10px; font-size: 13px; }
+
+  /* Padding lateral mínimo 16px + safe-area */
+  .header { padding-left: max(16px, env(safe-area-inset-left, 16px)); padding-right: max(16px, env(safe-area-inset-right, 16px)); }
+}
+
+@media (max-width: 390px) {
+  .column { width: 90vw; }
+  .columns { padding: 10px 16px 40px 10px; }
 }
