@@ -96,6 +96,16 @@ export default function ExpensesPage() {
   // Overrides otimistas para o ctrl e auto dos fixos (item → boolean)
   const [ctrlOvr, setCtrlOvr]   = useState({});
   const [autoOvr, setAutoOvr]   = useState({});
+
+  // Detecta mobile para margens responsivas dos gráficos
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const check = () => setIsMobile(mq.matches);
+    check();
+    mq.addEventListener("change", check);
+    return () => mq.removeEventListener("change", check);
+  }, []);
   const [toggling, setToggling] = useState(new Set());
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 2800); }
@@ -694,7 +704,7 @@ export default function ExpensesPage() {
                       ) : (
                         <>
                           <ResponsiveContainer width="100%" height={360}>
-                            <PieChart margin={{ top: 34, right: 68, bottom: 34, left: 68 }}>
+                            <PieChart margin={isMobile ? { top: 8, right: 8, bottom: 8, left: 8 } : { top: 34, right: 68, bottom: 34, left: 68 }}>
                               <Pie
                                 data={fixosDonutData} cx="50%" cy="50%"
                                 innerRadius={82} outerRadius={112}
