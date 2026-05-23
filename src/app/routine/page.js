@@ -11,8 +11,8 @@ const DAYS_FULL  = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Qui
 const CAT = {
   treino:      { color: "#a855f7", label: "Treino"   },
   trabalho:    { color: "#3b82f6", label: "Trabalho" },
-  pessoal:     { color: "#10b981", label: "Pessoal"  },
-  livre:       { color: "#94a3b8", label: "Livre"    },
+  pessoal:     { color: "#94a3b8", label: "Pessoal"  },
+  livre:       { color: "#10b981", label: "Livre"    },
   "refeição":  { color: "#f59e0b", label: "Refeição" },
 };
 
