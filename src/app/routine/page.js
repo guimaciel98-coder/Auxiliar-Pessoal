@@ -386,7 +386,6 @@ function TabDia({ selectedDay, onDayChange }) {
 }
 
 // ─── Aba: Semana ──────────────────────────────────────────────────────────────
-const SKIP_PILLS = new Set(["Dormir"]);
 
 function minsToLabel(m) {
   const h = Math.floor(m / 60), min = m % 60;
@@ -437,9 +436,6 @@ function TabSemana({ onSelectDay }) {
         const isT     = idx === todayIdx;
         const blocks  = week[idx] ?? [];
         const dateNum = getDateOfWeekday(idx);
-
-        // Pills: exclui Dormir e prioriza treino/trabalho
-        const pillBlocks = keyBlocks(blocks.filter(b => !SKIP_PILLS.has(b.activity)), 4);
 
         // Composição de categorias
         const catMins = {};
@@ -528,20 +524,7 @@ function TabSemana({ onSelectDay }) {
               </div>
             )}
 
-            {/* ── Pills de atividades ── */}
-            {pillBlocks.length > 0 ? (
-              <div className={styles.weekActivities}>
-                {pillBlocks.map((b, i) => {
-                  const cat = CAT[b.category] ?? CAT.livre;
-                  return (
-                    <span key={i} className={styles.weekActivityPill}>
-                      <span className={styles.weekActivityDot} style={{ background: cat.color }} />
-                      {b.activity}
-                    </span>
-                  );
-                })}
-              </div>
-            ) : (
+            {blocks.length === 0 && (
               <span className={styles.weekEmpty}>Sem atividades</span>
             )}
           </div>
