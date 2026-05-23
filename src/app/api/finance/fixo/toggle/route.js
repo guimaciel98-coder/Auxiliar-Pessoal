@@ -4,7 +4,8 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req) {
   try {
-    const { item, ctrl } = await req.json();
+    // field: "ctrl" (col E, padrão) | "auto" (col F)
+    const { item, ctrl, field = "ctrl" } = await req.json();
     if (!item || ctrl === undefined) {
       return Response.json({ ok: false, error: "item e ctrl são obrigatórios" }, { status: 400 });
     }
@@ -14,7 +15,7 @@ export async function POST(req) {
 
     const res  = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "'App_Gastos_Fixos'!A2:E500",
+      range: "'App_Gastos_Fixos'!A2:F500",
     });
 
     const rows   = res.data.values ?? [];
@@ -24,14 +25,15 @@ export async function POST(req) {
       return Response.json({ ok: false, error: `Item "${item}" não encontrado` }, { status: 404 });
     }
 
+    const col = field === "auto" ? "F" : "E";
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range:            `'App_Gastos_Fixos'!E${rowIdx + 2}`,
+      range:            `'App_Gastos_Fixos'!${col}${rowIdx + 2}`,
       valueInputOption: "RAW",
       requestBody:      { values: [[ctrl ? "TRUE" : "FALSE"]] },
     });
 
-    return Response.json({ ok: true, item, ctrl });
+    return Response.json({ ok: true, item, ctrl, field });
   } catch (e) {
     console.error("[toggle fixo]", e.message);
     return Response.json({ ok: false, error: e.message }, { status: 500 });

@@ -73,11 +73,19 @@ export async function GET() {
     const atingidos      = poupancaRows.filter(r => String(r[2]??"").toUpperCase() === "TRUE");
     const poupancaAcumulada = atingidos.length > 0 ? parseNum(atingidos[atingidos.length - 1][1]) : 0;
 
+    const melhorDiaAtual = (() => {
+      for (const r of configRows) {
+        if (String(r[0] ?? "").trim().toLowerCase() === "melhor_dia_compra") return parseInt(r[1] ?? "") || null;
+      }
+      return null;
+    })();
+
     return Response.json({
       ok: true,
-      mesAtual:   mesAtualLabel(),
-      proximoMes: proxMes,
+      mesAtual:      mesAtualLabel(),
+      proximoMes:    proxMes,
       cicloInicio,
+      melhorDiaAtual,
       poupancaAcumulada,
       preview: {
         fixos: {
@@ -103,7 +111,7 @@ export async function GET() {
 export async function POST(req) {
   let body = {};
   try { body = await req.json(); } catch {}
-  let { cycleStartDate, poupancaTotal, poupancaFatura } = body;
+  let { cycleStartDate, poupancaTotal, poupancaFatura, melhorDia } = body;
 
   try {
     const sheets        = await getSheetsClient();
@@ -111,7 +119,7 @@ export async function POST(req) {
 
     const PARCELAS = "App_Parcelas";
     const [fixosRows, ganhosRows, poupancaRows, variaveisRows, parcelasRows, configRows] = await Promise.all([
-      readSheet(sheets, spreadsheetId, `'${FIXOS}'!A2:E500`),
+      readSheet(sheets, spreadsheetId, `'${FIXOS}'!A2:F500`), // F = Auto
       readSheet(sheets, spreadsheetId, `'${GANHOS}'!A2:D500`),
       readSheet(sheets, spreadsheetId, `'${POUPANCA}'!A2:C100`),
       readSheet(sheets, spreadsheetId, `'${VARIAVEIS}'!A2:D100`),
@@ -141,17 +149,17 @@ export async function POST(req) {
     const updates = [];
     let   resultado = {};
 
-    // ── 1. Gastos Fixos: reset Controle → FALSE ───────────────────────────────
-    let fixosResetados = 0;
+    // ── 1. Gastos Fixos: auto → mantém TRUE; manuais → reset para FALSE ─────────
+    // Col F = Auto (pagamento automático → não precisa ser marcado manualmente)
+    let fixosResetados = 0, fixosAutoMantidos = 0;
     fixosRows.forEach((row, i) => {
-      if (!row[1]?.trim()) return; // pula linhas vazias
-      updates.push({
-        range:  `'${FIXOS}'!E${i + 2}`,
-        values: [["FALSE"]],
-      });
-      fixosResetados++;
+      if (!row[1]?.trim()) return;
+      const isAuto = String(row[5] ?? "FALSE").toUpperCase() === "TRUE";
+      updates.push({ range: `'${FIXOS}'!E${i + 2}`, values: [[isAuto ? "TRUE" : "FALSE"]] });
+      if (isAuto) fixosAutoMantidos++; else fixosResetados++;
     });
-    resultado.fixosResetados = fixosResetados;
+    resultado.fixosResetados    = fixosResetados;
+    resultado.fixosAutoMantidos = fixosAutoMantidos;
 
     // ── 2. Ganhos: reset Confirmado → FALSE ───────────────────────────────────
     let ganhosResetados = 0;
@@ -174,8 +182,8 @@ export async function POST(req) {
       const isAuto = String(row[8] ?? "FALSE").toUpperCase() === "TRUE";
       if (!nome || ativo === "FALSE") return;
 
-      // Reseta Pago (J) para todas as parcelas ativas
-      updates.push({ range: `'${PARCELAS}'!J${i + 2}`, values: [["FALSE"]] });
+      // Auto → J=TRUE (já pago automaticamente); manual → J=FALSE (aguarda ação)
+      updates.push({ range: `'${PARCELAS}'!J${i + 2}`, values: [[isAuto ? "TRUE" : "FALSE"]] });
 
       // Incrementa F apenas para parcelas automáticas
       if (isAuto) {
@@ -276,9 +284,8 @@ export async function POST(req) {
     }
     resultado.historicoSalvo = { ciclo: mesAtual, ganhos: totalGanhos, fixos: totalFixosReal, variaveis: totalVariaveisReal, poupanca: poupLiquida, saldo: saldoMes };
 
-    // ── Salva ciclo_inicio na App_Config (separado do batch principal) ───────────
-    if (cycleStartDate) {
-      // Cria a aba App_Config se não existir
+    // ── Salva ciclo_inicio e melhor_dia_compra no App_Config ─────────────────────
+    if (cycleStartDate || melhorDia) {
       try {
         await sheets.spreadsheets.values.get({ spreadsheetId, range: `'${CONFIG}'!A1` });
       } catch {
@@ -287,13 +294,26 @@ export async function POST(req) {
           requestBody: { requests: [{ addSheet: { properties: { title: CONFIG } } }] },
         });
       }
+      // Lê estado atual para não sobrescrever valor que não foi alterado
+      const cfgCurrent = await sheets.spreadsheets.values.get({ spreadsheetId, range: `'${CONFIG}'!A1:B20` })
+        .then(r => r.data.values ?? []).catch(() => []);
+      const cfgMap = {};
+      cfgCurrent.forEach(r => { if (r[0]) cfgMap[String(r[0]).trim().toLowerCase()] = r[1] ?? ""; });
+
+      if (cycleStartDate) cfgMap["ciclo_inicio"]      = cycleStartDate;
+      if (melhorDia)      cfgMap["melhor_dia_compra"] = String(parseInt(melhorDia));
+
+      // Reconstrói array de linhas preservando outras chaves
+      const cfgRows = Object.entries(cfgMap).map(([k, v]) => [k, v]);
       await sheets.spreadsheets.values.update({
         spreadsheetId,
-        range: `'${CONFIG}'!A1:B1`,
+        range: `'${CONFIG}'!A1:B${cfgRows.length}`,
         valueInputOption: "RAW",
-        requestBody: { values: [["ciclo_inicio", cycleStartDate]] },
+        requestBody: { values: cfgRows },
       });
-      resultado.novoCicloInicio = cycleStartDate;
+
+      if (cycleStartDate) resultado.novoCicloInicio = cycleStartDate;
+      if (melhorDia)      resultado.novoMelhorDia   = parseInt(melhorDia);
     }
 
     return Response.json({ ok: true, resultado });

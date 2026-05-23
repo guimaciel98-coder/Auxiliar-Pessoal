@@ -65,12 +65,13 @@ export default function LaunchPage() {
   const [saving, setSaving] = useState(false);
 
   // ── Estado: fechamento ───────────────────────────────────────────────────
-  const [poup1, setPoup1] = useState("");
-  const [poup2, setPoup2] = useState("");
-  const [poup3, setPoup3] = useState("");
-  const [benef, setBenef] = useState("");
-  const [brad,  setBrad]  = useState("");
-  const [nub,   setNub]   = useState("");
+  const [poup1, setPoup1]         = useState("");
+  const [poup2, setPoup2]         = useState("");
+  const [poup3, setPoup3]         = useState("");
+  const [benef, setBenef]         = useState("");
+  const [brad,  setBrad]          = useState("");
+  const [nub,   setNub]           = useState("");
+  const [melhorDiaInput, setMelhorDiaInput] = useState("");
   const [closePreview, setClosePreview] = useState(null);
   const [closing, setClosing]           = useState(false);
   const [closeResult, setCloseResult]   = useState(null);
@@ -114,7 +115,13 @@ export default function LaunchPage() {
     loadMonthsHistory();
     fetch("/api/finance/close-month", { cache: "no-store" })
       .then(r => r.json())
-      .then(d => { if (d.ok) setClosePreview(d); })
+      .then(d => {
+        if (d.ok) {
+          setClosePreview(d);
+          // Pré-preenche melhor dia com valor salvo no config
+          if (d.melhorDiaAtual) setMelhorDiaInput(String(d.melhorDiaAtual));
+        }
+      })
       .catch(() => {});
   }, [loadEntries, loadMonthsHistory]);
 
@@ -150,13 +157,13 @@ export default function LaunchPage() {
     try {
       const res = await fetch("/api/finance/close-month", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ poupancaTotal: totalPoup, poupancaFatura: totalFat }),
+        body: JSON.stringify({ poupancaTotal: totalPoup, poupancaFatura: totalFat, melhorDia: melhorDiaInput ? parseInt(melhorDiaInput) : undefined }),
       });
       const j = await res.json();
       if (!j.ok) throw new Error(j.error);
       setCloseResult(j.resultado);
       showToast("✓ Mês fechado com sucesso!");
-      setPoup1(""); setPoup2(""); setPoup3(""); setBenef(""); setBrad(""); setNub("");
+      setPoup1(""); setPoup2(""); setPoup3(""); setBenef(""); setBrad(""); setNub(""); setMelhorDiaInput("");
       setClosePreview(null);
       loadMonthsHistory();
     } catch (err) { showToast(`⚠ ${err.message}`, true); }
@@ -405,6 +412,8 @@ export default function LaunchPage() {
                       ? [`🏦 ${closeResult.poupancaAtualizada.mes}`, fmtShort(closeResult.poupancaAtualizada.acumulado)]
                       : null,
                     closeResult.novoCicloInicio ? ["🗓 Novo ciclo", closeResult.novoCicloInicio] : null,
+                    closeResult.novoMelhorDia   ? ["📅 Melhor dia", `dia ${closeResult.novoMelhorDia}`] : null,
+                    closeResult.fixosAutoMantidos > 0 ? ["⚡ Fixos auto (pagos)", closeResult.fixosAutoMantidos] : null,
                   ].filter(Boolean).map(([l, v]) => (
                     <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontSize: 12 }}>
                       <span style={{ color: "var(--text-muted)" }}>{l}</span>
@@ -458,6 +467,21 @@ export default function LaunchPage() {
                       ))}
                     </div>
                     {totalFat > 0 && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5, textAlign: "right", fontFamily: "var(--font-mono)" }}>{fmtShort(totalFat)}</div>}
+                  </div>
+
+                  {/* Melhor dia de compra do próximo ciclo */}
+                  <div>
+                    <label style={labelSt}>Melhor dia de compra <span style={{ opacity: 0.5 }}>(próximo ciclo)</span></label>
+                    <input
+                      type="number" min="1" max="31" step="1"
+                      value={melhorDiaInput}
+                      onChange={e => setMelhorDiaInput(e.target.value)}
+                      placeholder={closePreview?.melhorDiaAtual ? `Atual: dia ${closePreview.melhorDiaAtual}` : "Ex: 10"}
+                      style={{ ...inputSt, padding: "7px 10px", fontSize: 14, fontFamily: "var(--font-mono), monospace" }}
+                    />
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 3 }}>
+                      Define o início do ciclo do cartão. Deixe em branco para manter o atual.
+                    </div>
                   </div>
 
                   {/* Líquido */}

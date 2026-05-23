@@ -93,32 +93,50 @@ export default function ExpensesPage() {
   const [createSaving, setCreateSaving] = useState(false);
   const [createForm, setCreateForm]   = useState({ nome: "", grupo: "Pessoal", previsao: "" });
   const [toast, setToast]           = useState(null);
-  // Overrides otimistas para o ctrl dos fixos (item → boolean)
-  const [ctrlOvr, setCtrlOvr]       = useState({});
-  const [toggling, setToggling]     = useState(new Set());
+  // Overrides otimistas para o ctrl e auto dos fixos (item → boolean)
+  const [ctrlOvr, setCtrlOvr]   = useState({});
+  const [autoOvr, setAutoOvr]   = useState({});
+  const [toggling, setToggling] = useState(new Set());
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 2800); }
 
   async function toggleCtrl(itemName, currentCtrl) {
     if (toggling.has(itemName)) return;
     const newCtrl = !currentCtrl;
-    // Update otimista
     setCtrlOvr(p => ({ ...p, [itemName]: newCtrl }));
     setToggling(p => new Set(p).add(itemName));
     try {
       const res  = await fetch("/api/finance/fixo/toggle", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ item: itemName, ctrl: newCtrl }),
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error);
     } catch (err) {
-      // Reverte em caso de erro
       setCtrlOvr(p => ({ ...p, [itemName]: currentCtrl }));
       showToast(`⚠ Erro ao atualizar: ${err.message}`);
     } finally {
       setToggling(p => { const s = new Set(p); s.delete(itemName); return s; });
+    }
+  }
+
+  async function toggleAuto(itemName, currentAuto) {
+    if (toggling.has(`auto:${itemName}`)) return;
+    const newAuto = !currentAuto;
+    setAutoOvr(p => ({ ...p, [itemName]: newAuto }));
+    setToggling(p => new Set(p).add(`auto:${itemName}`));
+    try {
+      const res  = await fetch("/api/finance/fixo/toggle", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item: itemName, ctrl: newAuto, field: "auto" }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error);
+    } catch (err) {
+      setAutoOvr(p => ({ ...p, [itemName]: currentAuto }));
+      showToast(`⚠ Erro ao atualizar: ${err.message}`);
+    } finally {
+      setToggling(p => { const s = new Set(p); s.delete(`auto:${itemName}`); return s; });
     }
   }
 
@@ -567,6 +585,7 @@ export default function ExpensesPage() {
                               const nomeLimpo   = prazo ? item.item.replace(/\s*\(Até [^)]+\)$/i, "").trim() : item.item;
                               const isCommit    = !!prazo;
                               const ctrl        = ctrlOvr[item.item] ?? item.ctrl;
+                              const isAuto      = autoOvr[item.item] ?? item.auto ?? false;
                               const isToggling  = toggling.has(item.item);
 
                               return (
@@ -605,16 +624,33 @@ export default function ExpensesPage() {
                                     {ctrl ? "✓" : "○"}
                                   </div>
 
-                                  {/* Nome + prazo */}
+                                  {/* Nome + prazo + badge AUTO */}
                                   <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{
-                                      fontSize: 15, fontWeight: ctrl ? 400 : 600,
-                                      color: ctrl ? "rgba(255,255,255,0.35)" : "var(--text-primary)",
-                                      textDecoration: ctrl ? "line-through" : "none",
-                                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                                      transition: "all 0.2s",
-                                    }}>
-                                      {nomeLimpo}
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                      <div style={{
+                                        fontSize: 15, fontWeight: ctrl ? 400 : 600,
+                                        color: ctrl ? "rgba(255,255,255,0.35)" : "var(--text-primary)",
+                                        textDecoration: ctrl ? "line-through" : "none",
+                                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                        transition: "all 0.2s",
+                                      }}>
+                                        {nomeLimpo}
+                                      </div>
+                                      {/* Badge + toggle AUTO */}
+                                      <button
+                                        onClick={() => toggleAuto(item.item, isAuto)}
+                                        title={isAuto ? "Pagamento automático (clique para remover)" : "Marcar como débito automático"}
+                                        style={{
+                                          padding: "2px 7px", borderRadius: 99, fontSize: 9, fontWeight: 800,
+                                          border: `1px solid ${isAuto ? "rgba(96,165,250,0.4)" : "rgba(255,255,255,0.1)"}`,
+                                          background: isAuto ? "rgba(96,165,250,0.12)" : "transparent",
+                                          color: isAuto ? "#60a5fa" : "rgba(255,255,255,0.2)",
+                                          cursor: "pointer", letterSpacing: "0.05em", flexShrink: 0,
+                                          transition: "all 0.2s",
+                                        }}
+                                      >
+                                        ⚡ AUTO
+                                      </button>
                                     </div>
                                     {prazo && (
                                       <div style={{
@@ -848,8 +884,12 @@ export default function ExpensesPage() {
                         {item.nome}
                       </span>
                       {item.auto && (
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: "rgba(16,185,129,0.15)", color: "#10b981", border: "1px solid rgba(16,185,129,0.3)", flexShrink: 0 }}>
-                          auto
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
+                          background: item.pago ? "rgba(16,185,129,0.15)" : "rgba(96,165,250,0.12)",
+                          color:      item.pago ? "#10b981" : "#60a5fa",
+                          border:     `1px solid ${item.pago ? "rgba(16,185,129,0.3)" : "rgba(96,165,250,0.25)"}`,
+                          flexShrink: 0 }}>
+                          ⚡ {item.pago ? "✓ auto" : "auto"}
                         </span>
                       )}
                       <span style={{ fontSize: 14, fontWeight: 700, color: "#60a5fa", fontFamily: "var(--font-mono)", flexShrink: 0 }}>
