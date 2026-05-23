@@ -80,7 +80,7 @@ export default function Header({
       {isModalOpen && (
         <QuickAddModal
           onClose={() => setIsModalOpen(false)}
-          onSuccess={() => { setIsModalOpen(false); onRefresh(); }}
+          onSuccess={(msg) => { setIsModalOpen(false); onRefresh(msg); }}
           initialProjectId={activeProject}
           clients={clients}
         />

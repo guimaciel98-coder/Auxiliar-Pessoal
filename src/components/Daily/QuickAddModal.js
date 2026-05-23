@@ -81,7 +81,7 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
         const d = await res.json().catch(() => ({}));
         throw new Error(d.error || "Erro ao criar tarefa");
       }
-      onSuccess();
+      onSuccess("✓ Tarefa criada");
       onClose();
     } catch (err) {
       setError(err.message || "Erro ao criar tarefa. Tente novamente.");
@@ -296,7 +296,9 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
                   <option value="daily">Todo dia</option>
                   <option value="weekdays">Dias úteis</option>
                   <option value="weekly">Toda semana</option>
+                  <option value="biweekly">A cada 2 semanas</option>
                   <option value="monthly">Todo mês</option>
+                  <option value="yearly">Todo ano</option>
                 </select>
               </div>
 

@@ -138,7 +138,7 @@ export default function DailyOrchestrator({ mode = "today" }) {
         setFilter={setFilter}
         completedCount={completedCount}
         totalCount={totalCount}
-        onRefresh={sync}
+        onRefresh={(msg) => { sync(); if (msg) showToast(msg); }}
         syncing={syncing}
         activeProject={activeProject}
         clients={clients}
@@ -189,13 +189,23 @@ export default function DailyOrchestrator({ mode = "today" }) {
             </div>
           )}
 
-          <Section proj="pessoal" cfg={PROJ.pessoal} overdue={overdueTasks} all={currentTasks} visible={visible} overdueOnly={false} rowProps={rowProps} />
-          {(cnt.pessoal || 0) > 0 && <hr className={styles.divider} />}
+          {(() => {
+            // Conta tarefas VISÍVEIS (após filtro) para controlar os dividers
+            const pessoalVisible = [...overdueTasks, ...currentTasks].filter(t => t.proj === "pessoal").filter(visible).length;
+            const vcaVisible     = [...overdueTasks, ...currentTasks].filter(t => t.proj === "vca").filter(visible).length;
+            const pdvVisible     = [...overdueTasks, ...currentTasks].filter(t => t.proj === "pdv").filter(visible).length;
+            return (
+              <>
+                <Section proj="pessoal" cfg={PROJ.pessoal} overdue={overdueTasks} all={currentTasks} visible={visible} overdueOnly={false} rowProps={rowProps} />
+                {pessoalVisible > 0 && vcaVisible > 0 && <hr className={styles.divider} />}
 
-          <VcaSection overdue={overdueTasks} all={currentTasks} visible={visible} overdueOnly={false} rowProps={rowProps} clients={clients} />
-          {(cnt.vca || 0) > 0 && <hr className={styles.divider} />}
+                <VcaSection overdue={overdueTasks} all={currentTasks} visible={visible} overdueOnly={false} rowProps={rowProps} clients={clients} />
+                {vcaVisible > 0 && pdvVisible > 0 && <hr className={styles.divider} />}
 
-          <PdvSection overdue={overdueTasks} all={currentTasks} visible={visible} overdueOnly={false} rowProps={rowProps} clients={clients} />
+                <PdvSection overdue={overdueTasks} all={currentTasks} visible={visible} overdueOnly={false} rowProps={rowProps} clients={clients} />
+              </>
+            );
+          })()}
         </div>
 
         {/* Coluna lateral: métricas + resumo (desktop only) */}
