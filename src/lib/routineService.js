@@ -361,7 +361,8 @@ async function readAppRotina() {
         duration: Math.max(dur, 1),
       });
     });
-    return byDay;
+    // Se nenhum bloco válido foi encontrado (byDay vazio), trata como inexistente
+    return Object.keys(byDay).length > 0 ? byDay : null;
   } catch {
     return null;
   }
