@@ -60,3 +60,19 @@
   .configBtn { padding: 5px 9px; font-size: 10px; }
   .spacer { display: none; }
 }
+
+/* ── Safe area: notch / Dynamic Island — ADITIVO ────────────────────────────
+   Garante que o header não fique atrás do notch no iOS e Android.
+   Só tem efeito em dispositivos com safe-area; nos demais env() retorna 0.
+──────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .header {
+    padding-top: calc(8px + env(safe-area-inset-top, 0px));
+    padding-left:  max(12px, env(safe-area-inset-left,  0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  /* Back button e configBtn: touch target mínimo de 44px */
+  .backBtn  { min-height: 44px; }
+  .configBtn { min-height: 44px; padding: 5px 14px; }
+}

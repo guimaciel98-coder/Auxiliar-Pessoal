@@ -16,6 +16,65 @@
   .timeLabel   { font-size: 10px; }
 }
 
+/* ── Mobile touch & UX — ADITIVO ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Tabs Dia/Semana: 44px de toque */
+  .tab { padding: 13px 4px; }
+
+  /* Seletor de dias: altura mínima 44px */
+  .dayBtn { min-height: 52px; }
+
+  /* Botão ✎ de edição: 44×44px via inline-flex (antes era ~20px) */
+  .editBtn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    border-radius: 8px;
+    padding: 0;
+  }
+
+  /* "+ Adicionar bloco": 44px */
+  .addBlockBtn { padding: 14px 0; font-size: 14px; }
+
+  /* Desabilita hover transform no touch (evita jitter) */
+  .weekDayCard:hover { transform: none; }
+
+  /* Timeline: reduz padding interno para caber mais conteúdo em telas estreitas */
+  .itemRow { padding: 13px 14px; gap: 10px; }
+  .itemName { font-size: 15px; }
+
+  /* Chips de categoria na semana: legíveis em telas estreitas */
+  .weekCatChip { font-size: 12px; padding: 4px 10px; }
+  .weekActivityPill { font-size: 12px; padding: 4px 10px; }
+
+  /* Card AGORA: título um pouco menor */
+  .currentActivity { font-size: 24px; }
+
+  /* Linha da timeline: ajusta para timeCol menor */
+  .timelineLine { left: 38px; }
+}
+
+@media (max-width: 390px) {
+  /* Container: safe-area lateral explícita */
+  .container { padding: 0 max(16px, env(safe-area-inset-left, 16px)) 90px; }
+
+  /* Timeline ainda mais compacta */
+  .itemRow  { padding: 11px 12px; }
+  .itemName { font-size: 14px; }
+  .itemDur  { font-size: 11px; }
+
+  /* Bloco AGORA menor para caber na tela */
+  .currentActivity { font-size: 20px; }
+  .currentBlockBody { padding: 14px 16px 16px; }
+
+  /* Cards da semana: padding lateral reduzido */
+  .weekDayCard { padding: 12px 12px; }
+  .weekDayDate { font-size: 18px; }
+}
+
 /* ── Header ── */
 .header     { padding: 24px 0 8px; display: flex; justify-content: space-between; align-items: flex-end; }
 .header h1  { font-size: 26px; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 3px; }
