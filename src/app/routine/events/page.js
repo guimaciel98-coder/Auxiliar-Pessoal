@@ -336,6 +336,7 @@ export default function EventosPage() {
           <p>{today.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</p>
         </div>
         <button onClick={() => openAdd(today)}
+          className={styles.eventAddBtn}
           style={{ padding: "8px 16px", borderRadius: 99, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)", color: "#f59e0b", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
           + Evento
         </button>
