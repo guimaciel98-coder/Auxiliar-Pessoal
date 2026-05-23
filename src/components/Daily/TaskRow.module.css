@@ -92,7 +92,7 @@
 }
 .rescheduleChip:hover { background: rgba(0,229,160,0.1); color: var(--accent-primary); border-color: rgba(0,229,160,0.3); }
 
-/* ── Responsivo ─────────────────────────────────────────────────────────── */
+/* ── Responsivo (existente) ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .taskRow   { padding: 10px 10px; gap: 8px; }
   .taskName  { font-size: 13px; }
@@ -107,5 +107,32 @@
   .badges    { gap: 3px; }
   .badge     { font-size: 8px; padding: 2px 5px; }
   .rescheduleChip { padding: 5px 10px; font-size: 10px; }
+}
+
+/* ── Daily touch targets — ADITIVO (sobreescreve regressões acima) ──────── */
+@media (max-width: 768px) {
+  /* Restaura 44px — o bloco 768px existente reduziu para 40px */
+  .actionBtn { width: 44px; height: 44px; }
+
+  /* Chips de reagendar: 44px de toque */
+  .rescheduleChip {
+    padding: 10px 14px;
+    font-size: 12px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* taskSub mínimo 10px (não desce abaixo) */
+  .taskSub { font-size: 10px; }
+
+  /* Chip de hora: tamanho mínimo legível */
+  .taskTime { font-size: 11px; }
+}
+
+@media (max-width: 480px) {
+  /* Sobreescreve os 10px/8px do bloco existente com mínimos aceitáveis */
+  .rescheduleChip { padding: 9px 12px; font-size: 12px; }
+  .badge { font-size: 9px; padding: 2px 6px; }
 }
 
