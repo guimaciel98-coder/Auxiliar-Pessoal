@@ -49,8 +49,8 @@ const WEEKDAY_NAMES = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","S
 const CATEGORIES = {
   treino:    { label: "Treino",   color: "#9c27b0" },
   trabalho:  { label: "Trabalho", color: "#2196f3" },
-  pessoal:   { label: "Pessoal",  color: "#00e5a0" },
-  livre:     { label: "Livre",    color: "#484f58" },
+  pessoal:   { label: "Pessoal",  color: "#94a3b8" },
+  livre:     { label: "Livre",    color: "#10b981" },
   "refeição":{ label: "Refeição", color: "#f59e0b" },
 };
 
