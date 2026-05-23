@@ -143,9 +143,10 @@ export async function fetchFinancialData() {
     else if (grupo === "CLT")                               clt.push(entry);
     else                                                    pdv.push(entry);
   }
+  // CLT = fixo, sempre conta. PDV e empréstimos só contam quando confirmados.
   const totalCLT = clt.reduce((s, i) => s + i.valor, 0);
-  const totalPDV = pdv.reduce((s, i) => s + i.valor, 0);
-  const totalEmp = emprestimos.reduce((s, i) => s + i.valor, 0);
+  const totalPDV = pdv.reduce((s, i) => i.confirmado ? s + i.valor : s, 0);
+  const totalEmp = emprestimos.reduce((s, i) => i.confirmado ? s + i.valor : s, 0);
   const ganhoTudo = totalCLT + totalPDV + totalEmp;
 
   // ── Poupança ─────────────────────────────────────────────────────────────────
