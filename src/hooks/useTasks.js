@@ -7,7 +7,7 @@ function ssLoad() {
     const raw = JSON.parse(sessionStorage.getItem(SS_KEY) || "{}");
     const now = Date.now();
     // Descarta entradas com mais de 5 minutos — tempo suficiente para o Todoist processar
-    return new Set(Object.entries(raw).filter(([, ts]) => now - ts < 60_000).map(([id]) => id));
+    return new Set(Object.entries(raw).filter(([, ts]) => now - ts < 300_000).map(([id]) => id));
   } catch { return new Set(); }
 }
 

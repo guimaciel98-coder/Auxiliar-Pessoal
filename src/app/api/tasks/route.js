@@ -132,7 +132,7 @@ export async function GET(req) {
     }
 
     if (mode === "week") {
-      const filtered = open.map(toShape)
+      const filtered = open.map(t => toShape(t, sectionMap))
         .filter(t => { const dd = Number(t.due_date); return dd >= tomorrowStart && dd < weekEnd; })
         .sort((a, b) => Number(a.due_date) - Number(b.due_date));
       return Response.json({ tasks: filtered, overdue: [] }, NO_CACHE);

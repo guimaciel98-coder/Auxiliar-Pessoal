@@ -20,7 +20,18 @@ export async function POST(req) {
       if (p !== undefined) updateBody.priority = p;
     }
 
-    if (dueDate) Object.assign(updateBody, buildDuePayload(dueDate, time, recurrence));
+    if (dueDate) {
+      if (!recurrence || recurrence === "none") {
+        // due_string com data simples → Todoist remove recorrência existente.
+        // due_date preservaria recorrência, por isso usamos due_string aqui.
+        Object.assign(updateBody, time
+          ? { due_datetime: `${dueDate}T${time}:00` }
+          : { due_string: dueDate }
+        );
+      } else {
+        Object.assign(updateBody, buildDuePayload(dueDate, time, recurrence));
+      }
+    }
 
     // Envia project_id diretamente — Todoist ignora se já for o mesmo (sem round-trip extra)
     if (project) {

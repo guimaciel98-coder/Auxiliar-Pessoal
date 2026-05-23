@@ -4,7 +4,7 @@ import TaskRow from "./TaskRow";
 import styles from "./TaskLists.module.css";
 
 export function Section({ proj, cfg, overdue, all, visible, overdueOnly, rowProps }) {
-  const od    = overdue.filter(t => t.proj === proj);
+  const od    = overdue.filter(t => t.proj === proj).filter(visible);
   const today = overdueOnly ? [] : sortTasks(all.filter(t => t.proj === proj).filter(visible));
   const tasks = [...od, ...today];
   if (!tasks.length) return null;
@@ -40,7 +40,7 @@ function SubSection({ label, odTasks, todayTasks, rowProps }) {
 
 export function VcaSection({ overdue, all, visible, overdueOnly, rowProps, clients = [] }) {
   const vcaToday = overdueOnly ? [] : all.filter(t => t.proj === "vca").filter(visible);
-  const vcaOd    = overdue.filter(t => t.proj === "vca");
+  const vcaOd    = overdue.filter(t => t.proj === "vca").filter(visible);
   if (!vcaToday.length && !vcaOd.length) return null;
 
   const total     = vcaToday.length + vcaOd.length;
@@ -78,7 +78,7 @@ export function VcaSection({ overdue, all, visible, overdueOnly, rowProps, clien
 
 export function PdvSection({ overdue, all, visible, overdueOnly, rowProps, clients = [] }) {
   const pdvToday  = overdueOnly ? [] : all.filter(t => t.proj === "pdv").filter(visible);
-  const pdvOd     = overdue.filter(t => t.proj === "pdv");
+  const pdvOd     = overdue.filter(t => t.proj === "pdv").filter(visible);
   if (!pdvToday.length && !pdvOd.length) return null;
 
   const total      = pdvToday.length + pdvOd.length;

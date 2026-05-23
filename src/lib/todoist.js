@@ -223,17 +223,20 @@ export function toShape(task, sectionMap = null) {
 const EN_MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 const REC_MAP = {
-  daily:    "every day",
-  weekdays: "every weekday",
-  weekly:   "every week",
-  monthly:  "every month",
+  daily:     "every day",
+  weekdays:  "every weekday",
+  weekly:    "every week",
+  biweekly:  "every 2 weeks",
+  monthly:   "every month",
+  yearly:    "every year",
+  recurring: "every week", // fallback genérico — melhor que "every day"
 };
 
 export function buildDuePayload(dueDate, time, recurrence) {
   const [y, m, d] = dueDate.split("-").map(Number);
 
   if (recurrence && recurrence !== "none") {
-    const recStr  = REC_MAP[recurrence] ?? "every day";
+    const recStr  = REC_MAP[recurrence] ?? "every week";
     const dateStr = `${EN_MONTHS[m - 1]} ${d} ${y}`;
     const timeStr = time ? ` at ${time}` : "";
     return { due_string: `${recStr}${timeStr} starting ${dateStr}` };
