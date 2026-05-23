@@ -445,7 +445,72 @@ function TabSemana({ onSelectDay }) {
   );
   if (!week) return null;
 
+  // ── Barra geral da semana ──────────────────────────────────────────────────
+  const catOrder = ["trabalho","treino","refeição","pessoal","livre"];
+  const totalCatMins = {};
+  let totalWeekMins = 0;
+  for (let d = 0; d <= 6; d++) {
+    for (const b of (week[d] ?? [])) {
+      totalCatMins[b.category] = (totalCatMins[b.category] || 0) + b.duration;
+      totalWeekMins += b.duration;
+    }
+  }
+  const weekSegs = catOrder
+    .filter(c => totalCatMins[c])
+    .map(c => ({ cat: c, mins: totalCatMins[c], pct: (totalCatMins[c] / totalWeekMins) * 100 }));
+
   return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+
+      {/* ── Card resumo semanal ── */}
+      {weekSegs.length > 0 && (
+        <div style={{
+          margin: "0 0 20px",
+          padding: "20px 20px 18px",
+          borderRadius: 20,
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.08)",
+        }}>
+          {/* Título */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.09em", color: "rgba(255,255,255,0.35)" }}>
+              Distribuição Semanal
+            </span>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontFamily: "var(--font-mono)" }}>
+              {minsToLabel(totalWeekMins)} / semana
+            </span>
+          </div>
+
+          {/* Barra principal */}
+          <div style={{ display: "flex", height: 18, borderRadius: 10, overflow: "hidden", gap: 2 }}>
+            {weekSegs.map(({ cat, pct }) => (
+              <div key={cat}
+                style={{ width: `${pct}%`, background: CAT[cat]?.color ?? "#484f58",
+                         borderRadius: 4, transition: "width 0.4s ease", minWidth: pct > 3 ? undefined : 0 }}
+              />
+            ))}
+          </div>
+
+          {/* Legenda com percentuais */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 14px", marginTop: 14 }}>
+            {weekSegs.map(({ cat, mins, pct }) => (
+              <div key={cat} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: CAT[cat]?.color ?? "#484f58", flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>
+                  {CAT[cat]?.label ?? cat}
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: CAT[cat]?.color ?? "#fff" }}>
+                  {Math.round(pct)}%
+                </span>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontFamily: "var(--font-mono)" }}>
+                  {minsToLabel(mins)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     <div className={styles.weekGrid}>
       {DAYS_SHORT.map((_, idx) => {
         const isT     = idx === todayIdx;
@@ -456,7 +521,6 @@ function TabSemana({ onSelectDay }) {
         const catMins = {};
         for (const b of blocks) catMins[b.category] = (catMins[b.category] || 0) + b.duration;
         const totalMins = Object.values(catMins).reduce((s, v) => s + v, 0);
-        const catOrder  = ["trabalho","treino","refeição","pessoal","livre"];
         const catSegs   = catOrder.filter(c => catMins[c]).map(c => ({
           cat: c, pct: (catMins[c] / totalMins) * 100,
         }));
@@ -545,6 +609,7 @@ function TabSemana({ onSelectDay }) {
           </div>
         );
       })}
+    </div>
     </div>
   );
 }
