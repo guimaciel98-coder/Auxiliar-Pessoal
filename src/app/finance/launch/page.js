@@ -333,8 +333,8 @@ export default function LaunchPage() {
           </div>
         </div>
 
-        {/* ════ sideCol: formulários ════ */}
-        <div className={finStyles.sideCol}>
+        {/* ════ sideCol: formulários (sideColMobileShow torna visível no mobile) ════ */}
+        <div className={`${finStyles.sideCol} ${finStyles.sideColMobileShow}`}>
 
           {/* ── Painel 1: Gasto Variável Dia ── */}
           <div className={finStyles.sidePanel}>

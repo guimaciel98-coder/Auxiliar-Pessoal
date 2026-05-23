@@ -519,3 +519,30 @@
   .overviewStats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .overviewStatValue { font-size: 15px; }
 }
+
+/* ── Launch page: sideCol visível no mobile ─────────────────────────────────
+   Classe ADITIVA — não altera o display:none global do .sideCol acima.
+   Aplicada somente no sideCol da página Lançar, onde todos os formulários
+   de ação (Gasto Variável, Fechar Mês, Histórico) ficam invisíveis sem isso.
+   Desktop: sem efeito (regra só existe dentro do @media ≤768px).
+──────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sideColMobileShow {
+    display: flex;
+    position: static;
+    max-height: none;
+    padding: 0 16px calc(90px + env(safe-area-inset-bottom, 0px)) 16px;
+    overflow-y: visible;
+  }
+}
+
+/* ── Safe area no ModuleHeader (notch / Dynamic Island) ─────────────────────
+   Aditivo: só existe abaixo de 768px, desktop não é afetado.
+──────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .tabs  { margin: 0 16px 16px; }
+  .expenseSummary { margin: 0 16px 16px; }
+  .histPeriodBar  { padding: 0 16px 16px; }
+  .histCatSummary { padding: 0 16px 16px; }
+  .analyses       { padding: 0 16px 40px; }
+}
