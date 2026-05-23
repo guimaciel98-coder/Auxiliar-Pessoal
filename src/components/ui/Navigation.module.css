@@ -229,3 +229,15 @@
   .label { font-size: 10px; font-weight: 600; letter-spacing: 0; }
   .chevron { display: none; }
 }
+
+/* ── Navigation mobile — ADITIVO ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Label mínimo 11px (10px é abaixo do razoável em mobile) */
+  .label { font-size: 11px; }
+
+  /* Safe area lateral: suporte a landscape no iPhone/Android */
+  .nav {
+    padding-left:  max(4px, env(safe-area-inset-left,  0px));
+    padding-right: max(4px, env(safe-area-inset-right, 0px));
+  }
+}

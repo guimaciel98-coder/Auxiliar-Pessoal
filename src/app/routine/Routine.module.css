@@ -222,3 +222,9 @@
 .empty       { text-align: center; padding: 40px; color: rgba(255,255,255,0.22); font-size: 13px; }
 .errorCard   { padding: 20px; border-radius: 16px; background: rgba(248,113,113,0.06); border: 1px solid rgba(248,113,113,0.18); color: rgba(255,255,255,0.8); font-size: 13px; margin-bottom: 16px; }
 .retryBtn    { margin-top: 12px; padding: 6px 14px; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); font-size: 12px; font-weight: 600; cursor: pointer; }
+
+/* ── Eventos: botão + Evento com touch target 44px ──────────────────────── */
+.eventAddBtn { display: inline-flex; align-items: center; }
+@media (max-width: 768px) {
+  .eventAddBtn { min-height: 44px; padding-top: 10px !important; padding-bottom: 10px !important; }
+}

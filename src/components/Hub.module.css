@@ -223,3 +223,21 @@
   .secondaryCard { flex-direction: row; align-items: center; padding: 16px; gap: 12px; }
   .secondaryFooter { display: none; }
 }
+
+/* ── Hub mobile — ADITIVO ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* safe-area-inset-bottom: evita que o conteúdo fique sob o home indicator */
+  .landing {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Desabilita hover transforms — causam jitter em touch */
+  .primaryCard:hover  { transform: none; }
+  .secondaryCard:hover { transform: none; }
+
+  /* Padding lateral mínimo 16px + safe-area em landscape */
+  .landing {
+    padding-left:  max(16px, env(safe-area-inset-left,  0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+}
