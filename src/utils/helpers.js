@@ -31,7 +31,9 @@ export function isRealTime(ts) {
   const d = new Date(Number(ts) - 3*3600*1000);
   const h = d.getUTCHours(), m = d.getUTCMinutes();
   if (m !== 0) return true;
-  return h !== 0 && h !== 1 && h !== 4;
+  // h=0 = âncora de meia-noite BRT usada por parseDue para tarefas sem horário
+  // h=1..3 = faixa coberta pelo regex /T0[0-3]:00/ do parseDue → também sem horário real
+  return h > 3;
 }
 
 export function getHeat(ts, now) {
