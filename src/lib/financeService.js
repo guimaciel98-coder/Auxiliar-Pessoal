@@ -41,7 +41,7 @@ export async function fetchFinancialData() {
   const spreadsheetId = getSpreadsheetId();
 
   const [fixosRes, variaveisRes, ganhosRes, poupancaRes, parcelasRes, configRes, lancRes] = await Promise.all([
-    sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Gastos_Fixos'!A2:E500" }),
+    sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Gastos_Fixos'!A2:F500" }), // F = Auto
     sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Gastos_Variaveis'!A2:E500" }),
     sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Ganhos'!A2:D500" }),
     sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Poupanca'!A2:C100" }),
@@ -109,8 +109,9 @@ export async function fetchFinancialData() {
     const previsao = Math.abs(parseNum(row[2] ?? "0"));
     const real     = Math.abs(parseNum(row[3] ?? "0"));
     const ctrl     = String(row[4] ?? "").toUpperCase() === "TRUE";
+    const auto     = String(row[5] ?? "").toUpperCase() === "TRUE";
     if (!item) continue;
-    fixos.items.push({ grupo, item, previsao, real, ctrl });
+    fixos.items.push({ grupo, item, previsao, real, ctrl, auto });
     fixos.previsaoTotal += previsao;
     fixos.realTotal     += real;
   }
