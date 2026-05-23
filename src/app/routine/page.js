@@ -100,16 +100,34 @@ function TabDia({ selectedDay, onDayChange }) {
     ? Math.round((blocks.filter(b => b.minutes + b.duration <= mins).length / blocks.length) * 100)
     : 0;
 
+  function openNewBlock() {
+    setEditing({ sheetRow: null, atividade: "", categoria: "pessoal", inicio: "", fim: "" });
+  }
+
   async function handleSaveEdit() {
     if (!editing) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/routine/blocks", {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editing),
-      });
+      let res;
+      if (editing.sheetRow) {
+        res = await fetch("/api/routine/blocks", {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editing),
+        });
+      } else {
+        res = await fetch("/api/routine/blocks", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dia:       selectedDay,
+            inicio:    editing.inicio,
+            fim:       editing.fim,
+            atividade: editing.atividade,
+            categoria: editing.categoria,
+          }),
+        });
+      }
       const j = await res.json();
-      if (!j.ok) throw new Error(j.error);
+      if (!j.ok) throw new Error(j.error ?? "Erro");
       setEditing(null);
       load(selectedDay);
     } finally { setSaving(false); }
@@ -136,11 +154,13 @@ function TabDia({ selectedDay, onDayChange }) {
       {editing && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: 24, width: "100%", maxWidth: 380 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>Editar Bloco</div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>
+              {editing.sheetRow ? "Editar Bloco" : "Novo Bloco"}
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>ATIVIDADE</div>
-                <input value={editing.atividade} onChange={e => setEditing(p => ({ ...p, atividade: e.target.value }))} style={inputSt} />
+                <input value={editing.atividade} onChange={e => setEditing(p => ({ ...p, atividade: e.target.value }))} style={inputSt} autoFocus />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
@@ -154,15 +174,15 @@ function TabDia({ selectedDay, onDayChange }) {
               </div>
               <div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>CATEGORIA</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {CAT_OPTIONS.map(c => (
                     <button key={c} onClick={() => setEditing(p => ({ ...p, categoria: c }))}
-                      style={{ padding: "6px 4px", borderRadius: 8, fontSize: 11, fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
+                      style={{ flex: "1 0 calc(33% - 6px)", padding: "7px 4px", borderRadius: 8, fontSize: 11, fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
                         background: editing.categoria === c ? (CAT[c]?.color ?? "#484f58") + "22" : "rgba(255,255,255,0.04)",
                         color: editing.categoria === c ? (CAT[c]?.color ?? "#fff") : "rgba(255,255,255,0.4)",
                         border: `1px solid ${editing.categoria === c ? (CAT[c]?.color ?? "#484f58") + "55" : "rgba(255,255,255,0.08)"}`,
                       }}>
-                      {c}
+                      {CAT[c]?.label ?? c}
                     </button>
                   ))}
                 </div>
@@ -354,6 +374,12 @@ function TabDia({ selectedDay, onDayChange }) {
         <div className={styles.empty}>
           <p>Nenhuma atividade para {DAYS_FULL[selectedDay]}.</p>
         </div>
+      )}
+
+      {!loading && !error && fromAppRotina && (
+        <button className={styles.addBlockBtn} onClick={openNewBlock}>
+          + Adicionar bloco
+        </button>
       )}
     </>
   );
