@@ -520,6 +520,32 @@
   .overviewStatValue { font-size: 15px; }
 }
 
+/* ── Tabs de finanças: 44px de toque no mobile ───────────────────────────────
+   Aditivo: só em ≤768px.
+──────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .tab { padding: 13px 4px; }
+}
+
+/* ── Font sizes: mínimo 12px em labels de 10-11px ────────────────────────────
+   Aditivo: escala apenas em mobile.
+──────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sectionLabel     { font-size: 12px; }
+  .sidePanelTitle   { font-size: 12px; letter-spacing: 0.06em; }
+  .varBarMeta       { font-size: 11px; }
+  .overviewStatLabel{ font-size: 11px; }
+  .incomeGroupLabel { font-size: 11px; }
+  .chartTitle       { font-size: 11px; }
+  .expenseSummaryLabel { font-size: 11px; }
+}
+
+/* ── Overview: sideCol visível no mobile ─────────────────────────────────────
+   Classe ADITIVA — reaproveita o padrão da launch page.
+   Aplica-se ao sideCol de overview/page.js para expor:
+   Saldo Variável, Ciclo, Donut e Projeção de poupança.
+──────────────────────────────────────────────────────────────────────────── */
+
 /* ── Launch page: sideCol visível no mobile ─────────────────────────────────
    Classe ADITIVA — não altera o display:none global do .sideCol acima.
    Aplicada somente no sideCol da página Lançar, onde todos os formulários

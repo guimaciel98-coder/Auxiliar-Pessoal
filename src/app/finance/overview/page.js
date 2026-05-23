@@ -132,6 +132,16 @@ export default function OverviewPage() {
       .catch(() => {});
   }, []);
 
+  // Detecta mobile para ajustes de padding/margens — sem afetar desktop
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const check = () => setIsMobile(mq.matches);
+    check();
+    mq.addEventListener("change", check);
+    return () => mq.removeEventListener("change", check);
+  }, []);
+
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 2800); }
 
   async function handleAdd(e) {
@@ -315,7 +325,7 @@ export default function OverviewPage() {
           <div className={styles.mainCol} style={{ padding: "0 0 80px" }}>
 
             {/* ── Stat Cards ── */}
-            <div style={{ marginBottom: 36, padding: "20px 28px 0" }}>
+            <div style={{ marginBottom: 36, padding: isMobile ? "16px 16px 0" : "20px 28px 0" }}>
 
               {/* Linha 1: Ganhos + Gastos até agora */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -364,7 +374,7 @@ export default function OverviewPage() {
             </div>
 
             {/* ── Gastos Variáveis ── */}
-            <div style={{ marginBottom: 36, padding: "0 28px" }}>
+            <div style={{ marginBottom: 36, padding: isMobile ? "0 16px" : "0 28px" }}>
               <div style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 marginBottom: 18,
@@ -448,7 +458,7 @@ export default function OverviewPage() {
           </div>
 
           {/* ════ Coluna direita ════ */}
-          <div className={styles.sideCol} style={{ position: "static", maxHeight: "none", overflowY: "visible" }}>
+          <div className={`${styles.sideCol} ${styles.sideColMobileShow}`} style={{ position: "static", maxHeight: "none", overflowY: "visible" }}>
 
             {/* ── Saldo Variável + Donut de gastos ── */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 0 }}>
