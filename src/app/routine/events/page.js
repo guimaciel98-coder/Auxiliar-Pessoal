@@ -406,27 +406,86 @@ export default function EventosPage() {
           )}
 
           {/* ── Passados ── */}
-          {past.length > 0 && (
-            <div style={{ marginTop: 8 }}>
-              <button
-                onClick={() => setShowPast(p => !p)}
-                style={{ fontSize: 12, color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: "4px 0 8px", display: "flex", alignItems: "center", gap: 6 }}
-              >
-                <span style={{ fontSize: 10 }}>{showPast ? "▲" : "▼"}</span>
-                {past.length} passado{past.length !== 1 ? "s" : ""}
-              </button>
-              {showPast && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 5, opacity: 0.35 }}>
-                  {[...past].reverse().slice(0, 20).map((e, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 14px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                      <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--text-muted)", minWidth: 38, flexShrink: 0 }}>{e.dateLabel}</span>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-muted)", textDecoration: "line-through", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.activity}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          {past.length > 0 && (() => {
+            // Agrupa por mês (mais recente primeiro)
+            const sorted = [...past].reverse();
+            const byMonth = [];
+            for (const e of sorted) {
+              const [d, m, y] = e.dateLabel.split("/").map(Number);
+              const fullY = y < 100 ? 2000 + y : y;
+              const key = `${fullY}-${String(m).padStart(2,"0")}`;
+              const label = `${MES_FULL[m - 1]} ${fullY}`;
+              let grp = byMonth.find(g => g.key === key);
+              if (!grp) { grp = { key, label, events: [] }; byMonth.push(grp); }
+              grp.events.push(e);
+            }
+
+            return (
+              <div style={{ marginTop: 24, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16 }}>
+                <button
+                  onClick={() => setShowPast(p => !p)}
+                  style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: "0 0 14px", display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  <span style={{ fontSize: 10 }}>{showPast ? "▲" : "▼"}</span>
+                  {past.length} evento{past.length !== 1 ? "s" : ""} passado{past.length !== 1 ? "s" : ""}
+                </button>
+
+                {showPast && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                    {byMonth.map(({ key, label, events: grpEvts }) => (
+                      <div key={key}>
+                        {/* Cabeçalho do mês */}
+                        <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.2)", marginBottom: 8, paddingLeft: 2 }}>
+                          {label}
+                        </div>
+
+                        {/* Linhas de eventos */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          {grpEvts.map((e, i) => {
+                            const [day, mon] = e.dateLabel.split("/");
+                            const ts = tipoStyle(e.tipo);
+                            const tipoColor = e.tipo ? (TIPO_COLORS[e.tipo.toLowerCase()] ?? "rgba(255,255,255,0.25)") : "rgba(255,255,255,0.15)";
+                            return (
+                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 10, transition: "background 0.15s" }}
+                                onMouseEnter={el => el.currentTarget.style.background = "rgba(255,255,255,0.03)"}
+                                onMouseLeave={el => el.currentTarget.style.background = "transparent"}
+                              >
+                                {/* Data */}
+                                <div style={{ display: "flex", alignItems: "baseline", gap: 4, minWidth: 46, flexShrink: 0 }}>
+                                  <span style={{ fontSize: 16, fontWeight: 800, color: "rgba(255,255,255,0.25)", lineHeight: 1 }}>{day}</span>
+                                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.18)", fontWeight: 600 }}>/{mon}</span>
+                                </div>
+
+                                {/* Dia da semana */}
+                                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.18)", minWidth: 24, flexShrink: 0, textTransform: "uppercase", fontWeight: 700 }}>
+                                  {e.weekday ? e.weekday.slice(0, 3) : ""}
+                                </span>
+
+                                {/* Dot colorido do tipo */}
+                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: tipoColor, flexShrink: 0, opacity: 0.7 }} />
+
+                                {/* Nome do evento */}
+                                <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.45)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                                  {e.activity}
+                                </span>
+
+                                {/* Badge do tipo */}
+                                {e.tipo && (
+                                  <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 99, color: tipoColor, background: tipoColor + "18", border: `1px solid ${tipoColor}30`, textTransform: "capitalize", flexShrink: 0 }}>
+                                    {e.tipo}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
         </div>
       )}
