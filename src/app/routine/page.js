@@ -452,9 +452,9 @@ function TabSemana({ onSelectDay }) {
 
         // Resumo textual: só categorias com ≥30min, exceto livre e pessoal
         const catSummary = catOrder
-          .filter(c => catMins[c] >= 30 && c !== "livre" && c !== "pessoal")
+          .filter(c => catMins[c] >= 30)
           .map(c => ({ cat: c, label: CAT[c]?.label ?? c, time: minsToLabel(catMins[c]) }))
-          .slice(0, 3);
+          .slice(0, 5);
 
         // Bloco atual e % feito (apenas hoje)
         let nowBlock = null;
