@@ -8,7 +8,12 @@ export const PROJ = {
   },
   vca: {
     id:       "6Xvp8v5F2PGPq2g2",
-    extraIds: ["6fCfcJvXv6MjF6Pq"],
+    extraIds: [
+      "6fCfcJvXv6MjF6Pq", // OCUPE
+      "6ghvwpM3C9m8377R", // CAROL MACARONE
+      "6ghvxWFMgh5X3hHV", // SANTÉ
+      "6ghvxjQVHRmHW4wc", // HIVE
+    ],
     cor:      "#5b9fd6",
     label:    "VCA BRASIL",
   },
@@ -34,13 +39,24 @@ export const VCA_SECTIONS = {
   "6fXqVhFcx9QXVCW2": "SÃO FRANCISCO DE ASSIS",
   "6fXvmVJCxw2XM38R": "DR HATO",
   "6fXvmW8M4cQpH4X2": "R&K",
-  // Seções do sub-projeto "Entregas Ocupe - Performance" (IDs diferentes)
+  // Seções OCUPE
   "6fCv5mWg8f4Pwh8q": "GERAL",
   "6fCgCF2xj4wCxfpq": "PET CARE",
   "6fCgCH498pvWhMMH": "ANIMALIA",
   "6fCgCHjGHrq376xH": "BALNEÁRIO CAMBORIÚ",
   "6fCgCG9j79R5Q3Jq": "VET QUALITY",
   "6fCgCFQr4v7q4mWH": "ARIZA",
+  // Seções CAROL MACARONE
+  "6ghvwpQxJPhvpvp2": "GERAL",
+  "6ghvxqvj2RwChr82": "DR HATO",
+  "6ghvxrGMjR6QfFCR": "R&K",
+  // Seções SANTÉ
+  "6ghvxWCpvpmJ6x53": "GERAL",
+  "6ghvxWFQ5f6fMQpV": "PET SUPPORT",
+  "6ghvxWFqHp9wgwgV": "ONCO SUPPORT",
+  // Seções HIVE
+  "6ghvxjQQmcgPpX56": "GERAL",
+  "6ghvxjXg43j7Pqm6": "SÃO FRANCISCO DE ASSIS",
 };
 
 // ─── Seções PDV (clientes) ────────────────────────────────────────────────────
