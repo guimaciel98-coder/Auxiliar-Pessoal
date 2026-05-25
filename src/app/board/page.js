@@ -16,17 +16,14 @@ import styles from "./Board.module.css";
 import QuickAddModal from "@/components/Daily/QuickAddModal";
 import TaskEditModal from "@/components/Daily/TaskEditModal";
 
-const OCUPE_PROJECT_ID = "6fCfcJvXv6MjF6Pq";
+const VCA_MAIN_ID = "6Xvp8v5F2PGPq2g2";
 
-// Seções que pertencem ao sub-projeto Ocupe (IDs do Todoist)
-const OCUPE_SECTION_IDS = new Set([
-  "6fCv5mWg8f4Pwh8q",
-  "6fCgCF2xj4wCxfpq",
-  "6fCgCH498pvWhMMH",
-  "6fCgCHjGHrq376xH",
-  "6fCgCG9j79R5Q3Jq",
-  "6fCgCFQr4v7q4mWH",
-]);
+const VCA_AGENCIES = [
+  { key: "ocupe", label: "Ocupe",          projectId: "6fCfcJvXv6MjF6Pq" },
+  { key: "carol", label: "Carol Macarone", projectId: "6ghvwpM3C9m8377R" },
+  { key: "sante", label: "Santé",          projectId: "6ghvxWFMgh5X3hHV" },
+  { key: "hive",  label: "Hive",           projectId: "6ghvxjQVHRmHW4wc" },
+];
 
 const MONTHS   = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
 const WEEKDAYS = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
@@ -367,11 +364,13 @@ export default function ProjectsPage() {
     load();
   }
 
+  const activeAgency = VCA_AGENCIES.find(a => a.key === vcaSubFilter) ?? null;
+
   const filteredTasks = tasks.filter(t => {
     if (t._project_id !== activeProject) return false;
     if (activeProject === "vca" && viewMode === "detailed") {
-      const isOcupe = t.list?.id === OCUPE_PROJECT_ID;
-      return vcaSubFilter === "ocupe" ? isOcupe : !isOcupe;
+      if (!activeAgency) return t.list?.id === VCA_MAIN_ID;
+      return t.list?.id === activeAgency.projectId;
     }
     return true;
   });
@@ -381,11 +380,8 @@ export default function ProjectsPage() {
   // Para VCA em modo "Por Marca": filtrar seções pelo sub-projeto ativo
   const columnsToShow = (() => {
     if (activeProject !== "vca" || viewMode === "day") return projectClients;
-    return projectClients.filter(c =>
-      vcaSubFilter === "ocupe"
-        ? OCUPE_SECTION_IDS.has(c.cf_value)
-        : !OCUPE_SECTION_IDS.has(c.cf_value)
-    );
+    const sourceId = activeAgency ? activeAgency.projectId : VCA_MAIN_ID;
+    return projectClients.filter(c => c.source_project_id === sourceId);
   })();
 
   function getTasksForClient(sectionId) {
@@ -554,7 +550,9 @@ export default function ProjectsPage() {
           {activeProject === "vca" && !isDay && (
             <div className={styles.subFilterBar}>
               <button className={`${styles.subBtn} ${vcaSubFilter === "interno" ? styles.subActive : ""}`} onClick={() => setVcaSubFilter("interno")}>Gestão Interna</button>
-              <button className={`${styles.subBtn} ${vcaSubFilter === "ocupe" ? styles.subActive : ""}`}   onClick={() => setVcaSubFilter("ocupe")}>Agência Ocupe</button>
+              {VCA_AGENCIES.map(a => (
+                <button key={a.key} className={`${styles.subBtn} ${vcaSubFilter === a.key ? styles.subActive : ""}`} onClick={() => setVcaSubFilter(a.key)}>{a.label}</button>
+              ))}
             </div>
           )}
 
