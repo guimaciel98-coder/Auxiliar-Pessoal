@@ -66,7 +66,7 @@ export default function Header({
             </button>
           ))}
         </div>
-        <button onClick={onRefresh} disabled={syncing} className={styles.refreshBtn} title="Sincronizar">
+        <button onClick={() => onRefresh()} disabled={syncing} className={styles.refreshBtn} title="Sincronizar">
           <svg
             width="13" height="13" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
