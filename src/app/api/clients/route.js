@@ -8,13 +8,13 @@ export async function GET() {
     const vcaIds = [PROJ.vca.id, ...(PROJ.vca.extraIds ?? [])];
     const pdvIds = [PROJ.pdv.id, ...(PROJ.pdv.extraIds ?? [])];
 
-    const [vcaSections, pdvSections] = await Promise.all([
-      Promise.all(vcaIds.map(id => fetchProjectSections(id).catch(() => []))).then(arrs => arrs.flat()),
+    const [vcaSectionsByProject, pdvSections] = await Promise.all([
+      Promise.all(vcaIds.map(id => fetchProjectSections(id).catch(() => []).then(secs => secs.map(s => ({ ...s, _sourceProjectId: id }))))),
       Promise.all(pdvIds.map(id => fetchProjectSections(id).catch(() => []))).then(arrs => arrs.flat()),
     ]);
 
     const clients = [
-      ...vcaSections.map(s => ({ id: s.id, name: s.name, project_id: "vca", cf_value: s.id })),
+      ...vcaSectionsByProject.flat().map(s => ({ id: s.id, name: s.name, project_id: "vca", cf_value: s.id, source_project_id: s._sourceProjectId })),
       ...pdvSections.map(s => ({ id: s.id, name: s.name, project_id: "pdv", cf_value: s.id })),
     ];
 
