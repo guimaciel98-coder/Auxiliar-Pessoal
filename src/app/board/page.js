@@ -549,10 +549,15 @@ export default function ProjectsPage() {
 
           {activeProject === "vca" && !isDay && (
             <div className={styles.subFilterBar}>
-              <button className={`${styles.subBtn} ${vcaSubFilter === "interno" ? styles.subActive : ""}`} onClick={() => setVcaSubFilter("interno")}>Gestão Interna</button>
-              {VCA_AGENCIES.map(a => (
-                <button key={a.key} className={`${styles.subBtn} ${vcaSubFilter === a.key ? styles.subActive : ""}`} onClick={() => setVcaSubFilter(a.key)}>{a.label}</button>
-              ))}
+              <div className={styles.subFilterTop}>
+                <button className={`${styles.subBtnMain} ${vcaSubFilter === "interno" ? styles.subBtnMainActive : ""}`} onClick={() => setVcaSubFilter("interno")}>Gestão Interna</button>
+              </div>
+              <div className={styles.subFilterAgencies}>
+                <span className={styles.agenciesLabel}>Agências</span>
+                {VCA_AGENCIES.map(a => (
+                  <button key={a.key} className={`${styles.subBtn} ${vcaSubFilter === a.key ? styles.subActive : ""}`} onClick={() => setVcaSubFilter(a.key)}>{a.label}</button>
+                ))}
+              </div>
             </div>
           )}
 
