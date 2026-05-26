@@ -11,7 +11,10 @@ const DAYS_FULL  = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Qui
 const CAT = {
   treino:      { color: "#a855f7", label: "Treino"   },
   trabalho:    { color: "#3b82f6", label: "Trabalho" },
+  pdv:         { color: "#f97316", label: "PDV"      },
+  estudo:      { color: "#22d3ee", label: "Estudo"   },
   pessoal:     { color: "#94a3b8", label: "Pessoal"  },
+  sono:        { color: "#6366f1", label: "Sono"     },
   livre:       { color: "#10b981", label: "Livre"    },
   "refeição":  { color: "#f59e0b", label: "Refeição" },
 };
@@ -57,12 +60,17 @@ function keyBlocks(blocks, n = 3) {
 
 const CAT_OPTIONS = ["pessoal","trabalho","treino","livre","refeição"];
 
-function activityLabel(activity, category) {
+// Retorna a chave de categoria visual (inclui sono/estudo/pdv como virtuais)
+function effectiveCat(activity, category) {
   const a = (activity ?? "").toLowerCase();
-  if (/acordar|dormir/.test(a))      return "Sono";
-  if (/estudo/.test(a))              return "Estudo";
-  if (/ponto de vista/.test(a))      return "PDV";
-  return CAT[category]?.label ?? "Livre";
+  if (/acordar|dormir/.test(a))  return "sono";
+  if (/estudo/.test(a))          return "estudo";
+  if (/ponto de vista/.test(a))  return "pdv";
+  return category;
+}
+
+function activityLabel(activity, category) {
+  return CAT[effectiveCat(activity, category)]?.label ?? CAT[category]?.label ?? "Livre";
 }
 
 // ─── Aba: Dia ─────────────────────────────────────────────────────────────────
@@ -273,7 +281,7 @@ function TabDia({ selectedDay, onDayChange }) {
 
       {/* Bloco atual */}
       {isToday && current && !loading && (() => {
-        const cc = CAT[current.category]?.color ?? "#818cf8";
+        const cc = CAT[effectiveCat(current.activity, current.category)]?.color ?? "#818cf8";
         return (
           <div className={styles.currentBlock} style={{ borderColor: cc + "30", background: `linear-gradient(135deg, ${cc}12, ${cc}06)` }}>
             {/* Glow */}
@@ -332,7 +340,7 @@ function TabDia({ selectedDay, onDayChange }) {
           {blocks.map((block, i) => {
             const isPast = isToday && i < blocks.length - 1 && block.minutes + block.duration <= mins;
             const isCurr = isToday && current?.time === block.time;
-            const cat    = CAT[block.category] ?? CAT.livre;
+            const cat    = CAT[effectiveCat(block.activity, block.category)] ?? CAT.livre;
             const dur    = block.duration < 60
               ? `${block.duration}m`
               : block.duration % 60 === 0
@@ -456,12 +464,13 @@ function TabSemana({ onSelectDay }) {
   if (!week) return null;
 
   // ── Barra geral da semana ──────────────────────────────────────────────────
-  const catOrder = ["trabalho","treino","refeição","pessoal","livre"];
+  const catOrder = ["trabalho","pdv","treino","estudo","refeição","pessoal","sono","livre"];
   const totalCatMins = {};
   let totalWeekMins = 0;
   for (let d = 0; d <= 6; d++) {
     for (const b of (week[d] ?? [])) {
-      totalCatMins[b.category] = (totalCatMins[b.category] || 0) + b.duration;
+      const eff = effectiveCat(b.activity, b.category);
+      totalCatMins[eff] = (totalCatMins[eff] || 0) + b.duration;
       totalWeekMins += b.duration;
     }
   }
@@ -529,7 +538,10 @@ function TabSemana({ onSelectDay }) {
 
         // Composição de categorias
         const catMins = {};
-        for (const b of blocks) catMins[b.category] = (catMins[b.category] || 0) + b.duration;
+        for (const b of blocks) {
+          const eff = effectiveCat(b.activity, b.category);
+          catMins[eff] = (catMins[eff] || 0) + b.duration;
+        }
         const totalMins = Object.values(catMins).reduce((s, v) => s + v, 0);
         const catSegs   = catOrder.filter(c => catMins[c]).map(c => ({
           cat: c, pct: (catMins[c] / totalMins) * 100,
