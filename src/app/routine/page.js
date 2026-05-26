@@ -57,6 +57,14 @@ function keyBlocks(blocks, n = 3) {
 
 const CAT_OPTIONS = ["pessoal","trabalho","treino","livre","refeição"];
 
+function activityLabel(activity, category) {
+  const a = (activity ?? "").toLowerCase();
+  if (/acordar|dormir/.test(a))      return "Sono";
+  if (/estudo/.test(a))              return "Estudo";
+  if (/ponto de vista/.test(a))      return "PDV";
+  return CAT[category]?.label ?? "Livre";
+}
+
 // ─── Aba: Dia ─────────────────────────────────────────────────────────────────
 function TabDia({ selectedDay, onDayChange }) {
   const todayIdx = todayIndexBRT();
@@ -95,9 +103,11 @@ function TabDia({ selectedDay, onDayChange }) {
   const progressPct = data?.progressPct ?? 0;
   const fromAppRotina = data?.fromAppRotina ?? false;
 
-  const mins    = nowBRT();
-  const donePct = blocks.length > 0 && isToday
-    ? Math.round((blocks.filter(b => b.minutes + b.duration <= mins).length / blocks.length) * 100)
+  const mins      = nowBRT();
+  // Exclui o último bloco (Dormir) da contagem de "feito" e do isPast
+  const dayBlocks = blocks.length > 1 ? blocks.slice(0, -1) : blocks;
+  const donePct   = dayBlocks.length > 0 && isToday
+    ? Math.round((dayBlocks.filter(b => b.minutes + b.duration <= mins).length / dayBlocks.length) * 100)
     : 0;
 
   function openNewBlock() {
@@ -281,7 +291,7 @@ function TabDia({ selectedDay, onDayChange }) {
             {/* Corpo */}
             <div className={styles.currentBlockBody}>
               <div className={styles.currentCatTag} style={{ color: cc, background: cc + "1a", borderColor: cc + "40" }}>
-                {CAT[current.category]?.label ?? "Livre"}
+                {activityLabel(current.activity, current.category)}
               </div>
               <div className={styles.currentActivity}>{current.activity}</div>
               {next && (
@@ -320,7 +330,7 @@ function TabDia({ selectedDay, onDayChange }) {
         <div className={styles.timeline}>
           <div className={styles.timelineLine} />
           {blocks.map((block, i) => {
-            const isPast = isToday && block.minutes + block.duration <= mins;
+            const isPast = isToday && i < blocks.length - 1 && block.minutes + block.duration <= mins;
             const isCurr = isToday && current?.time === block.time;
             const cat    = CAT[block.category] ?? CAT.livre;
             const dur    = block.duration < 60
@@ -361,7 +371,7 @@ function TabDia({ selectedDay, onDayChange }) {
                       <span className={styles.itemDur}>{dur}</span>
                       {!isPast && (
                         <span className={styles.categoryTag} style={{ color: cat.color, background: cat.color + "18" }}>
-                          {cat.label}
+                          {activityLabel(block.activity, block.category)}
                         </span>
                       )}
                       {fromAppRotina && block.sheetRow && (
@@ -541,8 +551,9 @@ function TabSemana({ onSelectDay }) {
               ? b.minutes <= mins && mins < end
               : b.minutes <= mins || mins < end - 1440;
           });
+          const wb = blocks.length > 1 ? blocks.slice(0, -1) : blocks;
           donePct = Math.round(
-            (blocks.filter(b => b.minutes + b.duration <= mins).length / blocks.length) * 100
+            (wb.filter(b => b.minutes + b.duration <= mins).length / wb.length) * 100
           );
         }
         const nowCat = nowBlock ? (CAT[nowBlock.category] ?? CAT.livre) : null;
