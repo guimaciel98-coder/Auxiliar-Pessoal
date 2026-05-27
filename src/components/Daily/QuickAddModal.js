@@ -1,6 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
 import styles from "./QuickAddModal.module.css";
+import { PROJ } from "@/config/constants";
+
+const VCA_MAIN_ID = PROJ.vca.id;
+const VCA_AGENCIES = [
+  { id: PROJ.vca.extraIds[0], label: "Ocupe"          },
+  { id: PROJ.vca.extraIds[1], label: "Carol Macarone" },
+  { id: PROJ.vca.extraIds[2], label: "Santé"          },
+  { id: PROJ.vca.extraIds[3], label: "Hive"           },
+];
 
 const MODES = [
   { key: "task", label: "Tarefa" },
@@ -14,7 +23,7 @@ const MODAL_TITLE = {
   vca:  "Nova Marca VCA",
 };
 
-export default function QuickAddModal({ onClose, onSuccess, initialProjectId, initialSubClientId, clients: clientsProp }) {
+export default function QuickAddModal({ onClose, onSuccess, initialProjectId, initialVcaProjectId, initialSubClientId, clients: clientsProp }) {
   const [mode, setMode]       = useState("task");
   const [fading, setFading]   = useState(false);
   const [loading, setLoading] = useState(false);
@@ -26,6 +35,7 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
   const [taskData, setTaskData] = useState({
     title: "",
     project: initialProjectId || "pessoal",
+    vcaProjectId: initialVcaProjectId || "",
     subClient: initialSubClientId || "",
     dueDate: (() => {
       const b = new Date(Date.now() - 3 * 3600 * 1000);
@@ -204,7 +214,7 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
                 <label className={styles.label}>PROJETO / LISTA</label>
                 <select
                   value={taskData.project}
-                  onChange={e => setTaskData(p => ({ ...p, project: e.target.value, subClient: "" }))}
+                  onChange={e => setTaskData(p => ({ ...p, project: e.target.value, vcaProjectId: "", subClient: "" }))}
                   className={styles.select}
                 >
                   <option value="pessoal">Pessoal</option>
@@ -237,14 +247,54 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
 
               {taskData.project === "vca" && (
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>MARCA (VCA)</label>
+                  <label className={styles.label}>PROJETO VCA</label>
+                  <div>
+                    <div style={{ marginBottom: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => setTaskData(p => ({ ...p, vcaProjectId: VCA_MAIN_ID, subClient: "" }))}
+                        style={{
+                          padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700,
+                          fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s",
+                          border: taskData.vcaProjectId === VCA_MAIN_ID ? "1px solid rgba(91,159,214,0.45)" : "1px solid rgba(255,255,255,0.1)",
+                          background: taskData.vcaProjectId === VCA_MAIN_ID ? "rgba(91,159,214,0.15)" : "rgba(255,255,255,0.04)",
+                          color: taskData.vcaProjectId === VCA_MAIN_ID ? "#5b9fd6" : "rgba(255,255,255,0.45)",
+                        }}
+                      >Gestão Interna</button>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Agências</span>
+                      {VCA_AGENCIES.map(a => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => setTaskData(p => ({ ...p, vcaProjectId: a.id, subClient: "" }))}
+                          style={{
+                            padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600,
+                            fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s",
+                            border: taskData.vcaProjectId === a.id ? "1px solid rgba(91,159,214,0.4)" : "1px solid rgba(255,255,255,0.08)",
+                            background: taskData.vcaProjectId === a.id ? "rgba(91,159,214,0.12)" : "rgba(255,255,255,0.03)",
+                            color: taskData.vcaProjectId === a.id ? "#93c5fd" : "rgba(255,255,255,0.4)",
+                          }}
+                        >{a.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {taskData.project === "vca" && taskData.vcaProjectId && (
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>MARCA / SEÇÃO</label>
                   <select
                     value={taskData.subClient}
                     onChange={e => setTaskData(p => ({ ...p, subClient: e.target.value }))}
                     className={styles.select}
                   >
-                    <option value="">Selecione uma marca...</option>
-                    {vcaBrands.map(b => <option key={b.id} value={b.cf_value}>{b.name}</option>)}
+                    <option value="">Sem seção específica</option>
+                    {vcaBrands
+                      .filter(b => b.source_project_id === taskData.vcaProjectId)
+                      .map(b => <option key={b.id} value={b.cf_value}>{b.name}</option>)}
                   </select>
                 </div>
               )}

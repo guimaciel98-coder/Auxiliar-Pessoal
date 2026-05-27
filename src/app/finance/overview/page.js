@@ -382,16 +382,6 @@ export default function OverviewPage() {
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
                   Gastos Variáveis
                 </h2>
-                <button
-                  onClick={() => setAddModal(true)}
-                  style={{
-                    fontSize: 13, fontWeight: 700, padding: "6px 16px", borderRadius: 99,
-                    background: "rgba(0,229,160,0.1)", color: "var(--accent-primary)",
-                    border: "1px solid rgba(0,229,160,0.25)", cursor: "pointer",
-                  }}
-                >
-                  + Registrar
-                </button>
               </div>
 
               {variaveis.length === 0 ? (
@@ -573,56 +563,68 @@ export default function OverviewPage() {
                 background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(255,255,255,0.07)",
                 borderRadius: 16, padding: "16px 14px",
+                display: "flex", flexDirection: "column",
               }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
                   Gastos por Grupo
                 </div>
-                {donutData.length > 0 ? (
-                  <>
-                    <ResponsiveContainer width="100%" height={155}>
-                      <PieChart>
-                        <Pie
-                          data={donutData} cx="50%" cy="50%"
-                          innerRadius={36} outerRadius={56}
-                          dataKey="value" strokeWidth={0}
-                          animationBegin={200} animationDuration={800}
-                          label={({ cx, cy, midAngle, outerRadius, percent }) => {
-                            if (percent < 0.05) return null;
-                            const R = Math.PI / 180;
-                            const r = outerRadius + 18;
-                            const x = cx + r * Math.cos(-midAngle * R);
-                            const y = cy + r * Math.sin(-midAngle * R);
-                            return (
-                              <text x={x} y={y} fill="#9ca3af" textAnchor={x > cx ? "start" : "end"}
-                                dominantBaseline="central" fontSize={10} fontWeight={700}>
-                                {`${Math.round(percent * 100)}%`}
-                              </text>
-                            );
-                          }}
-                          labelLine={false}
-                        >
-                          {donutData.map((d, i) => (
-                            <Cell key={i} fill={DONUT_COLORS[d.name] ?? "#6b7280"} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{ background: "#1f2937", border: "1px solid rgba(55,65,81,0.7)", borderRadius: 8, fontSize: 11, padding: "6px 10px" }}
-                          formatter={v => fmt(v)}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "auto auto", gap: "5px 20px" }}>
-                        {donutData.map(d => (
-                          <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <div style={{ width: 8, height: 8, borderRadius: 2, background: DONUT_COLORS[d.name] ?? "#6b7280", flexShrink: 0 }} />
-                            <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{d.name}</span>
+                {donutData.length > 0 ? (() => {
+                  const total = donutData.reduce((s, d) => s + d.value, 0);
+                  return (
+                    <>
+                      {/* Donut + centro via overlay */}
+                      <div style={{ position: "relative" }}>
+                        <ResponsiveContainer width="100%" height={150}>
+                          <PieChart>
+                            <Pie
+                              data={donutData} cx="50%" cy="50%"
+                              innerRadius={44} outerRadius={64}
+                              dataKey="value" strokeWidth={2} stroke="rgba(15,23,42,0.6)"
+                              animationBegin={150} animationDuration={700}
+                              labelLine={false}
+                            >
+                              {donutData.map((d, i) => (
+                                <Cell key={i} fill={DONUT_COLORS[d.name] ?? "#6b7280"} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{ background: "#1f2937", border: "1px solid rgba(55,65,81,0.7)", borderRadius: 8, fontSize: 11, padding: "6px 10px" }}
+                              formatter={(v, name) => [fmt(v), name]}
+                              itemStyle={{ color: "#d1d5db" }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        {/* Centro */}
+                        <div style={{
+                          position: "absolute", inset: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          pointerEvents: "none",
+                        }}>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontSize: 8, color: "#6b7280", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>TOTAL</div>
+                            <div style={{ fontSize: 13, fontWeight: 900, color: "#f9fafb", lineHeight: 1 }}>{fmt(total)}</div>
                           </div>
-                        ))}
+                        </div>
                       </div>
-                    </div>
-                  </>
-                ) : (
+
+                      {/* Legenda rica */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 7, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                        {[...donutData].sort((a, b) => b.value - a.value).map(d => {
+                          const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                          const cor = DONUT_COLORS[d.name] ?? "#6b7280";
+                          return (
+                            <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ width: 9, height: 9, borderRadius: 3, background: cor, flexShrink: 0 }} />
+                              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", flex: 1, fontWeight: 500 }}>{d.name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.8)", fontFamily: "var(--font-mono)" }}>{fmt(d.value)}</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: cor, minWidth: 28, textAlign: "right" }}>{pct}%</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })() : (
                   <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "24px 0" }}>Sem dados</p>
                 )}
               </div>

@@ -83,6 +83,30 @@ function renderDonutLabel({ cx, cy, midAngle, outerRadius, percent, name }) {
   );
 }
 
+function AutoToggle({ value, onChange }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)", border: `1px solid ${value ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.07)"}` }}>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: value ? "#93c5fd" : "var(--text-primary)" }}>Pagamento automático</div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>Debitado automaticamente da conta</div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange(!value)}
+        style={{
+          padding: "5px 14px", borderRadius: 99, fontSize: 12, fontWeight: 700,
+          border: value ? "1px solid rgba(96,165,250,0.45)" : "1px solid rgba(255,255,255,0.12)",
+          background: value ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.05)",
+          color: value ? "#60a5fa" : "rgba(255,255,255,0.35)",
+          cursor: "pointer", transition: "all 0.2s", fontFamily: "inherit",
+        }}
+      >
+        {value ? "⚡ Automático" : "Manual"}
+      </button>
+    </div>
+  );
+}
+
 export default function ExpensesPage() {
   const { data, loading, error, refetch, hideNumbers } = useFinance();
   const fmt = (v) => fmtFin(v, hideNumbers);
@@ -91,7 +115,7 @@ export default function ExpensesPage() {
   const [createModal, setCreateModal] = useState(false);
   const [createTab, setCreateTab]     = useState("variavel");
   const [createSaving, setCreateSaving] = useState(false);
-  const [createForm, setCreateForm]   = useState({ nome: "", grupo: "Pessoal", previsao: "" });
+  const [createForm, setCreateForm]   = useState({ nome: "", grupo: "Pessoal", previsao: "", auto: false });
   const [toast, setToast]           = useState(null);
   // Overrides otimistas para o ctrl e auto dos fixos (item → boolean)
   const [ctrlOvr, setCtrlOvr]   = useState({});
@@ -108,7 +132,74 @@ export default function ExpensesPage() {
   }, []);
   const [toggling, setToggling] = useState(new Set());
 
+  // Modal de edição unificado (variável / fixo / parcela)
+  const [editModal,  setEditModal]  = useState(null); // { type, item }
+  const [editForm,   setEditForm]   = useState({});
+  const [editSaving, setEditSaving] = useState(false);
+
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 2800); }
+
+  function toInputMonth(mmyyyy) {
+    if (!mmyyyy) return "";
+    const [m, y] = String(mmyyyy).split("/");
+    if (!m || !y) return "";
+    return `${y}-${String(m).padStart(2, "0")}`;
+  }
+
+  function openEdit(type, item) {
+    if (type === "variavel") {
+      setEditForm({ nome: item.item, grupo: item.grupo || "Pessoal", previsao: String(item.previsao) });
+    } else if (type === "fixo") {
+      setEditForm({ nome: item.item, grupo: item.grupo || "Casa", real: String(item.real), previsao: String(item.previsao), auto: item.auto ?? false });
+    } else {
+      setEditForm({
+        nome:       item.nome,
+        valorTotal: String(item.valorTotal),
+        dataInicio: toInputMonth(item.dataInicio),
+        dataFim:    toInputMonth(item.dataFim),
+        auto:       item.auto ?? false,
+      });
+    }
+    setEditModal({ type, item });
+  }
+
+  async function saveEdit(e) {
+    e.preventDefault();
+    if (editSaving || !editModal) return;
+    setEditSaving(true);
+    const { type, item } = editModal;
+    try {
+      let campos;
+      let nomeAtual;
+      if (type === "variavel") {
+        nomeAtual = item.item;
+        campos = { nome: editForm.nome.trim(), grupo: editForm.grupo, previsao: parseFloat(editForm.previsao) || 0 };
+      } else if (type === "fixo") {
+        nomeAtual = item.item;
+        campos = { nome: editForm.nome.trim(), grupo: editForm.grupo, real: parseFloat(editForm.real) || 0, previsao: parseFloat(editForm.previsao) || 0, auto: editForm.auto };
+      } else {
+        nomeAtual = item.nome;
+        campos = {
+          nome:       editForm.nome.trim(),
+          valorTotal: parseFloat(editForm.valorTotal) || 0,
+          dataInicio: toSheetMonth(editForm.dataInicio),
+          dataFim:    toSheetMonth(editForm.dataFim),
+          auto:       editForm.auto,
+        };
+      }
+      const res  = await fetch("/api/finance/update", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, nomeAtual, campos }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      showToast("✓ Atualizado com sucesso");
+      setEditModal(null);
+      refetch();
+      if (type === "parcela") loadParcelas();
+    } catch (err) { showToast(`⚠ ${err.message}`); }
+    finally { setEditSaving(false); }
+  }
 
   async function toggleCtrl(itemName, currentCtrl) {
     if (toggling.has(itemName)) return;
@@ -151,6 +242,12 @@ export default function ExpensesPage() {
   }
 
 
+  const editBtnStyle = {
+    background: "none", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7,
+    padding: "3px 7px", cursor: "pointer", color: "rgba(255,255,255,0.3)",
+    fontSize: 12, lineHeight: 1, flexShrink: 0, transition: "all 0.15s",
+  };
+
   const variaveis  = data?.gastos?.variaveis?.items ?? [];
   const fixos      = data?.gastos?.fixos?.items     ?? [];
   const fixoGroups = useMemo(() => groupByGrupo(fixos), [fixos]);
@@ -163,7 +260,7 @@ export default function ExpensesPage() {
   const [parcSaving,       setParcSaving]       = useState(false);
   const [parcApplying,     setParcApplying]     = useState(false);
   const [parcForm,         setParcForm]         = useState({
-    nome: "", valorTotal: "",
+    nome: "", valorTotal: "", auto: false,
     dataInicio: new Date().toISOString().slice(0, 7),
     dataFim:    new Date().toISOString().slice(0, 7),
   });
@@ -241,13 +338,14 @@ export default function ExpensesPage() {
           valorTotal: parseFloat(parcForm.valorTotal),
           dataInicio: toSheetMonth(parcForm.dataInicio),
           dataFim:    toSheetMonth(parcForm.dataFim),
+          auto:       parcForm.auto,
         }),
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error);
       showToast(`✓ ${parcForm.nome} adicionado`);
       setCreateModal(false);
-      setParcForm({ nome: "", valorTotal: "", dataInicio: new Date().toISOString().slice(0, 7), dataFim: new Date().toISOString().slice(0, 7) });
+      setParcForm({ nome: "", valorTotal: "", auto: false, dataInicio: new Date().toISOString().slice(0, 7), dataFim: new Date().toISOString().slice(0, 7) });
       loadParcelas();
     } catch (e) { showToast(`⚠ ${e.message}`); }
     finally { setParcSaving(false); }
@@ -337,7 +435,7 @@ export default function ExpensesPage() {
       {!loading && !error && data && (
         <>
           {/* ── Big Numbers — clicáveis, associados às abas ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, padding: "0 28px", marginBottom: 20 }}>
+          <div className={styles.statGrid}>
             {[
               { label: "Variáveis", value: totalVariaveis, color: "#f59e0b", icon: "💸", tabKey: "variaveis" },
               { label: "Fixos",     value: totalFixos,     color: "#3b82f6", icon: "📋", tabKey: "fixos"     },
@@ -404,12 +502,15 @@ export default function ExpensesPage() {
                             border: overBudget ? "1px solid rgba(239,68,68,0.15)" : "1px solid rgba(255,255,255,0.07)",
                             borderLeft: `3px solid ${barColor}`,
                           }}>
-                            {/* Linha topo: nome + valores */}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
-                              <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{item.item}</span>
-                              <div style={{ display: "flex", alignItems: "baseline", gap: 4, fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
-                                <span style={{ fontSize: 14, fontWeight: 700, color: overBudget ? "#f87171" : "var(--text-primary)" }}>{fmt(item.real)}</span>
-                                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>/ {fmt(item.previsao)}</span>
+                            {/* Linha topo: nome + valores + editar */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 8 }}>
+                              <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.item}</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                <div style={{ display: "flex", alignItems: "baseline", gap: 4, fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
+                                  <span style={{ fontSize: 14, fontWeight: 700, color: overBudget ? "#f87171" : "var(--text-primary)" }}>{fmt(item.real)}</span>
+                                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>/ {fmt(item.previsao)}</span>
+                                </div>
+                                <button onClick={() => openEdit("variavel", item)} title="Editar" style={editBtnStyle}>✎</button>
                               </div>
                             </div>
                             {/* Barra */}
@@ -646,21 +747,22 @@ export default function ExpensesPage() {
                                       }}>
                                         {nomeLimpo}
                                       </div>
-                                      {/* Badge + toggle AUTO */}
-                                      <button
-                                        onClick={() => toggleAuto(item.item, isAuto)}
-                                        title={isAuto ? "Pagamento automático (clique para remover)" : "Marcar como débito automático"}
-                                        style={{
-                                          padding: "2px 7px", borderRadius: 99, fontSize: 9, fontWeight: 800,
-                                          border: `1px solid ${isAuto ? "rgba(96,165,250,0.4)" : "rgba(255,255,255,0.1)"}`,
-                                          background: isAuto ? "rgba(96,165,250,0.12)" : "transparent",
-                                          color: isAuto ? "#60a5fa" : "rgba(255,255,255,0.2)",
-                                          cursor: "pointer", letterSpacing: "0.05em", flexShrink: 0,
-                                          transition: "all 0.2s",
-                                        }}
-                                      >
-                                        ⚡ AUTO
-                                      </button>
+                                      {/* Badge AUTO — só exibe quando automático */}
+                                      {isAuto && (
+                                        <button
+                                          onClick={() => toggleAuto(item.item, isAuto)}
+                                          title="Pagamento automático (clique para remover)"
+                                          style={{
+                                            padding: "2px 7px", borderRadius: 99, fontSize: 9, fontWeight: 800,
+                                            border: "1px solid rgba(96,165,250,0.4)",
+                                            background: "rgba(96,165,250,0.12)",
+                                            color: "#60a5fa",
+                                            cursor: "pointer", letterSpacing: "0.05em", flexShrink: 0,
+                                          }}
+                                        >
+                                          ⚡ AUTO
+                                        </button>
+                                      )}
                                     </div>
                                     {prazo && (
                                       <div style={{
@@ -673,14 +775,17 @@ export default function ExpensesPage() {
                                     )}
                                   </div>
 
-                                  {/* Valor */}
-                                  <div style={{
-                                    fontSize: 15, fontWeight: 700,
-                                    fontFamily: "var(--font-mono)", flexShrink: 0,
-                                    color: ctrl ? "rgba(255,255,255,0.28)" : "#e5e7eb",
-                                    transition: "color 0.2s",
-                                  }}>
-                                    {fmt(item.real)}
+                                  {/* Valor + editar */}
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                    <div style={{
+                                      fontSize: 15, fontWeight: 700,
+                                      fontFamily: "var(--font-mono)",
+                                      color: ctrl ? "rgba(255,255,255,0.28)" : "#e5e7eb",
+                                      transition: "color 0.2s",
+                                    }}>
+                                      {fmt(item.real)}
+                                    </div>
+                                    <button onClick={() => openEdit("fixo", item)} title="Editar" style={editBtnStyle}>✎</button>
                                   </div>
                                 </div>
                               );
@@ -926,6 +1031,7 @@ export default function ExpensesPage() {
                         {item.restante > 0 && (
                           <span style={{ fontSize: 12, fontWeight: 600, color: "#fca5a5", fontFamily: "var(--font-mono)" }}>{fmt(item.restante)}</span>
                         )}
+                        <button onClick={() => openEdit("parcela", item)} title="Editar" style={editBtnStyle}>✎</button>
                         <button
                           onClick={() => handleParcRemove(item)}
                           disabled={isRem}
@@ -1090,6 +1196,111 @@ export default function ExpensesPage() {
         </>
       )}
 
+      {/* Modal de edição */}
+      {editModal && (() => {
+        const { type } = editModal;
+        const lbl = { fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 };
+        const btnCancel = { flex: 1, padding: 12, borderRadius: 10, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", fontFamily: "inherit", cursor: "pointer" };
+        const btnSave   = { flex: 2, padding: 12, borderRadius: 10, fontSize: 13, fontWeight: 700, color: "#fff", border: "none", fontFamily: "inherit", cursor: editSaving ? "wait" : "pointer", opacity: editSaving ? 0.6 : 1,
+          background: type === "variavel" ? "linear-gradient(135deg,#f59e0b,#d97706)"
+                    : type === "fixo"     ? "linear-gradient(135deg,#3b82f6,#2563eb)"
+                    :                       "linear-gradient(135deg,#8b5cf6,#6d28d9)" };
+        const typeLabel = type === "variavel" ? "Gasto Variável" : type === "fixo" ? "Gasto Fixo" : "Parcela";
+
+        // Cálculo de previsão de parcela no modal
+        const parcPrev = (() => {
+          if (type !== "parcela" || !editForm.dataInicio || !editForm.dataFim) return null;
+          const [ys, ms] = editForm.dataInicio.split("-").map(Number);
+          const [ye, me] = editForm.dataFim.split("-").map(Number);
+          const n = (ye - ys) * 12 + (me - ms) + 1;
+          return n > 0 ? n : null;
+        })();
+        const parcMensal = parcPrev && editForm.valorTotal
+          ? Math.round((parseFloat(editForm.valorTotal) / parcPrev) * 100) / 100
+          : null;
+
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600 }}
+            onClick={() => setEditModal(null)}>
+            <div style={{ background: "rgba(17,24,39,0.98)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: "28px 24px", width: "90%", maxWidth: 460, boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ marginBottom: 20 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 3 }}>Editar {typeLabel}</h3>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>Altere os campos e salve.</p>
+              </div>
+
+              <form onSubmit={saveEdit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+                {/* ── Variável ── */}
+                {type === "variavel" && (<>
+                  <div><label style={lbl}>Nome</label>
+                    <input autoFocus required type="text" value={editForm.nome} onChange={e => setEditForm(f => ({ ...f, nome: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div><label style={lbl}>Grupo</label>
+                    <select value={editForm.grupo} onChange={e => setEditForm(f => ({ ...f, grupo: e.target.value }))} style={inputStyle}>
+                      <option>Casa</option><option>Pessoal</option><option>Outros</option>
+                    </select>
+                  </div>
+                  <div><label style={lbl}>Previsão Mensal (R$)</label>
+                    <input required type="number" step="0.01" min="0" value={editForm.previsao} onChange={e => setEditForm(f => ({ ...f, previsao: e.target.value }))} style={inputStyle} />
+                  </div>
+                </>)}
+
+                {/* ── Fixo ── */}
+                {type === "fixo" && (<>
+                  <div><label style={lbl}>Nome</label>
+                    <input autoFocus required type="text" value={editForm.nome} onChange={e => setEditForm(f => ({ ...f, nome: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div><label style={lbl}>Grupo</label>
+                    <select value={editForm.grupo} onChange={e => setEditForm(f => ({ ...f, grupo: e.target.value }))} style={inputStyle}>
+                      <option>Casa</option><option>Pessoal</option><option>Outros</option>
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <div style={{ flex: 1 }}><label style={lbl}>Valor Real (R$)</label>
+                      <input required type="number" step="0.01" min="0" value={editForm.real} onChange={e => setEditForm(f => ({ ...f, real: e.target.value }))} style={inputStyle} />
+                    </div>
+                    <div style={{ flex: 1 }}><label style={lbl}>Previsão (R$)</label>
+                      <input type="number" step="0.01" min="0" value={editForm.previsao} onChange={e => setEditForm(f => ({ ...f, previsao: e.target.value }))} style={inputStyle} />
+                    </div>
+                  </div>
+                  <AutoToggle value={editForm.auto} onChange={v => setEditForm(f => ({ ...f, auto: v }))} />
+                </>)}
+
+                {/* ── Parcela ── */}
+                {type === "parcela" && (<>
+                  <div><label style={lbl}>Nome</label>
+                    <input autoFocus required type="text" value={editForm.nome} onChange={e => setEditForm(f => ({ ...f, nome: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div><label style={lbl}>Valor Total (R$)</label>
+                    <input required type="number" step="0.01" min="0" value={editForm.valorTotal} onChange={e => setEditForm(f => ({ ...f, valorTotal: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <div style={{ flex: 1 }}><label style={lbl}>Início</label>
+                      <input required type="month" value={editForm.dataInicio} onChange={e => setEditForm(f => ({ ...f, dataInicio: e.target.value }))} style={inputStyle} />
+                    </div>
+                    <div style={{ flex: 1 }}><label style={lbl}>Fim</label>
+                      <input required type="month" value={editForm.dataFim} onChange={e => setEditForm(f => ({ ...f, dataFim: e.target.value }))} style={inputStyle} />
+                    </div>
+                  </div>
+                  {parcPrev && parcMensal && (
+                    <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)", fontSize: 13, color: "#a78bfa", fontWeight: 600 }}>
+                      → {parcPrev}x de {fmt(parcMensal)}/mês
+                    </div>
+                  )}
+                  <AutoToggle value={editForm.auto} onChange={v => setEditForm(f => ({ ...f, auto: v }))} />
+                </>)}
+
+                <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+                  <button type="button" onClick={() => setEditModal(null)} style={btnCancel}>Cancelar</button>
+                  <button type="submit" disabled={editSaving} style={btnSave}>{editSaving ? "Salvando…" : "Salvar"}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Modal unificado de criação */}
       {createModal && (() => {
         const lbl = { fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 };
@@ -1116,7 +1327,7 @@ export default function ExpensesPage() {
           try {
             const res = await fetch("/api/finance/register", {
               method: "POST", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ type, grupo: createForm.grupo, nome: createForm.nome, previsao: parseFloat(createForm.previsao) || 0 }),
+              body: JSON.stringify({ type, grupo: createForm.grupo, nome: createForm.nome, previsao: parseFloat(createForm.previsao) || 0, auto: createForm.auto }),
             });
             const json = await res.json();
             if (!json.ok) throw new Error(json.error);
@@ -1170,6 +1381,7 @@ export default function ExpensesPage() {
                   <div><label style={lbl}>Nome do Item</label><input autoFocus required type="text" value={createForm.nome} onChange={e => setCreateForm(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Aluguel, Internet…" style={inputStyle} /></div>
                   {grupoSelect}
                   {previsaoInput("Valor (R$)")}
+                  <AutoToggle value={createForm.auto} onChange={v => setCreateForm(f => ({ ...f, auto: v }))} />
                   <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
                     <button type="button" onClick={() => setCreateModal(false)} style={btnCancel}>Cancelar</button>
                     <button type="submit" disabled={createSaving || !createForm.nome} style={{ ...btnSubmit, background: "linear-gradient(135deg,#3b82f6,#2563eb)", opacity: (createSaving || !createForm.nome) ? 0.5 : 1 }}>{createSaving ? "Salvando..." : "Adicionar Fixo"}</button>
@@ -1191,6 +1403,7 @@ export default function ExpensesPage() {
                       → {parcPrevModal}x de {fmt(parcMensalPrevModal)}/mês
                     </div>
                   )}
+                  <AutoToggle value={parcForm.auto} onChange={v => setParcForm(p => ({ ...p, auto: v }))} />
                   <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
                     <button type="button" onClick={() => setCreateModal(false)} style={btnCancel}>Cancelar</button>
                     <button type="submit" disabled={parcSaving || !parcForm.nome || !parcForm.valorTotal || !parcPrevModal} style={{ ...btnSubmit, background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", opacity: (parcSaving || !parcForm.nome || !parcForm.valorTotal || !parcPrevModal) ? 0.5 : 1 }}>{parcSaving ? "Salvando..." : "Adicionar Parcela"}</button>

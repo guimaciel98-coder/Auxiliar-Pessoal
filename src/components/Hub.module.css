@@ -1,243 +1,193 @@
-.container {
-  min-height: 100vh;
-  min-height: 100dvh;
+.root {
+  min-height: 100vh; min-height: 100dvh;
   background: var(--bg-main);
   color: var(--text-primary);
-  position: relative;
   font-family: var(--font-sans);
-  /* Offset sidebar */
-  padding-left: 220px;
+  position: relative;
+  display: flex; flex-direction: column;
+  padding: 0 0 40px;
 }
 
-.glowTop {
-  position: fixed; top: -20%; right: -10%;
-  width: 600px; height: 600px;
-  background: radial-gradient(circle, rgba(0,229,160,0.04) 0%, transparent 60%);
-  filter: blur(80px); pointer-events: none; z-index: 0;
+/* ── Glows ──────────────────────────────────────────────────────────────── */
+.glowA {
+  position: fixed; top: -10%; right: 5%;
+  width: 560px; height: 560px;
+  background: radial-gradient(circle, rgba(129,140,248,0.06) 0%, transparent 65%);
+  filter: blur(70px); pointer-events: none; z-index: 0;
 }
-.glowBottom {
-  position: fixed; bottom: -10%; left: 10%;
-  width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(0,179,126,0.03) 0%, transparent 60%);
-  filter: blur(80px); pointer-events: none; z-index: 0;
+.glowB {
+  position: fixed; bottom: -5%; left: 25%;
+  width: 480px; height: 480px;
+  background: radial-gradient(circle, rgba(248,113,113,0.04) 0%, transparent 65%);
+  filter: blur(70px); pointer-events: none; z-index: 0;
 }
-
-/* ── Landing: layout desktop ────────────────────────────────────────────── */
-.landing {
-  position: relative; z-index: 1;
-  max-width: 1100px;
-  padding: 48px 40px 80px;
-  display: flex; flex-direction: column; gap: 40px;
-  animation: fadeDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+.glowC {
+  position: fixed; top: 40%; left: -5%;
+  width: 350px; height: 350px;
+  background: radial-gradient(circle, rgba(251,191,36,0.03) 0%, transparent 65%);
+  filter: blur(60px); pointer-events: none; z-index: 0;
 }
 
-/* ── Header ─────────────────────────────────────────────────────────────── */
-.header {
-  display: flex; justify-content: space-between; align-items: flex-start;
+/* ── Top bar ────────────────────────────────────────────────────────────── */
+.topbar {
+  position: relative; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 48px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 
-.greeting {
-  font-size: 13px; color: var(--text-muted);
-  font-weight: 500; margin-bottom: 6px;
-  text-transform: uppercase; letter-spacing: 0.06em;
+.brand {
+  display: flex; align-items: center; gap: 12px;
+  text-decoration: none;
 }
+.brandMark {
+  width: 36px; height: 36px; border-radius: 11px;
+  background: linear-gradient(135deg, #4338ca, #6d28d9);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 900; color: #fff;
+  box-shadow: 0 4px 12px rgba(67,56,202,0.35);
+  flex-shrink: 0;
+}
+.brandText { display: flex; flex-direction: column; gap: 1px; }
+.brandName { font-size: 15px; font-weight: 800; color: #f9fafb; letter-spacing: -0.02em; line-height: 1; }
+.brandSub  { font-size: 9px; font-weight: 500; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.07em; }
 
-.title {
-  font-size: 36px; font-weight: 800; letter-spacing: -0.03em;
-  color: var(--text-primary); line-height: 1.1;
-}
+.topRight { display: flex; align-items: center; gap: 16px; }
+.clock { font-size: 13px; color: rgba(255,255,255,0.25); font-weight: 500; font-variant-numeric: tabular-nums; }
 
 .quickBtn {
-  width: 52px; height: 52px; border-radius: 16px;
-  background: rgba(0,229,160,0.1);
-  border: 1px solid rgba(0,229,160,0.2);
-  color: var(--accent-primary); font-size: 28px; font-weight: 300;
+  width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.6); font-size: 22px; font-weight: 300; line-height: 1;
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4,0,0.2,1); flex-shrink: 0; line-height: 1;
-  box-shadow: 0 4px 20px rgba(0,229,160,0.1);
+  cursor: pointer; transition: background .2s, transform .2s;
 }
-.quickBtn:hover {
-  background: rgba(0,229,160,0.16);
-  border-color: rgba(0,229,160,0.4);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0,229,160,0.2);
-}
-.quickBtn:active { transform: translateY(0) scale(0.95); }
+.quickBtn:hover { background: rgba(255,255,255,0.10); color: #fff; transform: translateY(-1px); }
 
-/* ── Desktop grid: card principal + secundários lado a lado ─────────────── */
-.modulesGrid {
+/* ── Greeting ───────────────────────────────────────────────────────────── */
+.greeting {
+  position: relative; z-index: 1;
+  padding: 40px 48px 32px;
+  text-align: center;
+}
+.greetSmall {
+  font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.28);
+  text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;
+}
+.greetTitle {
+  font-size: 44px; font-weight: 900; letter-spacing: -0.04em; line-height: 1;
+  color: #f9fafb;
+}
+.greetDate { color: rgba(255,255,255,0.38); font-weight: 600; }
+
+/* ── Grid ───────────────────────────────────────────────────────────────── */
+.grid {
+  position: relative; z-index: 1;
+  flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 0 48px;
+  align-items: start;
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-/* ── Card principal ─────────────────────────────────────────────────────── */
-.primaryCard {
-  grid-column: 1 / 3; /* ocupa 2/3 da grade */
-  display: flex; flex-direction: column; gap: 24px;
-  padding: 36px;
-  border-radius: 24px;
-  background: var(--bg-card);
+/* Coluna direita: 3 cards empilhados */
+.rightCol {
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+/* ── Card base ──────────────────────────────────────────────────────────── */
+.card {
+  display: flex; flex-direction: column;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.025);
   border: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: blur(20px);
-  text-decoration: none; color: inherit;
-  transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
-  position: relative; overflow: hidden;
-  min-height: 220px;
+  text-decoration: none; color: inherit; overflow: hidden;
+  transition: background .25s, border-color .25s, transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s;
 }
-.primaryCard::before {
-  content: ""; position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(0,229,160,0.08) 0%, transparent 50%);
-  opacity: 0; transition: opacity 0.4s;
-}
-.primaryCard:hover::before { opacity: 1; }
-.primaryCard:hover {
-  border-color: rgba(0,229,160,0.25);
+.card:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.11);
   transform: translateY(-3px);
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 40px rgba(0,229,160,0.08);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35);
 }
 
-.primaryCardHeader {
-  display: flex; justify-content: space-between; align-items: center;
-  position: relative; z-index: 2;
-}
+/* Barra colorida no topo */
+.cardBar { height: 3px; flex-shrink: 0; transition: height .2s; }
+.card:hover .cardBar { height: 4px; }
 
-.primaryIconWrap {
-  width: 52px; height: 52px; border-radius: 16px;
-  background: rgba(0,229,160,0.12);
-  border: 1px solid rgba(0,229,160,0.25);
+.cardBody { padding: 24px 26px 20px; display: flex; flex-direction: column; gap: 16px; flex: 1; }
+
+/* Card grande (Tarefas) */
+.cardTarefas { min-height: 320px; }
+
+/* Cards pequenos (direita) */
+.cardSmall { flex: 1; }
+
+/* ── Cabeçalho do card ──────────────────────────────────────────────────── */
+.cardHead {
+  display: flex; align-items: flex-start; gap: 14px;
+}
+.iconWrap {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 800;
 }
-.primaryIcon { font-size: 22px; color: var(--accent-primary); font-weight: bold; }
+.cardTitle { font-size: 18px; font-weight: 800; color: #f9fafb; letter-spacing: -0.02em; }
+.cardSub   { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 3px; line-height: 1.4; }
 
-.statusBadgeActive {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.1em; color: var(--accent-primary);
-  background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.2);
-  padding: 4px 12px; border-radius: 99px;
+/* ── KPIs ───────────────────────────────────────────────────────────────── */
+.kpiRow {
+  display: flex; gap: 24px;
+}
+.kpi { display: flex; flex-direction: column; gap: 4px; }
+.kpiValue {
+  font-size: 28px; font-weight: 900; letter-spacing: -0.04em; line-height: 1;
+  display: flex; align-items: baseline; gap: 3px;
+}
+.kpiUnit  { font-size: 14px; font-weight: 600; opacity: 0.7; }
+.kpiLabel { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.28); text-transform: uppercase; letter-spacing: 0.06em; }
+.kpiSkeleton {
+  display: inline-block; width: 40px; height: 24px; border-radius: 6px;
+  background: rgba(255,255,255,0.07); animation: pulse 1.4s ease-in-out infinite;
 }
 
-.primaryInfo { position: relative; z-index: 2; flex: 1; }
-.primaryTitle {
-  font-size: 32px; font-weight: 800;
-  color: var(--text-primary); letter-spacing: -0.02em;
-  margin-bottom: 6px;
-}
-.primarySubtitle {
-  font-size: 14px; color: var(--text-secondary);
-  font-family: var(--font-mono);
-}
+/* ── Barra de progresso ─────────────────────────────────────────────────── */
+.progressWrap { display: flex; align-items: center; gap: 10px; }
+.progressBar  { flex: 1; height: 4px; border-radius: 99px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.progressFill { height: 100%; border-radius: 99px; transition: width .6s cubic-bezier(.16,1,.3,1); }
+.progressLabel { font-size: 11px; color: rgba(255,255,255,0.3); font-weight: 600; white-space: nowrap; }
 
-.primaryFooter {
+/* ── Rodapé / CTA ───────────────────────────────────────────────────────── */
+.cardFooter {
   display: flex; justify-content: space-between; align-items: center;
   border-top: 1px solid rgba(255,255,255,0.05);
-  padding-top: 20px; position: relative; z-index: 2;
+  padding-top: 14px; margin-top: auto;
 }
-.primaryAction {
-  font-size: 13px; font-weight: 600; color: var(--text-secondary);
-  text-transform: uppercase; letter-spacing: 0.05em; transition: color 0.3s;
+.ctaLabel {
+  font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.28);
+  text-transform: uppercase; letter-spacing: 0.07em; transition: color .2s;
 }
-.primaryCard:hover .primaryAction { color: var(--accent-primary); }
-.arrow { font-size: 20px; transition: transform 0.3s; }
-.primaryCard:hover .arrow { transform: translateX(6px); }
+.card:hover .ctaLabel { color: rgba(255,255,255,0.55); }
+.ctaArrow { font-size: 16px; transition: transform .2s; }
+.card:hover .ctaArrow { transform: translateX(5px); }
 
-/* ── Cards secundários (coluna direita) ─────────────────────────────────── */
-.secondaryStack {
-  grid-column: 3 / 4;
-  display: flex; flex-direction: column; gap: 16px;
-}
-
-.secondaryCard {
-  display: flex; flex-direction: column; gap: 14px;
-  padding: 24px;
-  border-radius: 20px;
-  background: rgba(31, 41, 55, 0.6);
-  border: 1px solid rgba(255,255,255,0.05);
-  text-decoration: none; color: inherit;
-  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-  position: relative; flex: 1;
-}
-.secondaryCard:hover {
-  background: rgba(31, 41, 55, 0.9);
-  border-color: rgba(255,255,255,0.1);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
-}
-.cardDisabled { opacity: 0.4; pointer-events: none; }
-
-.secondaryIconWrap {
-  width: 40px; height: 40px; border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; font-weight: bold;
-}
-.secondaryInfo { display: flex; flex-direction: column; gap: 4px; flex: 1; }
-.secondaryTitle { font-size: 17px; font-weight: 700; color: var(--text-primary); }
-.secondarySubtitle { font-size: 12px; color: var(--text-muted); }
-
-.secondaryFooter {
-  display: flex; justify-content: space-between; align-items: center;
-  border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;
-  font-size: 12px; font-weight: 600; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 0.04em;
-}
-
-.statusBadgeSoon {
-  font-size: 9px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.05em; color: var(--text-muted);
-  background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 99px;
-}
-
-/* ── Animações ──────────────────────────────────────────────────────────── */
-@keyframes fadeDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ── Tablet ─────────────────────────────────────────────────────────────── */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .container { padding-left: 220px; }
-  .landing { padding: 36px 28px 60px; }
-  .modulesGrid { grid-template-columns: 1fr 1fr; }
-  .primaryCard { grid-column: 1 / 3; }
-  .secondaryStack { grid-column: 1 / 3; flex-direction: row; }
-  .title { font-size: 30px; }
+/* ── Animação pulse skeleton ────────────────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .4; }
 }
 
 /* ── Mobile ─────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .container { padding-left: 0; }
-  .landing { padding: 32px 16px 96px; gap: 28px; }
-  .title { font-size: 26px; }
-  .greeting { font-size: 12px; }
-  .quickBtn { width: 44px; height: 44px; font-size: 22px; border-radius: 12px; }
-  .modulesGrid { grid-template-columns: 1fr; gap: 14px; }
-  .primaryCard { grid-column: 1 / 2; padding: 22px; min-height: auto; gap: 16px; }
-  .primaryTitle { font-size: 24px; }
-  .secondaryStack { grid-column: 1 / 2; flex-direction: column; gap: 12px; }
-  .secondaryCard { flex-direction: row; align-items: center; padding: 16px; gap: 12px; }
-  .secondaryFooter { display: none; }
-}
-
-/* ── Hub mobile — ADITIVO ───────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  /* safe-area-inset-bottom: evita que o conteúdo fique sob o home indicator */
-  .landing {
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-  }
-
-  /* Desabilita hover transforms — causam jitter em touch */
-  .primaryCard:hover  { transform: none; }
-  .secondaryCard:hover { transform: none; }
-
-  /* Padding lateral mínimo 16px + safe-area em landscape */
-  .landing {
-    padding-left:  max(16px, env(safe-area-inset-left,  0px));
-    padding-right: max(16px, env(safe-area-inset-right, 0px));
-  }
+  .topbar  { padding: 16px 20px; }
+  .greeting { padding: 28px 20px 20px; }
+  .greetTitle { font-size: 30px; }
+  .grid    { grid-template-columns: 1fr; padding: 0 20px; }
+  .rightCol { gap: 10px; }
+  .card:hover { transform: none; }
+  .kpiValue { font-size: 22px; }
 }

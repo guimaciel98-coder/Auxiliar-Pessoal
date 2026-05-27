@@ -3,8 +3,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./Navigation.module.css";
 
+const FINANCE_ONLY = process.env.NEXT_PUBLIC_FINANCE_ONLY === "true";
+
 // ── Estrutura única de navegação ──────────────────────────────────────────────
-const NAV = [
+const NAV_FULL = [
   {
     label: "Hub",
     path: "/",
@@ -15,12 +17,12 @@ const NAV = [
     label: "Tarefas",
     path: "/daily",
     icon: "✓",
+    accent: "#818cf8",
     sectionLabel: "Módulos",
     prefixes: ["/daily", "/tomorrow", "/board", "/calendar", "/recurrences"],
     children: [
       { label: "Hoje",     path: "/daily",       icon: "🔥", exact: true },
       { label: "Projetos", path: "/board",       icon: "🗂️" },
-      // { label: "Agenda", path: "/calendar", icon: "📅" }, // oculta por ora
       { label: "Repetir",  path: "/recurrences", icon: "🔄" },
     ],
   },
@@ -28,6 +30,7 @@ const NAV = [
     label: "Financeiro",
     path: "/finance/overview",
     icon: "R$",
+    accent: "#fbbf24",
     prefixes: ["/finance"],
     children: [
       { label: "Visão Geral", path: "/finance/overview",  icon: "📊", exact: true },
@@ -40,13 +43,29 @@ const NAV = [
     label: "Rotina",
     path: "/routine",
     icon: "⏱",
+    accent: "#38bdf8",
     prefixes: ["/routine"],
     children: [
       { label: "Minha Rotina", path: "/routine",        icon: "📅", exact: true },
       { label: "Eventos",      path: "/routine/events", icon: "🗓" },
     ],
   },
+  {
+    label: "Saúde",
+    path: "/health",
+    icon: "♡",
+    accent: "#f87171",
+    prefixes: ["/health"],
+    children: [
+      { label: "Atividade", path: "/health",         icon: "⌚", exact: true },
+      { label: "Importar",  path: "/health/import",  icon: "↑" },
+    ],
+  },
 ];
+
+const NAV = FINANCE_ONLY
+  ? NAV_FULL.filter(i => i.label === "Financeiro")
+  : NAV_FULL;
 
 function isItemActive(item, pathname) {
   if (item.exact) return pathname === item.path;
@@ -55,15 +74,15 @@ function isItemActive(item, pathname) {
 }
 
 // Prefixos de seções com accordion
-const TASK_PREFIXES    = NAV.find(i => i.label === "Tarefas")?.prefixes    ?? [];
-const FINANCE_PREFIXES = NAV.find(i => i.label === "Financeiro")?.prefixes ?? [];
-const ROUTINE_PREFIXES = NAV.find(i => i.label === "Rotina")?.prefixes    ?? [];
+const TASK_PREFIXES    = NAV_FULL.find(i => i.label === "Tarefas")?.prefixes    ?? [];
+const FINANCE_PREFIXES = NAV_FULL.find(i => i.label === "Financeiro")?.prefixes ?? [];
+const ROUTINE_PREFIXES = NAV_FULL.find(i => i.label === "Rotina")?.prefixes    ?? [];
 
 // Listas flat para barra mobile
-const MOBILE_GLOBAL   = NAV.filter(i => !i.exact);
-const MOBILE_TASKS    = NAV.find(i => i.label === "Tarefas")?.children    ?? [];
-const MOBILE_FINANCE  = NAV.find(i => i.label === "Financeiro")?.children ?? [];
-const MOBILE_ROUTINE  = NAV.find(i => i.label === "Rotina")?.children     ?? [];
+const MOBILE_GLOBAL   = NAV_FULL.filter(i => !i.exact);
+const MOBILE_TASKS    = NAV_FULL.find(i => i.label === "Tarefas")?.children    ?? [];
+const MOBILE_FINANCE  = NAV_FULL.find(i => i.label === "Financeiro")?.children ?? [];
+const MOBILE_ROUTINE  = NAV_FULL.find(i => i.label === "Rotina")?.children     ?? [];
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -72,13 +91,15 @@ export default function Navigation() {
   const isRoutineSection = ROUTINE_PREFIXES.some(p => pathname.startsWith(p));
 
   // Mobile: mostra sub-itens do contexto ativo, senão itens globais
-  const mobileItems = isTaskSection
-    ? MOBILE_TASKS
-    : isFinanceSection
-      ? MOBILE_FINANCE
-      : isRoutineSection
-        ? MOBILE_ROUTINE
-        : MOBILE_GLOBAL;
+  const mobileItems = FINANCE_ONLY
+    ? MOBILE_FINANCE
+    : isTaskSection
+      ? MOBILE_TASKS
+      : isFinanceSection
+        ? MOBILE_FINANCE
+        : isRoutineSection
+          ? MOBILE_ROUTINE
+          : MOBILE_GLOBAL;
 
   return (
     <nav className={styles.nav}>
@@ -101,7 +122,7 @@ export default function Navigation() {
           const open   = item.children && active;
 
           return (
-            <div key={item.path} className={styles.itemGroup}>
+            <div key={item.path} className={styles.itemGroup} style={item.accent ? { "--section-accent": item.accent } : {}}>
               {item.sectionLabel && (
                 <span className={styles.sectionLabel}>{item.sectionLabel}</span>
               )}
