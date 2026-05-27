@@ -26,6 +26,7 @@ export async function GET() {
         variaveis: parseNum(r[4]),
         poupanca:  parseNum(r[5]),
         saldo:     parseNum(r[6]),
+        parcelas:  parseNum(r[7]),
       }))
       .reverse();
 

@@ -532,6 +532,7 @@ export default function LaunchPage() {
                       ["💰 Ganhos",    m.ganhos,    "#10b981"],
                       ["📋 Fixos",     m.fixos,     "var(--text-secondary)"],
                       ["💸 Variáveis", m.variaveis, "#f59e0b"],
+                      ...(m.parcelas > 0 ? [["💳 Parcelas", m.parcelas, "#a78bfa"]] : []),
                       ["🏦 Poupança",  m.poupanca,  "#3b82f6"],
                     ].map(([label, val, color]) => (
                       <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 11 }}>

@@ -32,7 +32,7 @@ export default function IncomePage() {
     { label: "CLT",          items: ganhos.items?.clt         ?? [], total: ganhos.clt         ?? 0 },
     { label: "PDV / Freelas",items: ganhos.items?.pdv         ?? [], total: ganhos.pdv         ?? 0 },
     { label: "Outros",       items: ganhos.items?.emprestimos ?? [], total: ganhos.emprestimos ?? 0 },
-  ].filter(g => g.items.length > 0 && g.total > 0);
+  ].filter(g => g.items.length > 0);
 
   const grandTotal = incomeGroups.reduce((s, g) => s + g.total, 0);
 
