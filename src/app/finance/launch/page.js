@@ -110,20 +110,23 @@ export default function LaunchPage() {
     } finally { setMonthsLoad(false); }
   }, []);
 
-  useEffect(() => {
-    loadEntries();
-    loadMonthsHistory();
+  const loadClosePreview = useCallback(() => {
     fetch("/api/finance/close-month", { cache: "no-store" })
       .then(r => r.json())
       .then(d => {
         if (d.ok) {
           setClosePreview(d);
-          // Pré-preenche melhor dia com valor salvo no config
           if (d.melhorDiaAtual) setMelhorDiaInput(String(d.melhorDiaAtual));
         }
       })
       .catch(() => {});
-  }, [loadEntries, loadMonthsHistory]);
+  }, []);
+
+  useEffect(() => {
+    loadEntries();
+    loadMonthsHistory();
+    loadClosePreview();
+  }, [loadEntries, loadMonthsHistory, loadClosePreview]);
 
   // ── Cálculos fechamento ──────────────────────────────────────────────────
   const totalPoup = [poup1, poup2, poup3, benef].reduce((s, v) => s + (parseFloat(v) || 0), 0);
@@ -164,8 +167,8 @@ export default function LaunchPage() {
       setCloseResult(j.resultado);
       showToast("✓ Mês fechado com sucesso!");
       setPoup1(""); setPoup2(""); setPoup3(""); setBenef(""); setBrad(""); setNub(""); setMelhorDiaInput("");
-      setClosePreview(null);
       loadMonthsHistory();
+      loadClosePreview();
     } catch (err) { showToast(`⚠ ${err.message}`, true); }
     finally { setClosing(false); }
   }
@@ -512,8 +515,19 @@ export default function LaunchPage() {
           {/* ── Painel 3: Histórico de Fechamentos ── */}
           {(monthsLoad || monthsHistory.length > 0) && (
             <div className={finStyles.sidePanel} style={{ marginTop: 12 }}>
-              <div className={finStyles.sidePanelTitle}>
+              <div className={finStyles.sidePanelTitle} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span>📅 Fechamentos</span>
+                <button
+                  onClick={async () => {
+                    const r = await fetch("/api/finance/months-history", { method: "PATCH" });
+                    const d = await r.json();
+                    if (d.ok) { showToast(`✓ ${d.rowsFixed} registro(s) recalculado(s)`); loadMonthsHistory(); }
+                    else showToast("⚠ Erro ao recalcular", true);
+                  }}
+                  style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  Recalcular
+                </button>
               </div>
               <div style={{ padding: "10px 16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
                 {monthsLoad ? (

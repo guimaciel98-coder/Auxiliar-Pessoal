@@ -55,11 +55,14 @@ export async function GET() {
     const sheets        = await getSheetsClient();
     const spreadsheetId = getSpreadsheetId();
 
-    const [fixosRows, ganhosRows, poupancaRows, configRows] = await Promise.all([
+    const HIST = "App_Historico_Meses";
+    const [fixosRows, ganhosRows, poupancaRows, configRows, histRows] = await Promise.all([
       readSheet(sheets, spreadsheetId, `'${FIXOS}'!A2:E500`),
       readSheet(sheets, spreadsheetId, `'${GANHOS}'!A2:D500`),
       readSheet(sheets, spreadsheetId, `'${POUPANCA}'!A2:C100`),
       sheets.spreadsheets.values.get({ spreadsheetId, range: `'${CONFIG}'!A1:B20` })
+        .then(r => r.data.values ?? []).catch(() => []),
+      sheets.spreadsheets.values.get({ spreadsheetId, range: `'${HIST}'!A2:A500` })
         .then(r => r.data.values ?? []).catch(() => []),
     ]);
 
@@ -80,9 +83,14 @@ export async function GET() {
       return null;
     })();
 
+    // Se o mês atual já tem fechamento, o próximo a fechar é o mês seguinte
+    const mesCalendario = mesAtualLabel();
+    const jaFechado     = histRows.some(r => String(r[0] ?? "").trim().toLowerCase() === mesCalendario.toLowerCase());
+    const mesParaFechar = jaFechado ? proxMes : mesCalendario;
+
     return Response.json({
       ok: true,
-      mesAtual:      mesAtualLabel(),
+      mesAtual:      mesParaFechar,
       proximoMes:    proxMes,
       cicloInicio,
       melhorDiaAtual,
@@ -161,15 +169,16 @@ export async function POST(req) {
     resultado.fixosResetados    = fixosResetados;
     resultado.fixosAutoMantidos = fixosAutoMantidos;
 
-    // ── 2. Ganhos: reset Confirmado → FALSE ───────────────────────────────────
+    // ── 2. Ganhos: CLT → mantém TRUE (salário fixo); PDV/outros → reset FALSE ──
     let ganhosResetados = 0;
     ganhosRows.forEach((row, i) => {
       if (!row[1]?.trim()) return;
+      const isCLT = String(row[0] ?? "").trim().toUpperCase() === "CLT";
       updates.push({
         range:  `'${GANHOS}'!D${i + 2}`,
-        values: [["FALSE"]],
+        values: [[isCLT ? "TRUE" : "FALSE"]],
       });
-      ganhosResetados++;
+      if (!isCLT) ganhosResetados++;
     });
     resultado.ganhosResetados = ganhosResetados;
 
