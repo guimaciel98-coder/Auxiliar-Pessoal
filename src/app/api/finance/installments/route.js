@@ -103,7 +103,7 @@ export async function GET() {
 // POST — cria nova parcela; copia fórmulas da linha anterior via copyPaste
 export async function POST(req) {
   try {
-    const { nome, dataFim, valorTotal, dataInicio } = await req.json();
+    const { nome, dataFim, valorTotal, dataInicio, auto = false } = await req.json();
 
     if (!nome?.trim())  return Response.json({ error: "Nome é obrigatório" }, { status: 400 });
     if (!valorTotal || parseFloat(valorTotal) <= 0)
@@ -128,7 +128,7 @@ export async function POST(req) {
       range:           `'${SHEET}'!A:I`,
       valueInputOption: "USER_ENTERED",
       requestBody: {
-        values: [[nome.trim(), dataFim, vTotal, vMensal, 0, 0, dataInicio, "TRUE", "FALSE"]],
+        values: [[nome.trim(), dataFim, vTotal, vMensal, 0, 0, dataInicio, "TRUE", auto ? "TRUE" : "FALSE"]],
       },
     });
 

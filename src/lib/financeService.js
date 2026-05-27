@@ -15,7 +15,7 @@
 import { getSheetsClient, getSpreadsheetId } from "./googleSheets";
 
 // ─── Constante de meta final de poupança ──────────────────────────────────────
-const META_POUPANCA_FINAL = 50_000;
+const META_POUPANCA_FINAL = parseInt(process.env.META_POUPANCA ?? "50000");
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Helpers
@@ -68,11 +68,11 @@ export async function fetchFinancialData() {
   // Calcula o label do ciclo atual (ex: "maio/26") a partir de melhor_dia_compra
   const MES_PT_ABBR = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
   function cicloAtualLabel(melhorDia) {
-    const now    = new Date();
-    const today  = now.getDate();
-    const mIdx   = today < melhorDia ? now.getMonth() : now.getMonth() + 1;
+    const now    = new Date(Date.now() - 3 * 3600 * 1000); // BRT = UTC-3
+    const today  = now.getUTCDate();
+    const mIdx   = today < melhorDia ? now.getUTCMonth() : now.getUTCMonth() + 1;
     const mFinal = mIdx > 11 ? 0 : mIdx;
-    const yFinal = mIdx > 11 ? now.getFullYear() + 1 : now.getFullYear();
+    const yFinal = mIdx > 11 ? now.getUTCFullYear() + 1 : now.getUTCFullYear();
     return `${MES_PT_ABBR[mFinal]}/${String(yFinal).slice(2)}`;
   }
 

@@ -475,8 +475,10 @@ function TabSemana({ onSelectDay }) {
     }
   }
   const weekSegs = catOrder
-    .filter(c => totalCatMins[c])
-    .map(c => ({ cat: c, mins: totalCatMins[c], pct: (totalCatMins[c] / totalWeekMins) * 100 }));
+    .filter(c => totalCatMins[c] > 0)
+    .map(c => ({ cat: c, mins: totalCatMins[c], pct: (totalCatMins[c] / totalWeekMins) * 100 }))
+    .filter(s => Math.round(s.pct) > 0)
+    .sort((a, b) => a.mins - b.mins);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>

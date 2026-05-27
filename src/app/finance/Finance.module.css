@@ -510,6 +510,8 @@
   .container { margin-left: 0; }
   .body { grid-template-columns: 1fr; }
   .mainCol { padding: 0 0 90px; }
+  /* Quando sideCol visível segue o mainCol, remove o padding extra */
+  .body:has(.sideColMobileShow) .mainCol { padding-bottom: 12px; }
   .sideCol { display: none; }
   .header { padding: 16px 16px 12px; }
   .content { padding: 0 16px; }
@@ -571,4 +573,25 @@
   .histPeriodBar  { padding: 0 16px 16px; }
   .histCatSummary { padding: 0 16px 16px; }
   .analyses       { padding: 0 16px 40px; }
+}
+
+/* ── Big numbers grid: 4 colunas no desktop, 2×2 no mobile ─────────────────── */
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 0 28px;
+  margin-bottom: 20px;
+}
+@media (max-width: 768px) {
+  .statGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 0 16px;
+  }
+}
+
+/* ── Lançar: formulário sobe no mobile (sideCol antes do mainCol) ─────────── */
+@media (max-width: 768px) {
+  .sideColFirst { order: -1; }
 }

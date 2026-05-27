@@ -679,7 +679,8 @@ export default function ProjectsPage() {
             onClose={() => setIsModalOpen(false)}
             onSuccess={() => { setIsModalOpen(false); load(); }}
             initialProjectId={activeProject}
-            initialSubClientId={selectedClient?.cf_value}
+            initialVcaProjectId={selectedClient?.source_project_id ?? ""}
+            initialSubClientId={selectedClient?.cf_value ?? ""}
           />
         )}
         {editTask && (

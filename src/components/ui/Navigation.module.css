@@ -7,10 +7,10 @@
   display: flex;
   flex-direction: column;
   padding: 20px 12px 20px;
-  background: rgba(13, 17, 23, 0.98);
+  background: rgba(10, 12, 18, 0.98);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-right: 1px solid rgba(55, 65, 81, 0.4);
+  border-right: 1px solid rgba(255,255,255,0.06);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
@@ -26,14 +26,15 @@
   transition: background 0.2s;
   flex-shrink: 0;
 }
-.brand:hover { background: rgba(255,255,255,0.05); }
+.brand:hover { background: rgba(255,255,255,0.04); }
 
 .brandMark {
-  width: 34px; height: 34px; border-radius: 10px;
-  background: linear-gradient(135deg, #00e5a0, #00b37e);
+  width: 36px; height: 36px; border-radius: 11px;
+  background: linear-gradient(135deg, #4338ca, #6d28d9);
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 900; color: #0a0d14;
+  font-size: 16px; font-weight: 900; color: #fff;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(67,56,202,0.4);
 }
 .brandText { display: flex; flex-direction: column; gap: 1px; }
 .brandName {
@@ -48,7 +49,7 @@
 /* ── Divider ────────────────────────────────────────────────────────────── */
 .divider {
   height: 1px;
-  background: rgba(55, 65, 81, 0.5);
+  background: rgba(255,255,255,0.06);
   margin: 12px 4px;
   flex-shrink: 0;
 }
@@ -71,20 +72,20 @@
 .sectionLabel {
   font-size: 10px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.25);
   padding: 14px 12px 4px;
   display: block;
 }
 
 /* ── Nav item principal ─────────────────────────────────────────────────── */
 .item {
-  width: 100%; height: 40px;
+  width: 100%; height: 44px;
   border-radius: 10px;
   display: flex; align-items: center;
   padding: 0 12px;
   gap: 12px;
   text-decoration: none;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.4);
   transition: background 0.18s, color 0.18s;
   position: relative;
   flex-shrink: 0;
@@ -92,21 +93,22 @@
   background: none; border: none; cursor: pointer;
 }
 .item:hover {
-  background: rgba(255,255,255,0.06);
-  color: var(--text-secondary);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.7);
 }
 
 .active {
-  background: rgba(0, 229, 160, 0.1);
-  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--section-accent, white) 9%, transparent);
+  color: var(--section-accent, #f9fafb);
 }
 .active::before {
   content: "";
-  position: absolute; left: 0; top: 8px; bottom: 8px;
-  width: 3px; border-radius: 0 3px 3px 0;
-  background: var(--accent-primary);
+  position: absolute; left: 0; top: 10px; bottom: 10px;
+  width: 2.5px; border-radius: 0 3px 3px 0;
+  background: var(--section-accent, rgba(255,255,255,0.6));
+  opacity: 0.85;
 }
-.active:hover { background: rgba(0, 229, 160, 0.14); }
+.active:hover { background: color-mix(in srgb, var(--section-accent, white) 13%, transparent); }
 
 .icon {
   font-size: 15px; line-height: 1; flex-shrink: 0;
@@ -120,21 +122,19 @@
 
 /* ── Chevron indicador ──────────────────────────────────────────────────── */
 .chevron {
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.25);
   display: flex; align-items: center;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.18s;
   flex-shrink: 0;
-  opacity: 0.7;
 }
 .chevronOpen {
   transform: rotate(180deg);
-  color: var(--accent-primary);
+  color: rgba(255,255,255,0.6);
 }
 
 /* ── Accordion sub-itens ────────────────────────────────────────────────── */
 .subItems {
   display: flex; flex-direction: column; gap: 1px;
-  /* Collapsed: height 0, opacity 0, não ocupa espaço */
   max-height: 0;
   overflow: hidden;
   opacity: 0;
@@ -143,7 +143,6 @@
     opacity 0.25s ease;
 }
 .subItemsOpen {
-  /* Expanded: 5 itens × 36px ≈ 180px + margem */
   max-height: 220px;
   opacity: 1;
 }
@@ -151,29 +150,28 @@
 .subItem {
   display: flex; align-items: center;
   gap: 10px;
-  height: 34px;
-  /* Indentação visual: alinha com o texto do item pai */
+  height: 36px;
   padding: 0 10px 0 44px;
   border-radius: 8px;
   text-decoration: none;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.35);
   font-size: 12px; font-weight: 500;
   transition: background 0.15s, color 0.15s;
   position: relative;
 }
 .subItem:hover {
-  background: rgba(255,255,255,0.05);
-  color: var(--text-secondary);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.65);
 }
 .subItemActive {
-  color: var(--accent-primary);
-  background: rgba(0, 229, 160, 0.07);
+  color: var(--section-accent, #e2e8f0);
+  background: color-mix(in srgb, var(--section-accent, white) 7%, transparent);
 }
 .subItemActive::before {
   content: "";
   position: absolute; left: 30px; top: 50%; transform: translateY(-50%);
   width: 3px; height: 3px; border-radius: 50%;
-  background: var(--accent-primary);
+  background: var(--section-accent, rgba(255,255,255,0.5));
 }
 
 .subIcon {
@@ -197,14 +195,13 @@
     justify-content: space-around;
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
     border-right: none;
-    border-top: 1px solid rgba(55, 65, 81, 0.5);
+    border-top: 1px solid rgba(255,255,255,0.07);
     gap: 0;
     overflow: visible;
   }
   .brand   { display: none; }
   .divider { display: none; }
 
-  /* No mobile: esconde sidebar desktop, mostra barra flat */
   .desktopItems { display: none; }
   .mobileItems  {
     display: flex;
@@ -223,19 +220,15 @@
     justify-content: center; align-items: center;
   }
   .item::before { display: none; }
-  .active { box-shadow: inset 0 3px 0 0 var(--accent-primary); background: transparent; }
+  .active { box-shadow: inset 0 3px 0 0 rgba(255,255,255,0.35); background: transparent; color: #f9fafb; }
   .active:hover { background: transparent; }
   .icon { font-size: 18px; width: auto; }
   .label { font-size: 10px; font-weight: 600; letter-spacing: 0; }
   .chevron { display: none; }
 }
 
-/* ── Navigation mobile — ADITIVO ────────────────────────────────────────── */
 @media (max-width: 768px) {
-  /* Label mínimo 11px (10px é abaixo do razoável em mobile) */
   .label { font-size: 11px; }
-
-  /* Safe area lateral: suporte a landscape no iPhone/Android */
   .nav {
     padding-left:  max(4px, env(safe-area-inset-left,  0px));
     padding-right: max(4px, env(safe-area-inset-right, 0px));
