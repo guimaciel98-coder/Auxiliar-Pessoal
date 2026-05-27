@@ -267,7 +267,7 @@ export async function POST(req) {
       return s + Math.abs(parseNum(row[3] ?? "0")); // D: ValorMensal
     }, 0);
     const poupLiquida        = poupancaTotal !== undefined ? (Number(poupancaTotal) - (Number(poupancaFatura) || 0)) : 0;
-    const saldoMes           = totalGanhos - totalFixosReal - totalVariaveisReal - totalParcelasReal;
+    const saldoMes           = totalGanhos - totalFixosReal - totalVariaveisReal;
     const dataHoje           = new Date().toLocaleDateString("pt-BR");
     const histRow            = [[mesAtual, dataHoje, toSheetNum(totalGanhos), toSheetNum(totalFixosReal), toSheetNum(totalVariaveisReal), toSheetNum(poupLiquida), toSheetNum(saldoMes), toSheetNum(totalParcelasReal)]];
 

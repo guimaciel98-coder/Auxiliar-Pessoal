@@ -67,7 +67,7 @@ export async function PATCH() {
       const ganhos    = parseNum(row[2]);
       const fixos     = parseNum(row[3]);
       const variaveis = parseNum(row[4]);
-      const saldo     = ganhos - fixos - variaveis - totalParcelas;
+      const saldo     = ganhos - fixos - variaveis; // parcelas já estão em variáveis
       updates.push({ range: `'${HIST}'!G${i + 2}`, values: [[toSheetNum(saldo)]] });
       updates.push({ range: `'${HIST}'!H${i + 2}`, values: [[toSheetNum(totalParcelas)]] });
     });
