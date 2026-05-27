@@ -252,10 +252,15 @@ export async function POST(req) {
     const totalGanhos        = ganhosRows.reduce((s, r) => r[1]?.trim() ? s + parseNum(r[2]) : s, 0);
     const totalFixosReal     = fixosRows.reduce((s, r) => r[1]?.trim() ? s + parseNum(r[3]) : s, 0);
     const totalVariaveisReal = variaveisRows.reduce((s, r) => r[1]?.trim() ? s + parseNum(r[3]) : s, 0);
+    const totalParcelasReal  = parcelasRows.reduce((s, row) => {
+      if (String(row[7] ?? "TRUE").toUpperCase() === "FALSE") return s;
+      if (!String(row[0] ?? "").trim()) return s;
+      return s + Math.abs(parseNum(row[3] ?? "0")); // D: ValorMensal
+    }, 0);
     const poupLiquida        = poupancaTotal !== undefined ? (Number(poupancaTotal) - (Number(poupancaFatura) || 0)) : 0;
-    const saldoMes           = totalGanhos - totalFixosReal - totalVariaveisReal;
+    const saldoMes           = totalGanhos - totalFixosReal - totalVariaveisReal - totalParcelasReal;
     const dataHoje           = new Date().toLocaleDateString("pt-BR");
-    const histRow            = [[mesAtual, dataHoje, toSheetNum(totalGanhos), toSheetNum(totalFixosReal), toSheetNum(totalVariaveisReal), toSheetNum(poupLiquida), toSheetNum(saldoMes)]];
+    const histRow            = [[mesAtual, dataHoje, toSheetNum(totalGanhos), toSheetNum(totalFixosReal), toSheetNum(totalVariaveisReal), toSheetNum(poupLiquida), toSheetNum(saldoMes), toSheetNum(totalParcelasReal)]];
 
     try {
       await sheets.spreadsheets.values.append({
