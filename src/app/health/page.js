@@ -29,6 +29,7 @@ const METRICS = [
     id:"workouts", icon:"🏋️", label:"Treinos", unit:"", dec:0,
     color:"#8b5cf6",
     cellColor: null,
+    goal: 27,
   },
   {
     id:"calories", icon:"🔥", label:"Calorias", unit:"kcal", dec:0,
@@ -37,10 +38,10 @@ const METRICS = [
       if (!v) return null;
       if (v < 200)  return "rgba(245,158,11,0.20)";
       if (v < 400)  return "rgba(245,158,11,0.42)";
-      if (v < 600)  return "rgba(245,158,11,0.68)";
+      if (v < 500)  return "rgba(245,158,11,0.68)";
       return "#f59e0b";
     },
-    goal: 600,
+    goal: 500,
   },
   {
     id:"sleep_h", icon:"🌙", label:"Sono", unit:"h", dec:1,
@@ -73,7 +74,6 @@ const METRICS = [
       if (v < 10000) return "rgba(16,185,129,0.68)";
       return "#10b981";
     },
-    goal: 10000,
   },
 ];
 
