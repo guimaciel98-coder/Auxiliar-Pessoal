@@ -53,25 +53,43 @@ export async function fetchHealthData() {
 
   const rows = res.data.values ?? [];
 
-  const days = rows
-    .map(row => {
-      const date = String(row[0] ?? "").trim();
-      if (!date) return null;
-      const d = parseDateBR(date);
-      if (!d) return null;
-      return {
-        date,
-        ts:           d.getTime(),
-        steps:        parseNum(row[1]),
-        calories:     parseNum(row[2]),
-        distance_km:  parseNum(row[3]),
-        bpm_rest:     parseNum(row[4]),
-        bpm_avg:      parseNum(row[5]),
-        sleep_h:      parseNum(row[6]),
-        sleep_deep_h: parseNum(row[7]),
-      };
-    })
-    .filter(Boolean)
+  // Deduplicar por data: mescla múltiplas linhas da mesma data num único registro
+  const byDate = new Map();
+  for (const row of rows) {
+    const date = String(row[0] ?? "").trim();
+    if (!date) continue;
+    const d = parseDateBR(date);
+    if (!d) continue;
+
+    const existing = byDate.get(date);
+    const parsed = {
+      date,
+      ts:           d.getTime(),
+      steps:        parseNum(row[1]),
+      calories:     parseNum(row[2]),
+      distance_km:  parseNum(row[3]),
+      bpm_rest:     parseNum(row[4]),
+      bpm_avg:      parseNum(row[5]),
+      sleep_h:      parseNum(row[6]),
+      sleep_deep_h: parseNum(row[7]),
+    };
+
+    if (!existing) {
+      byDate.set(date, parsed);
+    } else {
+      // Mantém o valor não-nulo de cada campo (merge)
+      for (const key of ["steps","calories","distance_km","bpm_rest","bpm_avg","sleep_h","sleep_deep_h"]) {
+        if (existing[key] === null && parsed[key] !== null) existing[key] = parsed[key];
+      }
+    }
+  }
+
+  const days = Array.from(byDate.values())
+    .map(d => ({
+      ...d,
+      // BPM: usa repouso se disponível, senão média (Zepp não exporta repouso)
+      bpm_rest: d.bpm_rest ?? d.bpm_avg ?? null,
+    }))
     .sort((a, b) => b.ts - a.ts);
 
   // Médias dos últimos 30 dias
