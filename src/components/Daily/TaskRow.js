@@ -112,6 +112,13 @@ export default function TaskRow({
               {contextLabel}
             </span>
           )}
+          {t.description && (
+            <span className={`${styles.badge} ${styles.badgeDesc}`} title="Tem descrição">
+              <svg width="9" height="9" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="1" y="3" width="14" height="2" rx="1"/><rect x="1" y="7" width="10" height="2" rx="1"/><rect x="1" y="11" width="12" height="2" rx="1"/>
+              </svg>
+            </span>
+          )}
           {t.prio === "p1" && <span className={`${styles.badge} ${styles.badgeUrgent}`}>P1</span>}
           {t.prio === "p2" && <span className={`${styles.badge} ${styles.badgeHigh}`}>P2</span>}
           {t.prio === "p3" && <span className={`${styles.badge} ${styles.badgeNormal}`}>P3</span>}

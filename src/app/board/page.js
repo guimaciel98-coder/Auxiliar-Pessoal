@@ -19,10 +19,10 @@ import TaskEditModal from "@/components/Daily/TaskEditModal";
 const VCA_MAIN_ID = "6Xvp8v5F2PGPq2g2";
 
 const VCA_AGENCIES = [
-  { key: "ocupe", label: "Ocupe",          projectId: "6fCfcJvXv6MjF6Pq" },
-  { key: "carol", label: "Carol Macarone", projectId: "6ghvwpM3C9m8377R" },
-  { key: "sante", label: "Santé",          projectId: "6ghvxWFMgh5X3hHV" },
-  { key: "hive",  label: "Hive",           projectId: "6ghvxjQVHRmHW4wc" },
+  { key: "ocupe", label: "Ocupe",          projectId: "6fCfcJvXv6MjF6Pq", color: "#06b6d4" },
+  { key: "carol", label: "Carol Macarone", projectId: "6ghvwpM3C9m8377R", color: "#ec4899" },
+  { key: "sante", label: "Santé",          projectId: "6ghvxWFMgh5X3hHV", color: "#10b981" },
+  { key: "hive",  label: "Hive",           projectId: "6ghvxjQVHRmHW4wc", color: "#f59e0b" },
 ];
 
 const MONTHS   = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
@@ -368,7 +368,7 @@ export default function ProjectsPage() {
 
   const filteredTasks = tasks.filter(t => {
     if (t._project_id !== activeProject) return false;
-    if (activeProject === "vca" && viewMode === "detailed") {
+    if (activeProject === "vca") {
       if (!activeAgency) return t.list?.id === VCA_MAIN_ID;
       return t.list?.id === activeAgency.projectId;
     }
@@ -547,7 +547,7 @@ export default function ProjectsPage() {
             </div>
           </div>
 
-          {activeProject === "vca" && !isDay && (
+          {activeProject === "vca" && (
             <div className={styles.subFilterBar}>
               <div className={styles.subFilterTop}>
                 <button className={`${styles.subBtnMain} ${vcaSubFilter === "interno" ? styles.subBtnMainActive : ""}`} onClick={() => setVcaSubFilter("interno")}>Gestão Interna</button>
@@ -555,7 +555,15 @@ export default function ProjectsPage() {
               <div className={styles.subFilterAgencies}>
                 <span className={styles.agenciesLabel}>Agências</span>
                 {VCA_AGENCIES.map(a => (
-                  <button key={a.key} className={`${styles.subBtn} ${vcaSubFilter === a.key ? styles.subActive : ""}`} onClick={() => setVcaSubFilter(a.key)}>{a.label}</button>
+                  <button
+                    key={a.key}
+                    className={`${styles.subBtn} ${vcaSubFilter === a.key ? styles.subActive : ""}`}
+                    style={vcaSubFilter === a.key ? { color: a.color, background: `${a.color}1a`, borderColor: `${a.color}55` } : {}}
+                    onClick={() => setVcaSubFilter(a.key)}
+                  >
+                    <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: vcaSubFilter === a.key ? a.color : "rgba(255,255,255,0.2)", marginRight: 5, verticalAlign: "middle", flexShrink: 0 }} />
+                    {a.label}
+                  </button>
                 ))}
               </div>
             </div>

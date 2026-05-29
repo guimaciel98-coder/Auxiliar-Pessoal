@@ -3,6 +3,15 @@ import { getVcaBrand, getPdvClient, sortTasks, brt } from "../../utils/helpers";
 import TaskRow from "./TaskRow";
 import styles from "./TaskLists.module.css";
 
+const VCA_AGENCY_ORDER = [
+  { id: "6Xvp8v5F2PGPq2g2", label: "Gestão Interna",  color: "#5b9fd6" },
+  { id: "6fCfcJvXv6MjF6Pq", label: "Ocupe",           color: "#06b6d4" },
+  { id: "6ghvwpM3C9m8377R", label: "Carol Macarone",  color: "#ec4899" },
+  { id: "6ghvxWFMgh5X3hHV", label: "Santé",           color: "#10b981" },
+  { id: "6ghvxjQVHRmHW4wc", label: "Hive",            color: "#f59e0b" },
+];
+const VCA_AGENCY_IDS = new Set(VCA_AGENCY_ORDER.map(a => a.id));
+
 export function Section({ proj, cfg, overdue, all, visible, overdueOnly, rowProps }) {
   const od    = overdue.filter(t => t.proj === proj).filter(visible);
   const today = overdueOnly ? [] : sortTasks(all.filter(t => t.proj === proj).filter(visible));
@@ -38,13 +47,12 @@ function SubSection({ label, odTasks, todayTasks, rowProps }) {
   );
 }
 
-export function VcaSection({ overdue, all, visible, overdueOnly, rowProps, clients = [] }) {
+export function VcaSection({ overdue, all, visible, overdueOnly, rowProps }) {
   const vcaToday = overdueOnly ? [] : all.filter(t => t.proj === "vca").filter(visible);
   const vcaOd    = overdue.filter(t => t.proj === "vca").filter(visible);
   if (!vcaToday.length && !vcaOd.length) return null;
 
-  const total     = vcaToday.length + vcaOd.length;
-  const vcaBrands = clients.filter(c => c.project_id === "vca");
+  const total = vcaToday.length + vcaOd.length;
 
   return (
     <div id="section-vca" className={styles.section}>
@@ -54,24 +62,39 @@ export function VcaSection({ overdue, all, visible, overdueOnly, rowProps, clien
         <span className={styles.secCount}>{total}</span>
       </div>
 
-      {/* Tarefas com seção definida */}
-      {vcaBrands.map(b => (
-        <SubSection
-          key={b.id}
-          label={b.name}
-          odTasks={sortTasks(vcaOd.filter(t => getVcaBrand(t) === b.cf_value))}
-          todayTasks={sortTasks(vcaToday.filter(t => getVcaBrand(t) === b.cf_value))}
-          rowProps={rowProps}
-        />
-      ))}
+      {VCA_AGENCY_ORDER.map(agency => {
+        const odTasks    = sortTasks(vcaOd.filter(t => t.list?.id === agency.id));
+        const todayTasks = sortTasks(vcaToday.filter(t => t.list?.id === agency.id));
+        if (!odTasks.length && !todayTasks.length) return null;
+        return (
+          <div key={agency.id} className={styles.subSection}>
+            <div className={styles.agencyHeader}>
+              <div className={styles.agencyDot} style={{ background: agency.color }} />
+              <span className={styles.agencyLabel} style={{ color: agency.color }}>{agency.label}</span>
+              <span className={styles.agencyCount}>{odTasks.length + todayTasks.length}</span>
+            </div>
+            <div className={styles.taskList}>
+              {odTasks.map(t    => <TaskRow key={t.id} t={t} od={true} {...rowProps} />)}
+              {todayTasks.map(t => <TaskRow key={t.id} t={t} {...rowProps} />)}
+            </div>
+          </div>
+        );
+      })}
 
-      {/* FIX: tarefas sem seção não sumiam mais — aparecem em "Geral" */}
-      <SubSection
-        label="Geral"
-        odTasks={sortTasks(vcaOd.filter(t => !getVcaBrand(t)))}
-        todayTasks={sortTasks(vcaToday.filter(t => !getVcaBrand(t)))}
-        rowProps={rowProps}
-      />
+      {/* Tarefas de listas não mapeadas */}
+      {(() => {
+        const odOther    = sortTasks(vcaOd.filter(t => !VCA_AGENCY_IDS.has(t.list?.id)));
+        const todayOther = sortTasks(vcaToday.filter(t => !VCA_AGENCY_IDS.has(t.list?.id)));
+        if (!odOther.length && !todayOther.length) return null;
+        return (
+          <SubSection
+            label="Outros"
+            odTasks={odOther}
+            todayTasks={todayOther}
+            rowProps={rowProps}
+          />
+        );
+      })()}
     </div>
   );
 }

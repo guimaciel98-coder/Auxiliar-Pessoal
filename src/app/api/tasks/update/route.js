@@ -6,7 +6,7 @@ export async function POST(req) {
   try { body = await req.json(); }
   catch { return Response.json({ error: "Payload JSON inválido" }, { status: 400 }); }
 
-  const { taskId, title, dueDate, time, priority, project, subClient, recurrence } = body;
+  const { taskId, title, dueDate, time, priority, project, subClient, recurrence, description } = body;
   if (!taskId) return Response.json({ error: "taskId obrigatório" }, { status: 400 });
 
   try {
@@ -39,7 +39,8 @@ export async function POST(req) {
       if (projCfg) updateBody.project_id = projCfg.id;
     }
 
-    if (subClient !== undefined) updateBody.section_id = subClient || null;
+    if (subClient !== undefined)    updateBody.section_id  = subClient || null;
+    if (description !== undefined)  updateBody.description = description?.trim() ?? "";
 
     await tdUpdate(taskId, updateBody);
     return Response.json({ ok: true });

@@ -258,7 +258,13 @@ export async function POST(req) {
 
     // ── Salva histórico do fechamento em App_Historico_Meses ─────────────────────
     const HIST = "App_Historico_Meses";
-    const totalGanhos        = ganhosRows.reduce((s, r) => r[1]?.trim() ? s + parseNum(r[2]) : s, 0);
+    // Ganhos confirmados: CLT sempre + PDV/outros só se confirmado=TRUE
+    const totalGanhosConf    = ganhosRows.reduce((s, r) => {
+      if (!r[1]?.trim()) return s;
+      const isCLT  = String(r[0] ?? "").trim().toUpperCase() === "CLT";
+      const isConf = String(r[3] ?? "").toUpperCase() === "TRUE";
+      return (isCLT || isConf) ? s + parseNum(r[2]) : s;
+    }, 0);
     const totalFixosReal     = fixosRows.reduce((s, r) => r[1]?.trim() ? s + parseNum(r[3]) : s, 0);
     const totalVariaveisReal = variaveisRows.reduce((s, r) => r[1]?.trim() ? s + parseNum(r[3]) : s, 0);
     const totalParcelasReal  = parcelasRows.reduce((s, row) => {
@@ -267,14 +273,23 @@ export async function POST(req) {
       return s + Math.abs(parseNum(row[3] ?? "0")); // D: ValorMensal
     }, 0);
     const poupLiquida        = poupancaTotal !== undefined ? (Number(poupancaTotal) - (Number(poupancaFatura) || 0)) : 0;
-    const saldoMes           = totalGanhos - totalFixosReal - totalVariaveisReal;
+    // Poupança acumulada do mês anterior (último atingido=TRUE antes do fechamento atual)
+    const atingidosBefore    = poupancaRows.filter(r => String(r[2] ?? "").toUpperCase() === "TRUE");
+    const poupancaAnterior   = atingidosBefore.length > 0 ? parseNum(atingidosBefore[atingidosBefore.length - 1][1]) : 0;
+    // Saldo calculado = ganhos_confirmados − fixos − variáveis − parcelas
+    const saldoMes           = totalGanhosConf - totalFixosReal - totalVariaveisReal - totalParcelasReal;
+    // Saldo real = Δ poupança (só faz sentido a partir do 2º mês; sem baseline = 0)
+    const temBaseline        = atingidosBefore.length > 0 && poupancaTotal !== undefined;
+    const saldoReal          = temBaseline ? (poupLiquida - poupancaAnterior) : 0;
+    // Diferença = saldo calculado − saldo real (gap sem explicação)
+    const diferenca          = temBaseline ? (saldoMes - saldoReal) : 0;
     const dataHoje           = new Date().toLocaleDateString("pt-BR");
-    const histRow            = [[mesAtual, dataHoje, toSheetNum(totalGanhos), toSheetNum(totalFixosReal), toSheetNum(totalVariaveisReal), toSheetNum(poupLiquida), toSheetNum(saldoMes), toSheetNum(totalParcelasReal)]];
+    const histRow            = [[mesAtual, dataHoje, toSheetNum(totalGanhosConf), toSheetNum(totalFixosReal), toSheetNum(totalVariaveisReal), toSheetNum(poupLiquida), toSheetNum(saldoMes), toSheetNum(totalParcelasReal), toSheetNum(saldoReal), toSheetNum(diferenca)]];
 
     try {
       await sheets.spreadsheets.values.append({
         spreadsheetId,
-        range: `'${HIST}'!A:G`,
+        range: `'${HIST}'!A:J`,
         valueInputOption: "USER_ENTERED",
         insertDataOption: "INSERT_ROWS",
         requestBody: { values: histRow },
@@ -285,18 +300,18 @@ export async function POST(req) {
         requestBody: { requests: [{ addSheet: { properties: { title: HIST } } }] },
       });
       await sheets.spreadsheets.values.update({
-        spreadsheetId, range: `'${HIST}'!A1:G1`, valueInputOption: "RAW",
-        requestBody: { values: [["Ciclo","DataFechamento","Ganhos","GastosFixos","GastosVariaveis","Poupanca","Saldo"]] },
+        spreadsheetId, range: `'${HIST}'!A1:J1`, valueInputOption: "RAW",
+        requestBody: { values: [["Ciclo","DataFechamento","Ganhos","GastosFixos","GastosVariaveis","Poupanca","Saldo","Parcelas","SaldoReal","Diferenca"]] },
       });
       await sheets.spreadsheets.values.append({
         spreadsheetId,
-        range: `'${HIST}'!A:G`,
+        range: `'${HIST}'!A:J`,
         valueInputOption: "USER_ENTERED",
         insertDataOption: "INSERT_ROWS",
         requestBody: { values: histRow },
       });
     }
-    resultado.historicoSalvo = { ciclo: mesAtual, ganhos: totalGanhos, fixos: totalFixosReal, variaveis: totalVariaveisReal, poupanca: poupLiquida, saldo: saldoMes };
+    resultado.historicoSalvo = { ciclo: mesAtual, ganhos: totalGanhosConf, fixos: totalFixosReal, variaveis: totalVariaveisReal, poupanca: poupLiquida, saldo: saldoMes, saldoReal, diferenca };
 
     // ── Salva ciclo_inicio e melhor_dia_compra no App_Config ─────────────────────
     if (cycleStartDate || melhorDia) {
