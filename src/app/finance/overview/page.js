@@ -211,9 +211,9 @@ export default function OverviewPage() {
   const donutData = useMemo(() => {
     const groups = { Casa: 0, Pessoal: 0, Outros: 0, Parcelas: 0 };
 
-    // Fixos pagos (ctrl=TRUE), excluindo parcelas antigas ("Até")
+    // Fixos pelo valor real (todos, pagos ou não), excluindo parcelas antigas ("Até")
     for (const item of data?.gastos?.fixos?.items ?? []) {
-      if (!item.real || !item.ctrl || item.item.includes("Até")) continue;
+      if (!item.real || item.item.includes("Até")) continue;
       if      (item.grupo === "Casa")    groups.Casa    += item.real;
       else if (item.grupo === "Pessoal") groups.Pessoal += item.real;
       else                               groups.Outros  += item.real;
