@@ -11,26 +11,44 @@ export default function IncomePage() {
   const fmt = (v) => fmtFin(v, hideNumbers);
   const [toggling, setToggling] = useState(new Set());
 
-  const [modal, setModal]   = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast]   = useState(null);
-  const [form, setForm]     = useState({ grupo: "PDV", item: "", valor: "", confirmado: false });
+  const [modal, setModal]       = useState(false);
+  const [editingItem, setEditingItem] = useState(null); // { item, grupo } quando editando
+  const [saving, setSaving]     = useState(false);
+  const [toast, setToast]       = useState(null);
+  const [form, setForm]         = useState({ grupo: "PDV", item: "", valor: "", confirmado: false });
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 2800); }
 
-  async function handleAdd(e) {
+  function openAdd() {
+    setEditingItem(null);
+    setForm({ grupo: "PDV", item: "", valor: "", confirmado: false });
+    setModal(true);
+  }
+
+  function openEdit(item, grupoLabel) {
+    const grupoMap = { "CLT": "CLT", "PDV / Freelas": "PDV", "Outros": "OUTROS" };
+    setEditingItem(item.item);
+    setForm({ grupo: grupoMap[grupoLabel] ?? "PDV", item: item.item, valor: String(item.valor), confirmado: item.confirmado });
+    setModal(true);
+  }
+
+  async function handleSave(e) {
     e.preventDefault();
     if (!form.item.trim() || !form.valor || parseFloat(form.valor) <= 0) return;
     setSaving(true);
     try {
+      const isEdit = editingItem !== null;
       const res = await fetch("/api/finance/ganho/add", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ grupo: form.grupo, item: form.item.trim(), valor: parseFloat(form.valor), confirmado: form.confirmado }),
+        method: isEdit ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(isEdit
+          ? { itemAtual: editingItem, grupo: form.grupo, item: form.item.trim(), valor: parseFloat(form.valor), confirmado: form.confirmado }
+          : { grupo: form.grupo, item: form.item.trim(), valor: parseFloat(form.valor), confirmado: form.confirmado }
+        ),
       });
       const j = await res.json();
       if (!j.ok) throw new Error(j.error);
-      showToast("✓ Ganho adicionado!");
-      setForm({ grupo: "PDV", item: "", valor: "", confirmado: false });
+      showToast(isEdit ? "✓ Ganho atualizado!" : "✓ Ganho adicionado!");
       setModal(false);
       refetch(true);
     } catch (err) {
@@ -88,8 +106,8 @@ export default function IncomePage() {
             style={{ background: "rgba(17,24,39,0.98)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 20px 44px", width: "100%", maxWidth: 500 }}
             onClick={e => e.stopPropagation()}
           >
-            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>Novo Ganho</h3>
-            <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>{editingItem ? "Editar Ganho" : "Novo Ganho"}</h3>
+            <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label style={{ display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>Grupo</label>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -125,7 +143,7 @@ export default function IncomePage() {
                 </button>
                 <button type="submit" disabled={saving || !form.item || !form.valor}
                   style={{ flex: 2, padding: 12, borderRadius: 10, fontSize: 13, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#10b981,#059669)", border: "none", cursor: "pointer", opacity: (saving || !form.item || !form.valor) ? 0.5 : 1, fontFamily: "inherit" }}>
-                  {saving ? "Salvando..." : "Salvar"}
+                  {saving ? "Salvando..." : editingItem ? "Atualizar" : "Salvar"}
                 </button>
               </div>
             </form>
@@ -238,7 +256,7 @@ export default function IncomePage() {
                           {toggling.has(item.item) ? "…" : item.confirmado ? "✓" : "○"}
                         </div>
                         <div style={{ display: "flex", gap: 6 }}>
-                          <button style={{
+                          <button onClick={() => openEdit(item, group.label)} style={{
                             fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
                             fontFamily: "inherit", background: "rgba(255,255,255,0.05)",
                             border: "1px solid rgba(255,255,255,0.1)",
@@ -273,7 +291,7 @@ export default function IncomePage() {
             ))}
 
             {/* Adicionar Fonte de Renda */}
-            <button onClick={() => setModal(true)} style={{
+            <button onClick={openAdd} style={{
               width: "100%", padding: 14, borderRadius: 12, fontFamily: "inherit",
               background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.12)",
               color: "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: 600,
