@@ -127,13 +127,16 @@ export async function POST(req) {
   }
 
   // ── Determina a data do envio ─────────────────────────────────────────────
-  // Usa a data da primeira métrica ou do primeiro workout, ou hoje
+  // v2 envia dados agrupados por dia — pega a data mais recente
   let date = null;
-  if (metrics.length > 0 && metrics[0]?.data?.[0]?.date) {
-    date = parseDate(metrics[0].data[0].date);
+  for (const m of metrics) {
+    if (Array.isArray(m.data) && m.data.length > 0) {
+      const d = parseDate(m.data[m.data.length - 1]?.date);
+      if (d) { date = d; break; }
+    }
   }
-  if (!date && workouts.length > 0 && workouts[0]?.startDate) {
-    date = parseDate(workouts[0].startDate);
+  if (!date && workouts.length > 0) {
+    date = parseDate(workouts[workouts.length - 1]?.start ?? workouts[workouts.length - 1]?.startDate);
   }
   if (!date) {
     const d = new Date(Date.now() - 3 * 3600 * 1000);
@@ -141,12 +144,14 @@ export async function POST(req) {
   }
 
   // ── Extrai métricas ───────────────────────────────────────────────────────
-  const steps      = getMetric(metrics, "step_count")               ?? getMetric(metrics, "steps");
-  const calories   = getMetric(metrics, "active_energy_burned")     ?? getMetric(metrics, "calories");
-  const distance   = getMetric(metrics, "distance_walking_running") ?? getMetric(metrics, "distance");
-  const bpmRest    = getMetric(metrics, "resting_heart_rate")       ?? getMetric(metrics, "heart_rate_resting");
-  const bpmAvg     = getMetric(metrics, "heart_rate")               ?? getMetric(metrics, "heart_rate_variability");
-  const sleep      = getSleep(metrics);
+  const steps    = getMetric(metrics, "step_count")               ?? getMetric(metrics, "steps");
+  const calories = getMetric(metrics, "active_energy_burned")     ?? getMetric(metrics, "active_energy")
+                ?? getMetric(metrics, "calories");
+  const distance = getMetric(metrics, "distance_walking_running") ?? getMetric(metrics, "walking_running_distance")
+                ?? getMetric(metrics, "distance");
+  const bpmRest  = getMetric(metrics, "resting_heart_rate")       ?? getMetric(metrics, "heart_rate_resting");
+  const bpmAvg   = getMetric(metrics, "heart_rate");
+  const sleep    = getSleep(metrics);
 
   try {
     const sheets        = await getSheetsClient();
@@ -198,11 +203,13 @@ export async function POST(req) {
       );
 
       const newRows = workouts.map(w => {
-        const wDate = parseDate(w.startDate ?? w.date) ?? date;
-        const tipo  = WORKOUT_TYPES[w.workoutActivityType] ?? WORKOUT_TYPES[w.type] ?? "Outro";
+        // v2: { name, start, duration, activeEnergy: {qty}, distance: {qty} }
+        // v1: { workoutActivityType, startDate, duration, totalEnergyBurned, totalDistance }
+        const wDate = parseDate(w.start ?? w.startDate ?? w.date) ?? date;
+        const tipo  = WORKOUT_TYPES[w.workoutActivityType] ?? WORKOUT_TYPES[w.name] ?? WORKOUT_TYPES[w.type] ?? "Outro";
         const dur   = Math.round(parseFloat(w.duration ?? w.duration_min ?? 0));
-        const cal   = parseFloat(w.totalEnergyBurned ?? w.calorias ?? 0) || "";
-        const dist  = parseFloat(w.totalDistance ?? w.distancia_km ?? 0) || "";
+        const cal   = parseFloat(w.activeEnergy?.qty ?? w.totalEnergyBurned ?? w.calorias ?? 0) || "";
+        const dist  = parseFloat(w.distance?.qty ?? w.totalDistance ?? w.distancia_km ?? 0) || "";
         return [wDate, tipo, dur, cal, dist];
       }).filter(r => r[2] > 0 && !existingKeys.has(`${r[0]}|${r[1]}|${r[2]}`));
 
