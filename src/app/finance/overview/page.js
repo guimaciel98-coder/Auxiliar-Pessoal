@@ -211,37 +211,37 @@ export default function OverviewPage() {
   const donutData = useMemo(() => {
     const groups = { Casa: 0, Pessoal: 0, Outros: 0, Parcelas: 0 };
 
-    // Mapa rápido de variáveis por nome (App_Gastos_Variaveis)
-    const varMap = {};
-    for (const item of data?.gastos?.variaveis?.items ?? []) {
-      varMap[item.item] = item;
-    }
-
-    // App_Gastos_Fixos → Casa, Pessoal, Outros
-    // Itens com "Até" no nome são parcelas — vêm do App_Parcelas, então ignoramos aqui
+    // Fixos pagos (ctrl=TRUE), excluindo parcelas antigas ("Até")
     for (const item of data?.gastos?.fixos?.items ?? []) {
-      if (!item.real || item.item.includes("Até")) continue;
+      if (!item.real || !item.ctrl || item.item.includes("Até")) continue;
       if      (item.grupo === "Casa")    groups.Casa    += item.real;
       else if (item.grupo === "Pessoal") groups.Pessoal += item.real;
-      else if (item.grupo === "Outros")  groups.Outros  += item.real;
+      else                               groups.Outros  += item.real;
     }
 
-    // App_Gastos_Variaveis → Casa: Mercado
-    if (varMap["Mercado"]?.real) groups.Casa += varMap["Mercado"].real;
-
-    // App_Gastos_Variaveis → Pessoal: Comida, Pito, Psicologa, Outros (Disponível)
-    for (const nome of ["Comida", "Pito", "Psicologa", "Outros (Disponível)"]) {
-      if (varMap[nome]?.real) groups.Pessoal += varMap[nome].real;
+    // Variáveis: usa o real do ciclo atual — cada item vai para o grupo correto
+    const VAR_GRUPO = {
+      "Mercado":           "Casa",
+      "Comida":            "Pessoal",
+      "Pito":              "Pessoal",
+      "Psicologa":         "Pessoal",
+      "Outros (Disponível)": "Pessoal",
+      "Transporte":        "Outros",
+    };
+    for (const item of data?.gastos?.variaveis?.items ?? []) {
+      if (!item.real) continue;
+      const grupo = VAR_GRUPO[item.item] ?? "Outros";
+      groups[grupo] += item.real;
     }
 
-    // App_Parcelas → Parcelas: soma dos valorMensal das parcelas ativas não quitadas
+    // Parcelas ativas
     for (const c of data?.compromissos?.items ?? []) {
       if (c.valorMensal) groups.Parcelas += c.valorMensal;
     }
 
     return Object.entries(groups)
       .filter(([, v]) => v > 0)
-      .map(([name, value]) => ({ name, value }));
+      .map(([name, value]) => ({ name, value: Math.round(value) }));
   }, [data]);
 
   // Gráfico unificado: histórico + projeção num único dataset
