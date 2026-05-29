@@ -743,12 +743,6 @@ export default function OverviewPage() {
                         {faltam > 0 ? fmtShort(faltam) : "Meta! 🎉"}
                       </div>
                     </div>
-                    {previsaoLabel && (
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Previsão</div>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: "#6b7280" }}>{previsaoLabel}</div>
-                      </div>
-                    )}
                   </div>
                 </div>
               );
