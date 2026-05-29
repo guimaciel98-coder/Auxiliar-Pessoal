@@ -486,12 +486,14 @@ export default function ProjectsPage() {
     for (let i = 0; i < maxDays; i++) {
       const cur  = todayBRT + i * 86400000;
       const next = cur + 86400000;
+      const dow  = new Date(cur - 3 * 3600 * 1000).getUTCDay(); // 0=Dom, 6=Sáb
+      if (dow === 0 || dow === 6) continue; // pula fins de semana
       const dayTasks = filteredTasks.filter(t => {
         if (!t.due_date) return false;
         const ms = Number(t.due_date);
         return ms >= cur && ms < next;
       });
-      if (dayTasks.length) groups.push({ id: `day-${i}`, label: getDayColLabel(i), tasks: dayTasks, dayOffset: i });
+      groups.push({ id: `day-${i}`, label: getDayColLabel(i), tasks: dayTasks, dayOffset: i });
     }
 
     const limitBRT = todayBRT + maxDays * 86400000;
