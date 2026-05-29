@@ -501,10 +501,11 @@ export default function OverviewPage() {
                     const overPct   = isOver ? Math.round(((varRealTotal - varPrevTotal) / varPrevTotal) * 100) : 0;
                     return (
                       <div>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "var(--text-muted)", marginBottom: 6 }}>
-                          <span style={{ fontWeight: 700, color: varColor }}>{isOver ? `${Math.round(varRawPct)}%` : `${varRawPct}%`}</span>
-                          {isOver && <span style={{ color: "#ef4444", fontWeight: 700 }}>+{overPct}% excedido</span>}
-                          <span>100%</span>
+                        <div style={{ textAlign: "center", fontSize: 9, marginBottom: 6 }}>
+                          <span style={{ fontWeight: 700, color: varColor }}>
+                            {isOver ? `${Math.round(varRawPct)}%` : `${varRawPct}%`}
+                            {isOver && <span style={{ color: "#ef4444", marginLeft: 6 }}>+{overPct}% excedido</span>}
+                          </span>
                         </div>
                         <div style={{ height: 10, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden", display: "flex" }}>
                           {isOver ? (
