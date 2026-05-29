@@ -502,7 +502,7 @@ export default function OverviewPage() {
                     return (
                       <div>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "var(--text-muted)", marginBottom: 6 }}>
-                          <span>0%</span>
+                          <span style={{ fontWeight: 700, color: varColor }}>{isOver ? `${Math.round(varRawPct)}%` : `${varRawPct}%`}</span>
                           {isOver && <span style={{ color: "#ef4444", fontWeight: 700 }}>+{overPct}% excedido</span>}
                           <span>100%</span>
                         </div>
