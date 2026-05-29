@@ -1,22 +1,22 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 
-const SS_KEY = "dailyapp_hidden_tasks";
+const LS_KEY = "dailyapp_completed";
+
+function todayKey() {
+  const d = new Date(Date.now() - 3 * 3600 * 1000); // BRT
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;
+}
 
 function ssLoad() {
   try {
-    const raw = JSON.parse(sessionStorage.getItem(SS_KEY) || "{}");
-    const now = Date.now();
-    // Descarta entradas com mais de 5 minutos — tempo suficiente para o Todoist processar
-    return new Set(Object.entries(raw).filter(([, ts]) => now - ts < 300_000).map(([id]) => id));
+    const raw = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+    return new Set(raw[todayKey()] ?? []);
   } catch { return new Set(); }
 }
 
 function ssSave(set) {
   try {
-    const now = Date.now();
-    const obj = {};
-    for (const id of set) obj[id] = now;
-    sessionStorage.setItem(SS_KEY, JSON.stringify(obj));
+    localStorage.setItem(LS_KEY, JSON.stringify({ [todayKey()]: [...set] }));
   } catch {}
 }
 
