@@ -136,15 +136,18 @@ function MetricSelector({ metrics, selected, onSelect, monthStats, todayStats, i
       {metrics.map(m => {
         const isSelected = selected === m.id;
 
+        const todayVal   = todayStats[m.id];
         const displayVal = m.id === "workouts"
           ? monthStats.workouts
           : isCurrentMonth
-            ? todayStats[m.id]
+            ? (todayVal ?? monthStats[m.id])
             : monthStats[m.id];
 
         const subLabel = m.id === "workouts"
           ? "no mês"
-          : isCurrentMonth ? "hoje" : "média";
+          : isCurrentMonth
+            ? (todayVal != null ? "hoje" : "média do mês")
+            : "média";
 
         return (
           <button
