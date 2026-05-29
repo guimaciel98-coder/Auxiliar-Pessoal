@@ -158,7 +158,7 @@ export default function OverviewPage() {
       if (!json.ok) throw new Error(json.error);
       showToast(`✓ ${addCat}: ${fmt(parseFloat(addVal))} registrado`);
       setAddCat(""); setAddVal(""); setAddModal(false);
-      refetch();
+      refetch(true);
     } catch (err) {
       showToast(`⚠ ${err.message}`);
     } finally {
@@ -191,6 +191,13 @@ export default function OverviewPage() {
 
   const gastosAteMomento = gastosVariaveisReal + gastosFixosPagos + gastosParcelasMes;
   const poupancaReal     = (summary.ganhoTudo ?? 0) - gastosAteMomento;
+
+  // Para projeção: variáveis consideradas como totalmente pagas no orçamento (real se excedeu)
+  const todosFixosMensal   = (data?.gastos?.fixos?.items ?? [])
+    .filter(i => !i.item.includes("Até"))
+    .reduce((s, i) => s + i.real, 0);
+  const varParaProjecao    = Math.max(varPrevTotal, varRealTotal);
+  const poupancaMensalBase = (summary.ganhoTudo ?? 0) - todosFixosMensal - varParaProjecao - gastosParcelasMes;
 
   // Poupança acumulada — último mês atingido (valor já é acumulado na planilha)
   const historico         = savingsData?.historico ?? poupanca.historico ?? [];
@@ -248,8 +255,8 @@ export default function OverviewPage() {
     });
     // Usa poupancaReal (ganhos − gastos do mês atual) como base da projeção.
     // buildProjection adiciona mês a mês o valor das parcelas que vão encerrando.
-    if (poupancaReal !== undefined || poupancaAcumulada) {
-      buildProjection(poupancaAcumulada, poupancaReal, compromissos).forEach(d => {
+    if (poupancaMensalBase !== undefined || poupancaAcumulada) {
+      buildProjection(poupancaAcumulada, poupancaMensalBase, compromissos).forEach(d => {
         const e = map.get(d.mes);
         map.set(d.mes, { ...(e ?? { mes: d.mes }), projecao: d.projecao });
       });
@@ -264,7 +271,7 @@ export default function OverviewPage() {
     }
 
     return Array.from(map.values());
-  }, [historico, poupancaAcumulada, summary.ganhoTudo, varPrevTotal, compromissos, data]);
+  }, [historico, poupancaAcumulada, summary.ganhoTudo, varPrevTotal, varRealTotal, gastosParcelasMes, poupancaMensalBase, compromissos, data]);
 
   const dataAtual = new Date().toLocaleDateString("pt-BR", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -341,36 +348,47 @@ export default function OverviewPage() {
                 ))}
               </div>
 
-              {/* Linha 2: Poupança Real — destaque */}
-              {(() => {
-                const pos = poupancaReal >= 0;
-                const cor = pos ? "#10b981" : "#ef4444";
-                return (
-                  <div style={{
-                    padding: "18px 24px",
-                    background: pos ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.06)",
-                    border: `1px solid ${pos ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)"}`,
-                    borderRadius: 16,
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                      <span style={{ fontSize: 26 }}>🏦</span>
-                      <div>
-                        <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>
-                          Poupança Real
-                        </div>
-                        <div style={{ fontSize: 22, fontWeight: 900, color: cor, lineHeight: 1 }}>
-                          {fmt(poupancaReal)}
+              {/* Linha 2: Poupança Real + Poupança Previsão */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {[
+                  {
+                    label: "Poupança Real",
+                    value: poupancaReal,
+                    hint: ["ganhos − gastos", "mês atual"],
+                    icon: "🏦",
+                  },
+                  {
+                    label: "Poupança Prev.",
+                    value: poupancaMensalBase,
+                    hint: ["fim de mês", "se gastar o previsto"],
+                    icon: "📈",
+                  },
+                ].map(({ label, value, hint, icon }) => {
+                  const pos = value >= 0;
+                  const cor = pos ? "#10b981" : "#ef4444";
+                  return (
+                    <div key={label} style={{
+                      padding: "14px 16px",
+                      background: pos ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.06)",
+                      border: `1px solid ${pos ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)"}`,
+                      borderRadius: 16,
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        <span style={{ fontSize: 18 }}>{icon}</span>
+                        <div style={{ fontSize: 9, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", lineHeight: 1.4 }}>
+                          {label}
                         </div>
                       </div>
+                      <div style={{ fontSize: 20, fontWeight: 900, color: cor, lineHeight: 1, marginBottom: 6 }}>
+                        {fmt(value)}
+                      </div>
+                      <div style={{ fontSize: 9, color: "var(--text-muted)", lineHeight: 1.5 }}>
+                        {hint.map((h, i) => <div key={i}>{h}</div>)}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 10, color: "var(--text-muted)", textAlign: "right", lineHeight: 1.6 }}>
-                      <div>ganhos − gastos</div>
-                      <div>mês atual</div>
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })}
+              </div>
             </div>
 
             {/* ── Gastos Variáveis ── */}
@@ -676,7 +694,7 @@ export default function OverviewPage() {
               const faltam     = Math.max(metaFinal - poupancaAcumulada, 0);
               const cor        = pctLabel >= 80 ? "#10b981" : pctLabel >= 50 ? "#3b82f6" : "#f59e0b";
 
-              const taxaMensal    = Math.max(poupancaReal, 0);
+              const taxaMensal    = Math.max(poupancaMensalBase, 0);
               const previsaoLabel = taxaMensal > 0 && faltam > 0 ? (() => {
                 const d = new Date();
                 d.setMonth(d.getMonth() + Math.ceil(faltam / taxaMensal));

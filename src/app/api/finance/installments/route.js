@@ -12,12 +12,13 @@ function parseNum(raw) {
   return parseFloat(String(raw ?? "0").trim().replace(/[R$\s.]/g, "").replace(",", ".")) || 0;
 }
 
-// Fórmulas Google Sheets — referenciam B e G da mesma linha
+// Fórmulas Google Sheets — usam YEAR/MONTH que funcionam com serial de data
 function formulaTotalParcelas(row) {
-  return `=DATEDIF(DATE(MID(G${row},FIND("/",G${row})+1,4),LEFT(G${row},FIND("/",G${row})-1),1),DATE(MID(B${row},FIND("/",B${row})+1,4),LEFT(B${row},FIND("/",B${row})-1),1),"M")+1`;
+  return `=(YEAR(B${row})-YEAR(G${row}))*12+MONTH(B${row})-MONTH(G${row})+1`;
 }
 function formulaParcelasPagas(row) {
-  return `=MIN(E${row},MAX(0,DATEDIF(DATE(MID(G${row},FIND("/",G${row})+1,4),LEFT(G${row},FIND("/",G${row})-1),1),TODAY(),"M")))`;
+  // HOJE() é o nome pt-BR de TODAY(); +1 inclui o mês atual
+  return `=MIN(E${row},MAX(0,(YEAR(HOJE())-YEAR(G${row}))*12+MONTH(HOJE())-MONTH(G${row})+1))`;
 }
 
 async function ensureSheet(sheets, spreadsheetId) {
@@ -63,17 +64,22 @@ export async function GET() {
         const vTotal  = parseNum(valorTotal);
         const vMensal = parseNum(valorMensal);
         const nTotal  = Math.max(0, parseInt(totalParcelas ?? "0") || 0);
-        const isAuto   = String(autoCol ?? "FALSE").toUpperCase() === "TRUE";
-        const rawPagas = Math.min(nTotal, Math.max(0, parseInt(parcelasPagas ?? "0") || 0));
-        // Cap de meses decorridos só se aplica a parcelas automáticas;
-        // manuais confiam no valor gravado pelo usuário
-        const _now = new Date();
-        const _pm  = _now.getMonth() === 0 ? 12 : _now.getMonth();
-        const _py  = _now.getMonth() === 0 ? _now.getFullYear() - 1 : _now.getFullYear();
+        const isAuto  = String(autoCol ?? "FALSE").toUpperCase() === "TRUE";
+
+        // Para auto: calcula meses decorridos desde dataInicio (inclui mês atual)
+        // Para manual: lê contagem da col F (incrementada pelo usuário via PATCH)
         const _parts = String(dataInicio ?? "0/0").split("/");
         const _ms = parseInt(_parts[0]), _ys = parseInt(_parts[1]);
-        const _maxP  = (isAuto && _ms && _ys) ? Math.max(0, Math.min(nTotal, (_py - _ys) * 12 + (_pm - _ms) + 1)) : nTotal;
-        const nPagas = Math.min(rawPagas, _maxP);
+        let nPagas;
+        if (isAuto && _ms && _ys) {
+          const now = new Date();
+          const nowMonth = now.getMonth() + 1; // 1-indexed
+          const nowYear  = now.getFullYear();
+          const computed = (nowYear - _ys) * 12 + (nowMonth - _ms) + 1;
+          nPagas = Math.min(nTotal, Math.max(0, computed));
+        } else {
+          nPagas = Math.min(nTotal, Math.max(0, parseInt(parcelasPagas ?? "0") || 0));
+        }
 
         return {
           sheetRow:          i + 2,
@@ -236,9 +242,31 @@ export async function PUT() {
         migrated++;
       }
 
-      // Fórmulas E e F
+      // Fórmula E (YEAR/MONTH funcionam em seriais)
       updates.push({ range: `'${SHEET}'!E${rowNum}`, values: [[formulaTotalParcelas(rowNum)]] });
-      updates.push({ range: `'${SHEET}'!F${rowNum}`, values: [[formulaParcelasPagas(rowNum)]] });
+
+      // F: número calculado em JS para auto; 0 para manual ou datas inválidas
+      const isAutoRow = String(row[8] ?? "FALSE").toUpperCase() === "TRUE";
+      const bRaw = fixedB || String(row[1] ?? "");
+      const gRaw = String(row[6] ?? "");
+      const gParts = gRaw.split("/");
+      const bParts = bRaw.split("/");
+      const startM = parseInt(gParts[0]);
+      const startY = parseInt(gParts[1]);
+      const endM   = parseInt(bParts[0]);
+      const endY   = parseInt(bParts[1]);
+      if (isAutoRow && startM >= 1 && startM <= 12 && startY > 2000) {
+        const now = new Date();
+        const nowM = now.getMonth() + 1;
+        const nowY = now.getFullYear();
+        const nTotal = (endM >= 1 && endM <= 12 && endY > 2000) ?
+          Math.max(1, (endY - startY) * 12 + (endM - startM) + 1) : 0;
+        const computed = (nowY - startY) * 12 + (nowM - startM) + 1;
+        const fVal = nTotal > 0 ? Math.min(nTotal, Math.max(0, computed)) : Math.max(0, computed);
+        updates.push({ range: `'${SHEET}'!F${rowNum}`, values: [[fVal]] });
+      } else {
+        updates.push({ range: `'${SHEET}'!F${rowNum}`, values: [[0]] });
+      }
     });
 
     if (updates.length > 0) {

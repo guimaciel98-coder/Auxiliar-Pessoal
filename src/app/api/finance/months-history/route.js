@@ -13,7 +13,7 @@ export async function GET() {
     const sheets        = await getSheetsClient();
     const spreadsheetId = getSpreadsheetId();
 
-    const res  = await sheets.spreadsheets.values.get({ spreadsheetId, range: `'${HIST}'!A2:H500` });
+    const res  = await sheets.spreadsheets.values.get({ spreadsheetId, range: `'${HIST}'!A2:J500` });
     const rows = res.data.values ?? [];
 
     const months = rows
@@ -27,6 +27,8 @@ export async function GET() {
         poupanca:  parseNum(r[5]),
         saldo:     parseNum(r[6]),
         parcelas:  parseNum(r[7]),
+        saldoReal: parseNum(r[8]),
+        diferenca: parseNum(r[9]),
       }))
       .reverse();
 
@@ -62,14 +64,25 @@ export async function PATCH() {
     function toSheetNum(n) { return Number(n).toFixed(2).replace(".", ","); }
 
     const updates = [];
+    let prevPoupanca = null; // null = sem baseline (primeiro mês)
     rows.forEach((row, i) => {
       if (!row[0]?.trim()) return;
-      const ganhos    = parseNum(row[2]);
-      const fixos     = parseNum(row[3]);
-      const variaveis = parseNum(row[4]);
-      const saldo     = ganhos - fixos - variaveis; // parcelas já estão em variáveis
+      const ganhos      = parseNum(row[2]);
+      const fixos       = parseNum(row[3]);
+      const variaveis   = parseNum(row[4]);
+      const poupanca    = parseNum(row[5]);
+      // Usa parcelas armazenadas na col H se disponível, senão usa total atual
+      const parcelasRow = parseNum(row[7] ?? "0");
+      const parcelasUse = parcelasRow > 0 ? parcelasRow : totalParcelas;
+      const saldo       = ganhos - fixos - variaveis - parcelasUse;
+      // Δ poupança só é calculável a partir do 2º mês (quando há baseline)
+      const saldoReal   = prevPoupanca !== null ? poupanca - prevPoupanca : 0;
+      const diferenca   = prevPoupanca !== null ? saldo - saldoReal : 0;
+      prevPoupanca      = poupanca;
       updates.push({ range: `'${HIST}'!G${i + 2}`, values: [[toSheetNum(saldo)]] });
-      updates.push({ range: `'${HIST}'!H${i + 2}`, values: [[toSheetNum(totalParcelas)]] });
+      updates.push({ range: `'${HIST}'!H${i + 2}`, values: [[toSheetNum(parcelasUse)]] });
+      updates.push({ range: `'${HIST}'!I${i + 2}`, values: [[toSheetNum(saldoReal)]] });
+      updates.push({ range: `'${HIST}'!J${i + 2}`, values: [[toSheetNum(diferenca)]] });
     });
 
     if (updates.length > 0) {

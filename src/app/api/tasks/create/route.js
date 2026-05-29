@@ -6,7 +6,7 @@ export async function POST(req) {
   try { body = await req.json(); }
   catch { return Response.json({ error: "Payload JSON inválido" }, { status: 400 }); }
 
-  const { title, project, subClient, vcaProjectId, dueDate, time, priority, recurrence } = body;
+  const { title, project, subClient, vcaProjectId, dueDate, time, priority, recurrence, description } = body;
 
   if (!title?.trim()) return Response.json({ error: "title obrigatório" }, { status: 400 });
   if (!project)       return Response.json({ error: "project obrigatório" }, { status: 400 });
@@ -18,9 +18,10 @@ export async function POST(req) {
   const userId = await tdGetMe().catch(() => null);
 
   const payload = {
-    content:    title.trim(),
-    project_id: vcaProjectId || projCfg.id,
-    priority:   P_TO_TD[priority] ?? 1,
+    content:     title.trim(),
+    project_id:  vcaProjectId || projCfg.id,
+    priority:    P_TO_TD[priority] ?? 1,
+    description: description?.trim() ?? "",
     ...buildDuePayload(dueDate, time, recurrence),
   };
 

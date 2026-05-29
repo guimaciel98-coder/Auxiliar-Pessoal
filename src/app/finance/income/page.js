@@ -20,7 +20,7 @@ export default function IncomePage() {
         body: JSON.stringify({ item: item.item, confirmado: !item.confirmado }),
       });
       const j = await res.json();
-      if (j.ok) refetch();
+      if (j.ok) refetch(true);
     } finally {
       setToggling(p => { const s = new Set(p); s.delete(item.item); return s; });
     }

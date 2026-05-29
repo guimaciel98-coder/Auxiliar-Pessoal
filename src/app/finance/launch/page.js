@@ -52,7 +52,7 @@ const labelSt = {
 };
 
 export default function LaunchPage() {
-  const { data: finData, loading: finLoading, hideNumbers } = useFinance();
+  const { data: finData, loading: finLoading, hideNumbers, refetch } = useFinance();
   const fmt      = (v) => fmtFin(v, hideNumbers);
   const fmtShort = (v) => fmtFin(v, hideNumbers);
 
@@ -148,6 +148,7 @@ export default function LaunchPage() {
       showToast("✓ Lançamento registrado!");
       setForm({ date: todayISO(), category: form.category, value: "" });
       loadEntries();
+      refetch(true);
     } catch (err) { showToast(`⚠ ${err.message}`, true); }
     finally { setSaving(false); }
   }
@@ -350,8 +351,8 @@ export default function LaunchPage() {
               )}
             </div>
 
-            <div style={{ padding: "14px 16px 16px" }}>
-              <form onSubmit={handleLaunch} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ padding: "14px 16px 20px" }}>
+              <form onSubmit={handleLaunch} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div>
                   <label style={labelSt}>Data</label>
                   <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} required style={{ ...inputSt, colorScheme: "dark" }} />
@@ -401,7 +402,7 @@ export default function LaunchPage() {
               )}
             </div>
 
-            <div style={{ padding: "14px 16px 16px" }}>
+            <div style={{ padding: "14px 16px 20px" }}>
               {closeResult ? (
                 /* Resultado */
                 <div>
@@ -554,9 +555,21 @@ export default function LaunchPage() {
                         <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color }}>{fmt(val)}</span>
                       </div>
                     ))}
-                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 6, paddingTop: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Saldo</span>
-                      <span style={{ fontSize: 13, fontFamily: "var(--font-mono)", fontWeight: 900, color: m.saldo >= 0 ? "#10b981" : "#ef4444" }}>{fmt(m.saldo)}</span>
+                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 6, paddingTop: 6 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Saldo calc.</span>
+                        <span style={{ fontSize: 13, fontFamily: "var(--font-mono)", fontWeight: 900, color: m.saldo >= 0 ? "#10b981" : "#ef4444" }}>{fmt(m.saldo)}</span>
+                      </div>
+                      {(m.saldoReal !== 0 || m.diferenca !== 0) && (<>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 5 }}>
+                          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Saldo real (Δ poup.)</span>
+                          <span style={{ fontSize: 12, fontFamily: "var(--font-mono)", fontWeight: 700, color: m.saldoReal >= 0 ? "#3b82f6" : "#ef4444" }}>{fmt(m.saldoReal)}</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4, paddingTop: 4, borderTop: "1px dashed rgba(255,255,255,0.06)" }}>
+                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>Diferença</span>
+                          <span style={{ fontSize: 12, fontFamily: "var(--font-mono)", fontWeight: 800, color: Math.abs(m.diferenca) < 100 ? "#10b981" : "#f59e0b" }}>{fmt(m.diferenca)}</span>
+                        </div>
+                      </>)}
                     </div>
                   </div>
                 ))}

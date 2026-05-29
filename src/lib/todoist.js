@@ -215,6 +215,7 @@ export function toShape(task, sectionMap = null) {
     _repeat_forever:      task.due?.is_recurring ?? false,
     _sub_client_label:    subClientLabel,
     _section_id:          sId,
+    description:          task.description ?? "",
   };
 }
 

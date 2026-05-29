@@ -34,6 +34,7 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
   // ── Estado: Tarefa ────────────────────────────────────────────────────────
   const [taskData, setTaskData] = useState({
     title: "",
+    description: "",
     project: initialProjectId || "pessoal",
     vcaProjectId: initialVcaProjectId || "",
     subClient: initialSubClientId || "",
@@ -350,6 +351,18 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
                   <option value="monthly">Todo mês</option>
                   <option value="yearly">Todo ano</option>
                 </select>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>DESCRIÇÃO (Opcional)</label>
+                <textarea
+                  value={taskData.description}
+                  onChange={e => setTaskData(p => ({ ...p, description: e.target.value }))}
+                  className={styles.input}
+                  placeholder="Detalhes, links, contexto..."
+                  rows={3}
+                  style={{ resize: "vertical", minHeight: 72, lineHeight: 1.5 }}
+                />
               </div>
 
               {error && <p style={{ color: "#f87171", fontSize: 13, marginTop: 8, textAlign: "center" }}>{error}</p>}

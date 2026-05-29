@@ -195,7 +195,7 @@ export default function ExpensesPage() {
       if (!json.ok) throw new Error(json.error);
       showToast("✓ Atualizado com sucesso");
       setEditModal(null);
-      refetch();
+      refetch(true);
       if (type === "parcela") loadParcelas();
     } catch (err) { showToast(`⚠ ${err.message}`); }
     finally { setEditSaving(false); }
@@ -704,17 +704,23 @@ export default function ExpensesPage() {
                                   display: "flex", alignItems: "center", gap: 14,
                                   padding: "13px 16px",
                                   borderRadius: 14,
-                                  background: ctrl
-                                    ? "rgba(255,255,255,0.02)"
-                                    : isCommit
-                                      ? "rgba(251,191,36,0.05)"
-                                      : "rgba(255,255,255,0.05)",
-                                  border: ctrl
-                                    ? "1px solid rgba(255,255,255,0.05)"
-                                    : isCommit
-                                      ? "1px solid rgba(251,191,36,0.15)"
-                                      : `1px solid ${gc}20`,
-                                  borderLeft: `3px solid ${ctrl ? `${isCommit ? "#f59e0b" : gc}55` : isCommit ? "#f59e0b" : gc}`,
+                                  background: isAuto
+                                    ? (ctrl ? "rgba(16,185,129,0.02)" : "rgba(16,185,129,0.05)")
+                                    : ctrl
+                                      ? "rgba(255,255,255,0.02)"
+                                      : isCommit
+                                        ? "rgba(251,191,36,0.05)"
+                                        : "rgba(255,255,255,0.05)",
+                                  border: isAuto
+                                    ? (ctrl ? "1px solid rgba(16,185,129,0.08)" : "1px solid rgba(16,185,129,0.18)")
+                                    : ctrl
+                                      ? "1px solid rgba(255,255,255,0.05)"
+                                      : isCommit
+                                        ? "1px solid rgba(251,191,36,0.15)"
+                                        : `1px solid ${gc}20`,
+                                  borderLeft: isAuto
+                                    ? `3px solid ${ctrl ? "rgba(16,185,129,0.45)" : "#10b981"}`
+                                    : `3px solid ${ctrl ? `${isCommit ? "#f59e0b" : gc}55` : isCommit ? "#f59e0b" : gc}`,
                                   transition: "background 0.2s, border 0.2s",
                                 }}>
                                   {/* Ícone de status — clicável */}
@@ -724,9 +730,9 @@ export default function ExpensesPage() {
                                       width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
                                       display: "flex", alignItems: "center", justifyContent: "center",
                                       fontSize: 16, fontWeight: 900,
-                                      background: ctrl ? "rgba(16,185,129,0.12)" : `${gc}18`,
-                                      color:      ctrl ? "#10b981"               : gc,
-                                      border:     `1.5px solid ${ctrl ? "rgba(16,185,129,0.3)" : `${gc}40`}`,
+                                      background: ctrl ? "rgba(16,185,129,0.12)" : isAuto ? "rgba(16,185,129,0.06)" : `${gc}18`,
+                                      color:      ctrl ? "#10b981"               : isAuto ? "rgba(16,185,129,0.45)" : gc,
+                                      border:     `1.5px solid ${ctrl ? "rgba(16,185,129,0.3)" : isAuto ? "rgba(16,185,129,0.2)" : `${gc}40`}`,
                                       cursor:  isToggling ? "wait" : "pointer",
                                       opacity: isToggling ? 0.4 : 1,
                                       transition: "all 0.2s",
@@ -747,20 +753,20 @@ export default function ExpensesPage() {
                                       }}>
                                         {nomeLimpo}
                                       </div>
-                                      {/* Badge AUTO — só exibe quando automático */}
+                                      {/* Badge AUTO — estilo unificado com parcelas */}
                                       {isAuto && (
                                         <button
                                           onClick={() => toggleAuto(item.item, isAuto)}
-                                          title="Pagamento automático (clique para remover)"
+                                          title="Automático (clique para desativar)"
                                           style={{
-                                            padding: "2px 7px", borderRadius: 99, fontSize: 9, fontWeight: 800,
-                                            border: "1px solid rgba(96,165,250,0.4)",
-                                            background: "rgba(96,165,250,0.12)",
-                                            color: "#60a5fa",
-                                            cursor: "pointer", letterSpacing: "0.05em", flexShrink: 0,
+                                            padding: "2px 8px", borderRadius: 99, fontSize: 10, fontWeight: 700, flexShrink: 0,
+                                            background: ctrl ? "rgba(16,185,129,0.15)" : "rgba(96,165,250,0.12)",
+                                            color:      ctrl ? "#10b981" : "#60a5fa",
+                                            border:     `1px solid ${ctrl ? "rgba(16,185,129,0.3)" : "rgba(96,165,250,0.25)"}`,
+                                            cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.04em",
                                           }}
                                         >
-                                          ⚡ AUTO
+                                          ⚡ {ctrl ? "✓ auto" : "auto"}
                                         </button>
                                       )}
                                     </div>
@@ -925,8 +931,9 @@ export default function ExpensesPage() {
           {tab === "parcelas" && (() => {
             const totalMensal  = parcItems.reduce((s, i) => s + i.valorMensal, 0);
             const totalDivida  = parcItems.reduce((s, i) => s + i.restante,    0);
-            const automaticos  = parcItems.filter(i => i.auto);
-            const manuais      = parcItems.filter(i => !i.auto);
+            const parseMmYyyy  = s => { const [m, y] = String(s ?? "").split("/").map(Number); return (y || 0) * 100 + (m || 0); };
+            const automaticos  = parcItems.filter(i => i.auto).sort((a, b) => parseMmYyyy(a.dataFim) - parseMmYyyy(b.dataFim));
+            const manuais      = parcItems.filter(i => !i.auto).sort((a, b) => parseMmYyyy(a.dataFim) - parseMmYyyy(b.dataFim));
 
             const parcPrev = (() => {
               if (!parcForm.dataInicio || !parcForm.dataFim) return null;
@@ -995,16 +1002,18 @@ export default function ExpensesPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {/* Linha 1: nome + auto badge + valor */}
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                      <span style={{ fontSize: 15, fontWeight: item.pago ? 400 : 700, color: item.pago ? "rgba(255,255,255,0.35)" : "#e5e7eb", textDecoration: item.pago ? "line-through" : "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", transition: "all 0.2s" }}>
+                      {(() => { const done = item.pago || item.parcelasRestantes === 0; return (
+                      <span style={{ fontSize: 15, fontWeight: done ? 400 : 700, color: done ? "rgba(255,255,255,0.35)" : "#e5e7eb", textDecoration: done ? "line-through" : "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", transition: "all 0.2s" }}>
                         {item.nome}
                       </span>
+                      ); })()}
                       {item.auto && (
                         <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
-                          background: item.pago ? "rgba(16,185,129,0.15)" : "rgba(96,165,250,0.12)",
-                          color:      item.pago ? "#10b981" : "#60a5fa",
-                          border:     `1px solid ${item.pago ? "rgba(16,185,129,0.3)" : "rgba(96,165,250,0.25)"}`,
+                          background: (item.pago || item.parcelasRestantes === 0) ? "rgba(16,185,129,0.15)" : "rgba(96,165,250,0.12)",
+                          color:      (item.pago || item.parcelasRestantes === 0) ? "#10b981" : "#60a5fa",
+                          border:     `1px solid ${(item.pago || item.parcelasRestantes === 0) ? "rgba(16,185,129,0.3)" : "rgba(96,165,250,0.25)"}`,
                           flexShrink: 0 }}>
-                          ⚡ {item.pago ? "✓ auto" : "auto"}
+                          ⚡ {(item.pago || item.parcelasRestantes === 0) ? "✓ auto" : "auto"}
                         </span>
                       )}
                       <span style={{ fontSize: 14, fontWeight: 700, color: "#60a5fa", fontFamily: "var(--font-mono)", flexShrink: 0 }}>
@@ -1332,7 +1341,7 @@ export default function ExpensesPage() {
             const json = await res.json();
             if (!json.ok) throw new Error(json.error);
             showToast(`✓ ${createForm.nome} adicionado`);
-            setCreateModal(false); refetch();
+            setCreateModal(false); refetch(true);
           } catch (err) { showToast(`⚠ ${err.message}`); }
           finally { setCreateSaving(false); }
         }

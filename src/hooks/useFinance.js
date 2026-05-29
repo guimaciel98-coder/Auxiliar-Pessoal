@@ -41,10 +41,11 @@ export function FinanceProvider({ children }) {
   const toggleHide = useCallback(() => setHideNumbers(h => !h), []);
   const lastFetchedAt = useRef(0);
 
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(async (bust = false) => {
     dispatch({ type: "FETCH" });
     try {
-      const r    = await fetch("/api/finance", { cache: "no-store" });
+      const url  = bust ? "/api/finance?bust=1" : "/api/finance";
+      const r    = await fetch(url, { cache: "no-store" });
       const json = await r.json();
       if (!json.ok) throw new Error(json.error ?? "Erro desconhecido");
       lastFetchedAt.current = Date.now();

@@ -1,27 +1,20 @@
 import { fetchFinancialData } from "@/lib/financeService";
+import { unstable_cache } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
-/**
- * GET /api/finance
- *
- * Retorna dashboard financeiro completo.
- * Lê exclusivamente das abas App_* na planilha.
- *
- * Response shape:
- * {
- *   ok: true,
- *   summary:      { ganhoCLT, ganhoTudo, gastosBudget, gastosReal, saldoCLT, saldoTudo },
- *   ganhos:       { clt, pdv, emprestimos, total, items: { clt[], pdv[], emprestimos[] } },
- *   gastos:       { budget, real, fixos: { items[], previsaoTotal, realTotal },
- *                   variaveis: { items[], previsaoTotal, realTotal } },
- *   poupanca:     { realidade, meta, progresso, historico[], currentMilestone },
- *   compromissos: { items[], totalRestante }
- * }
- */
-export async function GET() {
+// Cache server-side por 90s — evita estourar a cota de leituras do Sheets (60 req/min)
+const getCachedFinancialData = unstable_cache(
+  fetchFinancialData,
+  ["finance-data"],
+  { revalidate: 90 }
+);
+
+export async function GET(req) {
   try {
-    const data = await fetchFinancialData();
+    const { searchParams } = new URL(req.url);
+    const bust = searchParams.get("bust"); // ?bust=1 força leitura fresca
+    const data = bust ? await fetchFinancialData() : await getCachedFinancialData();
     return Response.json({ ok: true, ...data });
   } catch (e) {
     console.error("[GET /api/finance]", e.message);
