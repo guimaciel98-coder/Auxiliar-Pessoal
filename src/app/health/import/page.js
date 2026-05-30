@@ -19,120 +19,70 @@ const WORKOUT_TYPES = {
 };
 
 function dateBR(isoDate) {
-  // "2024-01-15" → "15/01/2024"
   const [y, m, d] = isoDate.split("-");
   return `${d}/${m}/${y}`;
 }
 
 function parseXML(text) {
-  const stepsByDay    = {};
-  const caloriesByDay = {};
-  const distByDay     = {};
-  const hrByDay       = {};  // { day: [values] }
-  const sleepByDay    = {};  // minutes
-  const workouts      = [];
-
-  // ── Records ──────────────────────────────────────────────────────────────
+  const stepsByDay = {}, caloriesByDay = {}, distByDay = {}, hrByDay = {}, sleepByDay = {};
+  const workouts = [];
   const recRegex = /<Record\s([^/>]*?)(?:\/?>)/g;
   let m;
   while ((m = recRegex.exec(text)) !== null) {
     const attrs = m[1];
-    const get   = (k) => { const r = new RegExp(`${k}="([^"]*?)"`); const x = r.exec(attrs); return x ? x[1] : ""; };
-
-    const type  = get("type");
-    const val   = parseFloat(get("value")) || 0;
-    const start = get("startDate").slice(0, 10); // "YYYY-MM-DD"
-    const end   = get("endDate").slice(0, 10);
-
-    if (type === "HKQuantityTypeIdentifierStepCount") {
-      stepsByDay[start] = (stepsByDay[start] || 0) + val;
-    } else if (type === "HKQuantityTypeIdentifierActiveEnergyBurned") {
-      caloriesByDay[start] = (caloriesByDay[start] || 0) + val;
-    } else if (type === "HKQuantityTypeIdentifierDistanceWalkingRunning") {
-      distByDay[start] = (distByDay[start] || 0) + val;
-    } else if (type === "HKQuantityTypeIdentifierHeartRate") {
-      if (!hrByDay[start]) hrByDay[start] = [];
-      hrByDay[start].push(val);
-    } else if (type === "HKCategoryTypeIdentifierSleepAnalysis") {
+    const get = (k) => { const r = new RegExp(`${k}="([^"]*?)"`); const x = r.exec(attrs); return x ? x[1] : ""; };
+    const type = get("type"), val = parseFloat(get("value")) || 0;
+    const start = get("startDate").slice(0, 10), end = get("endDate").slice(0, 10);
+    if (type === "HKQuantityTypeIdentifierStepCount")              stepsByDay[start]    = (stepsByDay[start] || 0) + val;
+    else if (type === "HKQuantityTypeIdentifierActiveEnergyBurned") caloriesByDay[start] = (caloriesByDay[start] || 0) + val;
+    else if (type === "HKQuantityTypeIdentifierDistanceWalkingRunning") distByDay[start] = (distByDay[start] || 0) + val;
+    else if (type === "HKQuantityTypeIdentifierHeartRate") { if (!hrByDay[start]) hrByDay[start] = []; hrByDay[start].push(val); }
+    else if (type === "HKCategoryTypeIdentifierSleepAnalysis") {
       const v = get("value");
       if (v.includes("Asleep") || v.includes("InBed")) {
-        const sMs = new Date(get("startDate")).getTime();
-        const eMs = new Date(get("endDate")).getTime();
-        const mins = (eMs - sMs) / 60000;
-        if (mins > 0 && mins < 720) {
-          sleepByDay[end] = (sleepByDay[end] || 0) + mins;
-        }
+        const mins = (new Date(get("endDate")).getTime() - new Date(get("startDate")).getTime()) / 60000;
+        if (mins > 0 && mins < 720) sleepByDay[end] = (sleepByDay[end] || 0) + mins;
       }
     }
   }
-
-  // ── Workouts ──────────────────────────────────────────────────────────────
   const wkRegex = /<Workout\s([^>]*?)>/g;
   while ((m = wkRegex.exec(text)) !== null) {
     const attrs = m[1];
-    const get   = (k) => { const r = new RegExp(`${k}="([^"]*?)"`); const x = r.exec(attrs); return x ? x[1] : ""; };
-
-    const wType = get("workoutActivityType");
-    const dur   = parseFloat(get("duration")) || 0;
-    const dist  = parseFloat(get("totalDistance")) || 0;
-    const cal   = parseFloat(get("totalEnergyBurned")) || 0;
+    const get = (k) => { const r = new RegExp(`${k}="([^"]*?)"`); const x = r.exec(attrs); return x ? x[1] : ""; };
+    const wType = get("workoutActivityType"), dur = parseFloat(get("duration")) || 0;
     const start = get("startDate").slice(0, 10);
     if (!wType || !start || dur < 1) continue;
-
-    workouts.push({
-      date:         dateBR(start),
-      tipo:         WORKOUT_TYPES[wType] || wType.replace("HKWorkoutActivityType", ""),
-      duracao_min:  Math.round(dur),
-      calorias:     Math.round(cal),
-      distancia_km: Math.round(dist * 10) / 10,
-    });
+    workouts.push({ date: dateBR(start), tipo: WORKOUT_TYPES[wType] || wType.replace("HKWorkoutActivityType", ""), duracao_min: Math.round(dur), calorias: Math.round(parseFloat(get("totalEnergyBurned")) || 0), distancia_km: Math.round((parseFloat(get("totalDistance")) || 0) * 10) / 10 });
   }
-
-  // ── Consolida métricas por dia ─────────────────────────────────────────────
-  const allDays = new Set([
-    ...Object.keys(stepsByDay),
-    ...Object.keys(caloriesByDay),
-    ...Object.keys(sleepByDay),
-  ]);
-
-  const days = Array.from(allDays)
-    .filter(d => d && d.length === 10)
-    .sort()
-    .map(day => ({
-      date:        dateBR(day),
-      steps:       Math.round(stepsByDay[day] || 0) || null,
-      calories:    Math.round(caloriesByDay[day] || 0) || null,
-      distance_km: distByDay[day] ? Math.round(distByDay[day] * 10) / 10 : null,
-      bpm_avg:     hrByDay[day]?.length
-        ? Math.round(hrByDay[day].reduce((a, b) => a + b, 0) / hrByDay[day].length)
-        : null,
-      sleep_h: sleepByDay[day] ? Math.round((sleepByDay[day] / 60) * 10) / 10 : null,
-    }));
-
+  const allDays = new Set([...Object.keys(stepsByDay), ...Object.keys(caloriesByDay), ...Object.keys(sleepByDay)]);
+  const days = Array.from(allDays).filter(d => d && d.length === 10).sort().map(day => ({
+    date: dateBR(day),
+    steps: Math.round(stepsByDay[day] || 0) || null,
+    calories: Math.round(caloriesByDay[day] || 0) || null,
+    distance_km: distByDay[day] ? Math.round(distByDay[day] * 10) / 10 : null,
+    bpm_avg: hrByDay[day]?.length ? Math.round(hrByDay[day].reduce((a, b) => a + b, 0) / hrByDay[day].length) : null,
+    sleep_h: sleepByDay[day] ? Math.round((sleepByDay[day] / 60) * 10) / 10 : null,
+  }));
   return { days, workouts };
 }
 
 export default function ImportPage() {
-  const [status,   setStatus]   = useState("idle"); // idle | parsing | preview | importing | done | error
+  const [status,   setStatus]   = useState("idle");
   const [preview,  setPreview]  = useState(null);
   const [progress, setProgress] = useState("");
   const [result,   setResult]   = useState(null);
+  const [dragging, setDragging] = useState(false);
   const inputRef = useRef();
 
-  async function handleFile(e) {
-    const file = e.target.files?.[0];
+  function processFile(file) {
     if (!file) return;
     setStatus("parsing");
-    setProgress("Lendo arquivo...");
-
+    setProgress("Analisando dados...");
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setProgress("Analisando dados de saúde...");
       setTimeout(() => {
         try {
-          const text    = ev.target.result;
-          const parsed  = parseXML(text);
-          setPreview(parsed);
+          setPreview(parseXML(ev.target.result));
           setStatus("preview");
         } catch (err) {
           setStatus("error");
@@ -143,17 +93,19 @@ export default function ImportPage() {
     reader.readAsText(file);
   }
 
+  function handleFile(e) { processFile(e.target.files?.[0]); }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragging(false);
+    processFile(e.dataTransfer.files?.[0]);
+  }
+
   async function handleImport() {
     if (!preview) return;
     setStatus("importing");
-    setProgress("Enviando para a planilha...");
-
     try {
-      const res  = await fetch("/api/health/import", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(preview),
-      });
+      const res  = await fetch("/api/health/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(preview) });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error);
       setResult(json);
@@ -165,130 +117,182 @@ export default function ImportPage() {
   }
 
   return (
-    <div style={{ marginLeft: 220, minHeight: "100vh" }}>
+    <div style={{ marginLeft: 220, minHeight: "100vh", background: "var(--bg-primary, #0a0d14)" }}>
       <ModuleHeader title="Saúde" />
       <Navigation />
 
-      <div style={{ padding: "24px 28px 80px" }}>
-        <Link href="/health" style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-          ← Voltar
-        </Link>
+      <div style={{ maxWidth: 560, margin: "0 auto", padding: "28px 20px 80px" }}>
 
-        <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>Importar Histórico</h1>
-        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 14, marginBottom: 32 }}>
-          Importe seu histórico completo do Apple Health — passos, sono, frequência cardíaca e treinos.
-        </p>
+        {/* Header */}
+        <div style={{ marginBottom: 28 }}>
+          <Link href="/health" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "rgba(255,255,255,0.3)", textDecoration: "none", fontWeight: 600, marginBottom: 20, letterSpacing: "0.04em" }}>
+            ← SAÚDE
+          </Link>
+          <h1 style={{ fontSize: 22, fontWeight: 900, color: "#f9fafb", margin: "0 0 6px", letterSpacing: "-0.02em" }}>
+            Importar Histórico
+          </h1>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.5 }}>
+            Importe seu histórico do Apple Health — passos, sono, BPM e treinos.
+          </p>
+        </div>
 
-        {/* ── Como exportar ── */}
-        {status === "idle" && (
-          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "24px", marginBottom: 28, maxWidth: 540 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 16 }}>
-              Como exportar do iPhone
-            </p>
-            {[
-              "Abra o app Saúde no iPhone",
-              "Toque na sua foto (canto superior direito)",
-              'Toque em "Export All Health Data"',
-              "Confirme e aguarde o arquivo ZIP ser gerado",
-              "Extraia o ZIP → dentro tem o arquivo export.xml",
-              "Selecione o export.xml aqui abaixo",
-            ].map((step, i) => (
-              <div key={i} style={{ display: "flex", gap: 14, marginBottom: 12 }}>
-                <span style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", color: "#10b981", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {i + 1}
-                </span>
-                <span style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", lineHeight: 1.5 }}>{step}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── Upload ── */}
+        {/* ── IDLE: Upload zone + guia ── */}
         {(status === "idle" || status === "error") && (
-          <div>
-            <input ref={inputRef} type="file" accept=".xml" onChange={handleFile} style={{ display: "none" }} />
-            <button
+          <>
+            {/* Drop zone */}
+            <div
+              onDragOver={e => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
               onClick={() => inputRef.current?.click()}
-              style={{ padding: "14px 28px", borderRadius: 12, background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)", color: "#10b981", fontSize: 15, fontWeight: 700, cursor: "pointer" }}
+              style={{
+                border: `2px dashed ${dragging ? "rgba(16,185,129,0.6)" : "rgba(255,255,255,0.12)"}`,
+                borderRadius: 20,
+                padding: "44px 24px",
+                textAlign: "center",
+                cursor: "pointer",
+                background: dragging ? "rgba(16,185,129,0.04)" : "rgba(255,255,255,0.02)",
+                transition: "all 0.2s",
+                marginBottom: 24,
+              }}
             >
-              Selecionar export.xml
-            </button>
-            {status === "error" && (
-              <p style={{ marginTop: 12, color: "#ef4444", fontSize: 13 }}>{progress}</p>
-            )}
-          </div>
-        )}
-
-        {/* ── Parsing ── */}
-        {status === "parsing" && (
-          <div style={{ padding: "32px 0" }}>
-            <div style={{ fontSize: 24, marginBottom: 12 }}>⏳</div>
-            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>{progress}</p>
-            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, marginTop: 8 }}>Arquivos grandes podem demorar alguns segundos...</p>
-          </div>
-        )}
-
-        {/* ── Preview ── */}
-        {status === "preview" && preview && (
-          <div style={{ maxWidth: 540 }}>
-            <div style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 16, padding: "20px 24px", marginBottom: 20 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#10b981", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                Encontrado no arquivo
+              <input ref={inputRef} type="file" accept=".xml" onChange={handleFile} style={{ display: "none" }} />
+              <div style={{ fontSize: 40, marginBottom: 14 }}>🫀</div>
+              <p style={{ fontSize: 15, fontWeight: 700, color: "#f9fafb", margin: "0 0 6px" }}>
+                {dragging ? "Solte aqui" : "Selecionar export.xml"}
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", margin: 0 }}>
+                Arraste o arquivo ou clique para selecionar
+              </p>
+              {status === "error" && (
+                <p style={{ marginTop: 14, color: "#ef4444", fontSize: 12, background: "rgba(239,68,68,0.08)", borderRadius: 8, padding: "8px 12px", display: "inline-block" }}>
+                  {progress}
+                </p>
+              )}
+            </div>
+
+            {/* Guia de exportação */}
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "20px 22px" }}>
+              <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(255,255,255,0.3)", margin: "0 0 16px" }}>
+                Como exportar do iPhone
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[
-                  { icon: "📅", label: "Dias com dados", value: preview.days.length },
-                  { icon: "🏋️", label: "Treinos",        value: preview.workouts.length },
-                  { icon: "👟", label: "Dias com passos",value: preview.days.filter(d => d.steps).length },
-                  { icon: "🌙", label: "Dias com sono",  value: preview.days.filter(d => d.sleep_h).length },
-                ].map(s => (
-                  <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 18, marginBottom: 4 }}>{s.icon}</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: "#f9fafb" }}>{s.value}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{s.label}</div>
+                  ["📱", "Abra o app Saúde no iPhone"],
+                  ["👤", "Toque na sua foto (canto superior direito)"],
+                  ["📤", 'Toque em "Export All Health Data"'],
+                  ["⏳", "Aguarde o arquivo ZIP ser gerado"],
+                  ["📂", "Extraia o ZIP → selecione o export.xml aqui"],
+                ].map(([icon, text], i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
+                      {icon}
+                    </div>
+                    <span style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.4 }}>{text}</span>
                   </div>
                 ))}
               </div>
             </div>
+          </>
+        )}
 
-            <div style={{ display: "flex", gap: 12 }}>
-              <button
-                onClick={() => { setStatus("idle"); setPreview(null); }}
-                style={{ padding: "12px 20px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-              >
+        {/* ── PARSING ── */}
+        {status === "parsing" && (
+          <div style={{ textAlign: "center", padding: "60px 0" }}>
+            <div style={{ fontSize: 44, marginBottom: 16, animation: "pulse 1.5s infinite" }}>⏳</div>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#f9fafb", marginBottom: 8 }}>Processando arquivo...</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Arquivos grandes podem demorar alguns segundos</p>
+          </div>
+        )}
+
+        {/* ── PREVIEW ── */}
+        {status === "preview" && preview && (
+          <div>
+            {/* Stats grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+              {[
+                { icon: "📅", label: "Dias com dados",  value: preview.days.length,                          color: "#6366f1" },
+                { icon: "🏋️", label: "Treinos",         value: preview.workouts.length,                      color: "#8b5cf6" },
+                { icon: "👟", label: "Dias com passos", value: preview.days.filter(d => d.steps).length,     color: "#10b981" },
+                { icon: "🌙", label: "Dias com sono",   value: preview.days.filter(d => d.sleep_h).length,   color: "#6366f1" },
+                { icon: "🔥", label: "Dias com calorias",value: preview.days.filter(d => d.calories).length, color: "#f59e0b" },
+                { icon: "💓", label: "Dias com BPM",    value: preview.days.filter(d => d.bpm_avg).length,   color: "#ef4444" },
+              ].map(s => (
+                <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: `${s.color}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                    {s.icon}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: "#f9fafb", lineHeight: 1 }}>{s.value.toLocaleString("pt-BR")}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>{s.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Período */}
+            {preview.days.length > 0 && (
+              <div style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Período</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#a5b4fc" }}>
+                  {preview.days[0].date} → {preview.days[preview.days.length - 1].date}
+                </span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => { setStatus("idle"); setPreview(null); }}
+                style={{ padding: "12px 20px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                 Cancelar
               </button>
-              <button
-                onClick={handleImport}
-                style={{ flex: 1, padding: "12px 20px", borderRadius: 10, background: "linear-gradient(135deg,#10b981,#059669)", border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
-              >
-                Importar {preview.days.length} dias + {preview.workouts.length} treinos
+              <button onClick={handleImport}
+                style={{ flex: 1, padding: "12px 20px", borderRadius: 12, background: "linear-gradient(135deg,#10b981,#059669)", border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                Importar {preview.days.length} dias + {preview.workouts.length} treinos →
               </button>
             </div>
           </div>
         )}
 
-        {/* ── Importing ── */}
+        {/* ── IMPORTING ── */}
         {status === "importing" && (
-          <div style={{ padding: "32px 0" }}>
-            <div style={{ fontSize: 24, marginBottom: 12 }}>📤</div>
-            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>{progress}</p>
+          <div style={{ textAlign: "center", padding: "60px 0" }}>
+            <div style={{ fontSize: 44, marginBottom: 16 }}>📤</div>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#f9fafb", marginBottom: 8 }}>Enviando para a planilha...</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Pode levar alguns segundos</p>
+            <div style={{ width: 200, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 99, margin: "24px auto 0", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: "60%", background: "linear-gradient(90deg,#10b981,#6366f1)", borderRadius: 99, animation: "shimmer 1.5s infinite" }} />
+            </div>
           </div>
         )}
 
-        {/* ── Done ── */}
+        {/* ── DONE ── */}
         {status === "done" && result && (
-          <div style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 16, padding: "28px 24px", maxWidth: 400 }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>✅</div>
-            <p style={{ fontSize: 18, fontWeight: 800, color: "#10b981", marginBottom: 8 }}>Importado com sucesso!</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 20 }}>
-              {result.days_written} dias de métricas e {result.workouts_written} treinos salvos na planilha.
-            </p>
-            <Link href="/health" style={{ display: "inline-block", padding: "10px 20px", borderRadius: 10, background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", color: "#10b981", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
-              Ver Saúde →
-            </Link>
+          <div style={{ textAlign: "center", padding: "48px 24px" }}>
+            <div style={{ fontSize: 52, marginBottom: 20 }}>✅</div>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: "#10b981", marginBottom: 8 }}>Importação concluída!</h2>
+            <div style={{ display: "flex", justifyContent: "center", gap: 16, margin: "20px 0 28px" }}>
+              <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 12, padding: "14px 22px", textAlign: "center" }}>
+                <div style={{ fontSize: 26, fontWeight: 900, color: "#10b981" }}>{result.days_written}</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>dias salvos</div>
+              </div>
+              <div style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 12, padding: "14px 22px", textAlign: "center" }}>
+                <div style={{ fontSize: 26, fontWeight: 900, color: "#8b5cf6" }}>{result.workouts_written}</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>treinos salvos</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button onClick={() => { setStatus("idle"); setPreview(null); setResult(null); }}
+                style={{ padding: "11px 20px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                Importar outro
+              </button>
+              <Link href="/health"
+                style={{ padding: "11px 24px", borderRadius: 12, background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)", color: "#10b981", fontSize: 13, fontWeight: 700, textDecoration: "none", display: "inline-block" }}>
+                Ver Saúde →
+              </Link>
+            </div>
           </div>
         )}
+
       </div>
     </div>
   );
