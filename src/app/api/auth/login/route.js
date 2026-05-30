@@ -26,11 +26,11 @@ export async function POST(req) {
       return NextResponse.json({ ok: false, error: "Usuário ou senha incorretos" }, { status: 401 });
     }
 
-    // Gera token HMAC-SHA256
-    const token = crypto.createHmac("sha256", secret).update("authenticated").digest("hex");
+    // Usa SESSION_TOKEN pré-definido (evita crypto async no middleware)
+    const sessionToken = process.env.SESSION_TOKEN ?? crypto.createHmac("sha256", secret).update("authenticated").digest("hex");
 
     const res = NextResponse.json({ ok: true });
-    res.cookies.set("session", token, {
+    res.cookies.set("session", sessionToken, {
       httpOnly: true,
       secure:   true,
       sameSite: "strict",
