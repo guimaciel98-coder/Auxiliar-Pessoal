@@ -67,8 +67,14 @@ export function useTasks(mode = "today") {
       const json = await r.json();
       if (json.error) throw new Error(json.error);
       setData(json);
-      // O estado `completed` persiste naturalmente no React durante a sessão.
-      // Não resetar aqui — só addHidden/removeHidden e o restore do mount o modificam.
+      // Se uma tarefa concluída pelo app voltou como pendente no Todoist
+      // (ex: recorrente reagendada para hoje), remove do completed local.
+      const returnedIds = new Set((json.tasks ?? []).map(t => t.id));
+      setCompleted(prev => {
+        const cleaned = new Set([...prev].filter(id => !returnedIds.has(id)));
+        if (cleaned.size !== prev.size) ssSave(cleaned);
+        return cleaned;
+      });
     } catch (e) {
       console.error("[useTasks] load:", e);
       showToast("⚠️ Erro ao carregar tarefas. Verifique a conexão.");
