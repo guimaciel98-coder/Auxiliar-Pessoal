@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 
-const PUBLIC = ["/login", "/api/auth/login", "/api/auth/logout"];
-
-// Calcula o token esperado uma vez por cold start — evita importKey em todo request
+// Cache do token por cold start — importKey só ocorre uma vez
 let _tokenCache = null;
 async function getExpectedToken() {
   if (_tokenCache) return _tokenCache;
@@ -20,11 +18,12 @@ async function getExpectedToken() {
 export async function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  // Assets e rotas públicas passam direto sem nenhuma lógica
+  // Passa direto: assets, API (têm auth própria) e rota de login
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
-    PUBLIC.some(p => pathname.startsWith(p))
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/login")
   ) {
     return NextResponse.next();
   }
@@ -33,19 +32,13 @@ export async function middleware(req) {
   const expected = await getExpectedToken();
 
   if (!token || !expected || token !== expected) {
-    // RSC prefetch requests devem retornar 401, não redirect (evita loop no client)
-    const isRSC = req.headers.get("RSC") === "1" || req.nextUrl.searchParams.has("_rsc");
-    if (isRSC) {
-      return new NextResponse(null, { status: 401 });
-    }
-    const res = NextResponse.redirect(new URL("/login", req.url));
-    if (token) res.cookies.delete("session");
-    return res;
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Só intercepta rotas de página — exclui estáticos, API e _next
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/).*)"],
 };
