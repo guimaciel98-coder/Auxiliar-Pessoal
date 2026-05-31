@@ -220,7 +220,7 @@ export async function POST(req) {
         const cal   = parseFloat(w.activeEnergy?.qty ?? w.totalEnergyBurned ?? w.calorias ?? 0) || "";
         const dist  = parseFloat(w.distance?.qty ?? w.totalDistance ?? w.distancia_km ?? 0) || "";
         return [wDate, tipo, dur, cal, dist];
-      }).filter(r => r[2] > 0 && !existingKeys.has(`${r[0]}|${r[1]}|${r[2]}`));
+      }).filter(r => r[2] > 0 && r[2] <= 480 && !existingKeys.has(`${r[0]}|${r[1]}|${r[2]}`)); // máx 8h — exclui sessões de sono
 
       if (newRows.length > 0) {
         await sheets.spreadsheets.values.append({
