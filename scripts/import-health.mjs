@@ -3,10 +3,36 @@
  * Execução: node scripts/import-health.mjs
  */
 
-import { readFileSync } from "fs";
+import { readFileSync, mkdtempSync, rmSync } from "fs";
+import { execSync } from "child_process";
+import { tmpdir } from "os";
+import { join } from "path";
 
-const XML_PATH  = "c:/Users/Guilherme/Downloads/health-export/apple_health_export/export.xml";
-const API_URL   = "https://daily-app-standalone.vercel.app/api/health/import";
+// --file <caminho>  aceita .zip ou .xml
+// --from YYYY-MM-DD filtra apenas dias >= data (default: 2025-01-01)
+const fileArg  = (() => { const i = process.argv.indexOf("--file"); return i >= 0 ? process.argv[i+1] : null; })();
+const fromArg  = (() => { const i = process.argv.indexOf("--from"); return i >= 0 ? process.argv[i+1] : "2025-01-01"; })();
+const FROM_DATE = fromArg; // YYYY-MM-DD
+
+const DEFAULT_XML = "c:/Users/Guilherme/Downloads/health-export/apple_health_export/export.xml";
+const API_URL     = "https://daily-app-standalone.vercel.app/api/health/import";
+
+let XML_PATH = DEFAULT_XML;
+let tmpDir   = null;
+
+if (fileArg) {
+  if (fileArg.endsWith(".zip")) {
+    tmpDir   = mkdtempSync(join(tmpdir(), "health-"));
+    console.log(`📦 Extraindo ${fileArg}...`);
+    execSync(`unzip -o "${fileArg}" -d "${tmpDir}"`, { stdio: "pipe" });
+    const found = execSync(`find "${tmpDir}" -name "export.xml"`, { encoding: "utf8" }).trim();
+    if (!found) throw new Error("export.xml não encontrado no zip");
+    XML_PATH = found;
+    console.log(`✓ Extraído para ${XML_PATH}`);
+  } else {
+    XML_PATH = fileArg;
+  }
+}
 
 // ── Workout types → PT ────────────────────────────────────────────────────────
 const WORKOUT_TYPES = {
@@ -97,7 +123,7 @@ while ((m = wkRegex.exec(text)) !== null) {
   const dist  = parseFloat(getAttr(attrs, "totalDistance")) || 0;
   const cal   = parseFloat(getAttr(attrs, "totalEnergyBurned")) || 0;
   const start = getAttr(attrs, "startDate").slice(0, 10);
-  if (!wType || !start || dur < 1) continue;
+  if (!wType || !start || dur < 1 || start < FROM_DATE) continue;
   workouts.push({
     date:         dateBR(start),
     tipo:         WORKOUT_TYPES[wType] || wType.replace("HKWorkoutActivityType", ""),
@@ -111,7 +137,7 @@ console.log(`✓ ${workouts.length} treinos encontrados`);
 // ── Consolida dias ────────────────────────────────────────────────────────────
 const allDays = new Set([...Object.keys(stepsByDay), ...Object.keys(caloriesByDay), ...Object.keys(sleepByDay)]);
 const days    = Array.from(allDays)
-  .filter(d => d && d.length === 10)
+  .filter(d => d && d.length === 10 && d >= FROM_DATE)
   .sort()
   .map(day => ({
     date:        dateBR(day),
@@ -182,3 +208,5 @@ for (let i = 0; i < days.length; i += BATCH) {
 console.log(`\n✅ Concluído!`);
 console.log(`   ${totalDays} novos dias · ${totalWorkouts} treinos`);
 console.log(`\n🌐 Acesse: https://daily-app-standalone.vercel.app/health`);
+
+if (tmpDir) { try { rmSync(tmpDir, { recursive: true }); } catch {} }

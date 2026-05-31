@@ -573,12 +573,7 @@ export default function HealthPage() {
 
       {/* ── Header ── */}
       <header style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", padding:"8px 20px 6px", gap:8 }}>
-        <Link href="/health/import" style={{
-          padding:"5px 12px", borderRadius:99,
-          background:"rgba(16,185,129,0.1)", border:"1px solid rgba(16,185,129,0.25)",
-          color:"#10b981", fontSize:11, fontWeight:700, textDecoration:"none",
-        }}>↑ Importar</Link>
-        <button onClick={refetch} style={{
+<button onClick={refetch} style={{
           padding:"5px 10px", borderRadius:99,
           background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.09)",
           color:"rgba(255,255,255,0.4)", fontSize:13, cursor:"pointer",
@@ -596,9 +591,6 @@ export default function HealthPage() {
         <div style={{ textAlign:"center", padding:"80px 28px" }}>
           <div style={{ fontSize:48, marginBottom:16 }}>⌚</div>
           <p style={{ fontSize:15, fontWeight:700, color:"rgba(255,255,255,0.4)", marginBottom:10 }}>Sem dados ainda</p>
-          <Link href="/health/import" style={{ fontSize:13, color:"#10b981", fontWeight:600, textDecoration:"none" }}>
-            Importar histórico do Apple Health →
-          </Link>
         </div>
       )}
 

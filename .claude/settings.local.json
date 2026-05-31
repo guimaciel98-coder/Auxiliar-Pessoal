@@ -276,7 +276,17 @@
       "Bash(Write-Output \"ok\")",
       "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Guilherme\\\\0.WORKS\\\\02_Dev_IA\\\\daily-app-standalone\\\\src\\\\app\\\\api\\\\finance\\\\ganho\\\\add\")",
       "Bash(xargs grep -l \"HEALTH\")",
-      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Guilherme\\\\0.WORKS\\\\02_Dev_IA\\\\daily-app-standalone\\\\src\\\\app\\\\api\\\\health\\\\cleanup\")"
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Guilherme\\\\0.WORKS\\\\02_Dev_IA\\\\daily-app-standalone\\\\src\\\\app\\\\api\\\\health\\\\cleanup\")",
+      "Bash(node scripts/import-health.mjs --file \"c:/Users/Guilherme/Downloads/export \\(3\\).zip\")",
+      "Bash(node scripts/import-health.mjs --file \"c:/Users/Guilherme/Downloads/export \\(3\\).zip\" --from 2025-01-01)",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Guilherme\\\\0.WORKS\\\\02_Dev_IA\\\\daily-app-standalone\\\\src\\\\app\\\\api\\\\auth\\\\login\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Guilherme\\\\0.WORKS\\\\02_Dev_IA\\\\daily-app-standalone\\\\src\\\\app\\\\api\\\\auth\\\\logout\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Guilherme\\\\0.WORKS\\\\02_Dev_IA\\\\daily-app-standalone\\\\src\\\\app\\\\login\")",
+      "PowerShell(ipconfig /flushdns)",
+      "PowerShell(nslookup daily-app-standalone.vercel.app 8.8.8.8)",
+      "PowerShell(vercel ls 2>&1)",
+      "PowerShell(Get-Content \"C:\\\\Windows\\\\System32\\\\drivers\\\\etc\\\\hosts\" | Where-Object { $_ -notmatch \"^#\" -and $_.Trim\\(\\) -ne \"\" })",
+      "Bash(node scripts/import-health.mjs --file \"c:/Users/Guilherme/Downloads/export \\(4\\).zip\" --from 2025-01-01)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Guilherme\\0.WORKS\\02_Dev_IA\\daily-app-standalone\\daily-app-standalone",
