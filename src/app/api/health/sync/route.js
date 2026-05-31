@@ -66,10 +66,19 @@ function numFmt(v) {
   return isNaN(n) ? "" : String(Math.round(n * 100) / 100).replace(".", ",");
 }
 
+// Métricas cumulativas: soma todos os itens do dia
+// Métricas de média: lê o último item
+const SUM_METRICS = new Set(["step_count","steps","active_energy_burned","active_energy","calories","distance_walking_running","walking_running_distance","distance"]);
+
 function getMetric(metrics, name) {
   const m = metrics.find(x => x.name === name || x.name?.toLowerCase() === name.toLowerCase());
   if (!m || !Array.isArray(m.data) || m.data.length === 0) return null;
-  // pega o item mais recente (último do dia ou único)
+  if (SUM_METRICS.has(name.toLowerCase())) {
+    // Soma todos os itens (o app pode enviar em múltiplos grupos de hora)
+    const total = m.data.reduce((s, item) => s + (parseFloat(item?.qty ?? item?.value ?? item?.Qty ?? 0) || 0), 0);
+    return total > 0 ? total : null;
+  }
+  // Média/ponto: pega o último item
   const item = m.data[m.data.length - 1];
   return parseFloat(item?.qty ?? item?.value ?? item?.Qty ?? 0) || null;
 }
