@@ -22,7 +22,7 @@ export async function POST(req) {
     return Response.json({ ok: false, error: "JSON inválido" }, { status: 400 });
   }
 
-  const { days = [], workouts = [], update_sleep = false, clear = false } = body;
+  const { days = [], workouts = [], update_sleep = false, update_bpm = false, clear = false } = body;
   if (!clear && !days.length && !workouts.length) {
     return Response.json({ ok: false, error: "Nenhum dado recebido" }, { status: 400 });
   }
@@ -76,6 +76,41 @@ export async function POST(req) {
       }
 
       return Response.json({ ok: true, sleep_updated: batchData.length });
+    }
+
+    // ── Modo update_bpm: atualiza E:F (bpm_rest, bpm_avg) para datas existentes ──
+    if (update_bpm) {
+      const existingData = await sheets.spreadsheets.values.get({
+        spreadsheetId, range: "'App_Saude'!A2:H9999",
+      }).catch(() => ({ data: { values: [] } }));
+
+      const rows = existingData.data.values ?? [];
+      const dateToRow = {};
+      rows.forEach((row, idx) => {
+        const date = String(row[0] ?? "").trim();
+        if (date) dateToRow[date] = idx + 2;
+      });
+
+      const batchData = [];
+      for (const d of days) {
+        if (!d.date || !dateToRow[d.date]) continue;
+        const rowNum = dateToRow[d.date];
+        batchData.push({
+          range:  `'App_Saude'!E${rowNum}:F${rowNum}`,
+          values: [[toNum(d.bpm_rest), toNum(d.bpm_avg)]],
+        });
+      }
+
+      if (batchData.length > 0) {
+        const BATCH = 500;
+        for (let i = 0; i < batchData.length; i += BATCH) {
+          await sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId,
+            requestBody: { valueInputOption: "RAW", data: batchData.slice(i, i + BATCH) },
+          });
+        }
+      }
+      return Response.json({ ok: true, bpm_updated: batchData.length });
     }
 
     // ── Lê datas já existentes em App_Saude ──────────────────────────────
