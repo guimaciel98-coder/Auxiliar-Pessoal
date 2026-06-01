@@ -164,10 +164,10 @@ export async function fetchFinancialData() {
 
   // ── Compromissos (derivados de App_Parcelas) ──────────────────────────────────
   const commitItems = [];
-  // Mês atual ainda não fechado → cap de pagamentos até o fim do mês anterior
+  // Cap de pagamentos inclui o mês atual (contagem 1-indexed)
   const _capNow  = new Date();
-  const _capPrevM = _capNow.getMonth() === 0 ? 12 : _capNow.getMonth();
-  const _capPrevY = _capNow.getMonth() === 0 ? _capNow.getFullYear() - 1 : _capNow.getFullYear();
+  const _capPrevM = _capNow.getMonth() + 1; // mês atual 1-indexed (jan=1 … dez=12)
+  const _capPrevY = _capNow.getFullYear();
   for (const row of parcelasRes.data.values ?? []) {
     const ativo = String(row[7] ?? "TRUE").toUpperCase();
     if (ativo === "FALSE") continue;
