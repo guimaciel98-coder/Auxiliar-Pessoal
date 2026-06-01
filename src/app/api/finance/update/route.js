@@ -81,9 +81,10 @@ export async function PATCH(req) {
       }
 
       const updates = [];
-      if (campos.nome       !== undefined) updates.push({ range: `'App_Parcelas'!A${row}`, values: [[campos.nome]] });
-      if (campos.dataFim    !== undefined) updates.push({ range: `'App_Parcelas'!B${row}`, values: [[campos.dataFim]] });
-      if (campos.auto       !== undefined) updates.push({ range: `'App_Parcelas'!I${row}`, values: [[campos.auto ? "TRUE" : "FALSE"]] });
+      if (campos.nome           !== undefined) updates.push({ range: `'App_Parcelas'!A${row}`, values: [[campos.nome]] });
+      if (campos.dataFim        !== undefined) updates.push({ range: `'App_Parcelas'!B${row}`, values: [[campos.dataFim]] });
+      if (campos.auto           !== undefined) updates.push({ range: `'App_Parcelas'!I${row}`, values: [[campos.auto ? "TRUE" : "FALSE"]] });
+      if (campos.parcelasPagas  !== undefined) updates.push({ range: `'App_Parcelas'!F${row}`, values: [[Number(campos.parcelasPagas)]] });
       if (campos.valorTotal !== undefined) {
         updates.push({ range: `'App_Parcelas'!C${row}`, values: [[vTotal]] });
         updates.push({ range: `'App_Parcelas'!D${row}`, values: [[vMensal]] });
