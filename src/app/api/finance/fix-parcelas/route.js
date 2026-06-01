@@ -1,8 +1,6 @@
 import { getSheetsClient, getSpreadsheetId } from "@/lib/googleSheets";
 export const dynamic = "force-dynamic";
 
-// Endpoint temporário — escreve pagas corretas direto na coluna F
-// Valores corretos conforme usuário: Revisão=11, Assistencia=2, Capacete=9, Concerto=8, Jogo=2, Manual=2
 const FIXES = [
   { row: 4,  pagas: 11 }, // Revisão Bike
   { row: 5,  pagas: 2  }, // Assistencia Computador
@@ -12,19 +10,38 @@ const FIXES = [
   { row: 10, pagas: 2  }, // Manual (Cabelo)
 ];
 
+export async function GET() {
+  // Debug: lê o conteúdo real de F (fórmula ou valor)
+  const sheets        = await getSheetsClient();
+  const spreadsheetId = getSpreadsheetId();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: "'App_Parcelas'!A2:F15",
+    valueRenderOption: "FORMULA",
+  });
+  return Response.json({ rows: res.data.values });
+}
+
 export async function POST() {
   const sheets        = await getSheetsClient();
   const spreadsheetId = getSpreadsheetId();
 
-  const data = FIXES.map(f => ({
-    range:  `'App_Parcelas'!F${f.row}`,
-    values: [[f.pagas]],
-  }));
+  // Usa update individual por célula com RAW para garantir sobrescrever fórmula
+  for (const f of FIXES) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range:            `'App_Parcelas'!F${f.row}`,
+      valueInputOption: "RAW",
+      requestBody:      { values: [[f.pagas]] },
+    });
+  }
 
-  await sheets.spreadsheets.values.batchUpdate({
+  // Lê de volta para confirmar
+  const check = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    requestBody: { valueInputOption: "RAW", data },
+    range: "'App_Parcelas'!F4:F12",
+    valueRenderOption: "FORMATTED_VALUE",
   });
 
-  return Response.json({ ok: true, fixed: FIXES.length });
+  return Response.json({ ok: true, fixed: FIXES.length, f_values: check.data.values });
 }
