@@ -72,9 +72,9 @@ export async function GET() {
         const _ms = parseInt(_parts[0]), _ys = parseInt(_parts[1]);
         let nPagas;
         if (isAuto && _ms && _ys) {
-          const now = new Date();
-          const nowMonth = now.getMonth() + 1; // 1-indexed
-          const nowYear  = now.getFullYear();
+          const now = new Date(Date.now() - 3 * 3600 * 1000); // BRT (UTC-3)
+          const nowMonth = now.getUTCMonth() + 1; // 1-indexed
+          const nowYear  = now.getUTCFullYear();
           const computed = (nowYear - _ys) * 12 + (nowMonth - _ms) + 1;
           nPagas = Math.min(nTotal, Math.max(0, computed));
         } else {
