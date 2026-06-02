@@ -26,13 +26,35 @@ export async function POST(req) {
   }
 }
 
-// DELETE — remove evento por linha
+// DELETE — remove a linha inteira (deleteDimension, não clear)
 export async function DELETE(req) {
   try {
     const { sheetRow } = await req.json();
     if (!sheetRow) return Response.json({ ok: false, error: "sheetRow obrigatório" }, { status: 400 });
+
     const sheets = await getSheetsClient();
-    await sheets.spreadsheets.values.clear({ spreadsheetId: ID, range: `'${SHEET}'!A${sheetRow}:C${sheetRow}` });
+
+    // Busca o sheetId da aba App_Eventos
+    const meta    = await sheets.spreadsheets.get({ spreadsheetId: ID });
+    const sheet   = meta.data.sheets.find(s => s.properties.title === SHEET);
+    if (!sheet) return Response.json({ ok: false, error: "Aba não encontrada" }, { status: 404 });
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: ID,
+      requestBody: {
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId:    sheet.properties.sheetId,
+              dimension:  "ROWS",
+              startIndex: sheetRow - 1, // 0-indexed
+              endIndex:   sheetRow,
+            },
+          },
+        }],
+      },
+    });
+
     return Response.json({ ok: true });
   } catch (e) {
     return Response.json({ ok: false, error: e.message }, { status: 500 });

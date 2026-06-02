@@ -467,9 +467,11 @@ export async function fetchSpecialAgenda() {
     const rows  = res.data.values ?? [];
     const today = new Date(); today.setHours(0, 0, 0, 0);
 
+    // map ANTES do filter para preservar o idx real da planilha
     const events = rows
-      .filter(r => r[0]?.trim() && r[1]?.trim())
       .map((r, idx) => {
+        if (!r[0]?.trim() || !r[1]?.trim()) return null; // pula vazias, mantendo idx
+
         const parts = r[0].trim().split("/").map(Number);
         if (parts.length < 2 || parts.some(isNaN)) return null;
 
@@ -489,7 +491,7 @@ export async function fetchSpecialAgenda() {
         const monthYear   = date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
         return {
-          sheetRow:    idx + 2,
+          sheetRow:    idx + 2, // idx real da resposta da API → linha correta na planilha
           date:        date.toISOString().slice(0, 10),
           dateLabel,
           weekday,
