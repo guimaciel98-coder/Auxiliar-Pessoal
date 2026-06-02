@@ -321,6 +321,33 @@ export default function EventosPage() {
   // IDs de todos os dias dos 3 FDS (+ pontões) para excluir da lista
   const fdsISOSet = new Set(weekends.flatMap(w => w.days.map(toISO)));
 
+  // Feriados midweek próximos (90 dias) que NÃO estão nos FDS já exibidos
+  const holidaySections = (() => {
+    const sections = [];
+    const yearsNeeded = new Set([today.getFullYear(), today.getFullYear() + 1]);
+    const allHolidays = new Set([...yearsNeeded].flatMap(y => [...getSpHolidays(y)]));
+    for (const hISO of [...allHolidays].sort()) {
+      const hDate = new Date(hISO); hDate.setHours(0,0,0,0);
+      const daysAway = Math.round((hDate - today) / 86400000);
+      if (daysAway < 0 || daysAway > 90) continue;       // só próximos 90 dias
+      if (fdsISOSet.has(hISO)) continue;                   // já coberto por FDS
+      const dow = hDate.getDay();
+      if (dow === 0 || dow === 6) continue;                // fds puro já coberto
+      // Dia anterior ao feriado
+      const prev = new Date(hDate); prev.setDate(hDate.getDate() - 1);
+      sections.push({
+        days: [prev, hDate],
+        holidayISO: hISO,
+        title: `🎉 Feriado · ${hDate.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}`,
+        daysAway,
+      });
+    }
+    return sections;
+  })();
+
+  // Adiciona dias dos feriados midweek ao set para não duplicar na lista
+  for (const s of holidaySections) s.days.forEach(d => fdsISOSet.add(toISO(d)));
+
   // Eventos restantes (excluindo os 3 FDS)
   const rest = upcoming.filter(e => !fdsISOSet.has(e.date));
 
@@ -419,8 +446,13 @@ export default function EventosPage() {
       {!loading && (
         <div style={{ paddingBottom: 80 }}>
 
-          {/* ── Próximos 3 FDS ── */}
-          {weekends.map(({ days, rangeLabel, title }, wi) => (
+          {/* ── Próximos 3 FDS + Feriados midweek em ordem cronológica ── */}
+          {[
+            ...weekends.map(w => ({ ...w, type: "fds", sortKey: toISO(w.days[0]) })),
+            ...holidaySections.map(h => ({ ...h, type: "feriado", sortKey: h.holidayISO })),
+          ]
+            .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+            .map(({ days, rangeLabel, title, type }, wi) => (
             <div key={wi} style={{ marginBottom: 28 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 14 }}>
                 <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)" }}>
