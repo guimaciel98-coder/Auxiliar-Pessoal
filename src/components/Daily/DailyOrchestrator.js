@@ -120,7 +120,7 @@ export default function DailyOrchestrator({ mode = "today" }) {
 
   return (
     <div className={styles.wrap}>
-      <Toast message={toast?.message} />
+      <Toast message={toast?.message} onUndo={toast?.onUndo} />
 
       {editingTask && (
         <TaskEditModal

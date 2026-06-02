@@ -82,6 +82,10 @@ export async function tdComplete(id) {
   return tdFetch(`/tasks/${id}/close`, { method: "POST", body: JSON.stringify({}) });
 }
 
+export async function reopenTask(id) {
+  return tdFetch(`/tasks/${id}/reopen`, { method: "POST", body: JSON.stringify({}) });
+}
+
 // ─── Busca via filtro NLP do Todoist (replica exatamente o que o app mostra) ──
 
 export async function fetchTasksByFilter(filterStr) {

@@ -34,10 +34,10 @@ export function useTasks(mode = "today") {
 
   const isLoadingRef = useRef(false);
 
-  function showToast(message) {
+  function showToast(message, onUndo = null) {
     const key = Date.now();
-    setToast({ message, key });
-    setTimeout(() => setToast(t => t?.key === key ? null : t), 2500);
+    setToast({ message, key, onUndo });
+    setTimeout(() => setToast(t => t?.key === key ? null : t), onUndo ? 5000 : 2500);
   }
 
   function addHidden(taskId) {
@@ -132,7 +132,7 @@ export function useTasks(mode = "today") {
     };
   }, [load]);
 
-  async function rescheduleTask(taskId, newDueDate, timed, isRecurring, recurrence, label) {
+  async function rescheduleTask(taskId, newDueDate, timed, isRecurring, recurrence, label, prevDueDate) {
     setRescheduling(prev => new Set(prev).add(taskId));
     setFading(prev => new Set(prev).add(taskId));
 
@@ -148,7 +148,23 @@ export function useTasks(mode = "today") {
       }
       addHidden(taskId);
       setFading(prev => { const s = new Set(prev); s.delete(taskId); return s; });
-      showToast(`→ Reagendado para ${label ?? "nova data"}`);
+
+      const undoReschedule = prevDueDate ? async () => {
+        setToast(null);
+        try {
+          const prevDate = new Date(Number(prevDueDate));
+          const pad = n => String(n).padStart(2, "0");
+          const iso = `${prevDate.getUTCFullYear()}-${pad(prevDate.getUTCMonth()+1)}-${pad(prevDate.getUTCDate())}`;
+          await fetch("/api/tasks/reschedule", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ taskId, dueDate: iso, timed, isRecurring: !!isRecurring, recurrence: recurrence ?? null }),
+          });
+          removeHidden(taskId);
+          setTimeout(load, 500);
+        } catch {}
+      } : null;
+
+      showToast(`→ ${label ?? "Reagendado"}`, undoReschedule);
       setTimeout(load, 1000);
     } catch (e) {
       setFading(prev => { const s = new Set(prev); s.delete(taskId); return s; });
@@ -180,9 +196,25 @@ export function useTasks(mode = "today") {
       addHidden(taskId);
       setFading(prev => { const s = new Set(prev); s.delete(taskId); return s; });
       const name = taskName;
-      showToast(name ? `✓ Concluída: ${name.length > 28 ? name.slice(0, 28) + "…" : name}` : "✓ Tarefa concluída");
 
-      setTimeout(load, 2000); // 2s para o Todoist processar antes do refetch
+      const undoComplete = async () => {
+        setToast(null);
+        try {
+          await fetch("/api/tasks/reopen", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ taskId }),
+          });
+          removeHidden(taskId);
+          setTimeout(load, 500);
+        } catch {}
+      };
+
+      showToast(
+        name ? `✓ ${name.length > 28 ? name.slice(0, 28) + "…" : name}` : "✓ Concluída",
+        undoComplete
+      );
+
+      setTimeout(load, 2000);
     } catch (e) {
       setFading(prev => { const s = new Set(prev); s.delete(taskId); return s; });
       removeHidden(taskId);
