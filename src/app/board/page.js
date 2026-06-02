@@ -487,7 +487,7 @@ export default function ProjectsPage() {
       const cur  = todayBRT + i * 86400000;
       const next = cur + 86400000;
       const dow  = new Date(cur - 3 * 3600 * 1000).getUTCDay(); // 0=Dom, 6=Sáb
-      if (dow === 0 || dow === 6) continue; // pula fins de semana
+      if ((dow === 0 || dow === 6) && activeProject === "vca") continue; // fim de semana só pula no VCA
       const dayTasks = filteredTasks.filter(t => {
         if (!t.due_date) return false;
         const ms = Number(t.due_date);
