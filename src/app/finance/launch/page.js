@@ -63,6 +63,24 @@ export default function LaunchPage() {
   // ── Estado: lançamento ───────────────────────────────────────────────────
   const [form, setForm]     = useState({ date: todayISO(), category: "", value: "" });
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null); // rowIndex sendo apagado
+
+  async function handleDelete(rowIndex) {
+    if (!window.confirm("Apagar este lançamento?")) return;
+    setDeleting(rowIndex);
+    try {
+      const res = await fetch("/api/finance/launch", {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rowIndex }),
+      });
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error);
+      showToast("✓ Lançamento apagado");
+      loadEntries();
+      refetch(true);
+    } catch (err) { showToast(`⚠ ${err.message}`, true); }
+    finally { setDeleting(null); }
+  }
 
   // ── Estado: fechamento ───────────────────────────────────────────────────
   const [poup1, setPoup1]         = useState("");
@@ -312,6 +330,7 @@ export default function LaunchPage() {
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                               {diaEntries.map((e, i) => {
                                 const cs = catStyle(e.categoria);
+                                const isDel = deleting === e.rowIndex;
                                 return (
                                   <div key={i} style={{
                                     display: "flex", alignItems: "center", gap: 8,
@@ -322,6 +341,17 @@ export default function LaunchPage() {
                                     <span style={{ fontSize: 12, fontWeight: 800, color: cs.text, fontFamily: "var(--font-mono)" }}>
                                       {fmtShort(e.valor)}
                                     </span>
+                                    <button
+                                      onClick={() => handleDelete(e.rowIndex)}
+                                      disabled={isDel}
+                                      style={{
+                                        background: "none", border: "none", cursor: isDel ? "wait" : "pointer",
+                                        color: "rgba(255,255,255,0.3)", fontSize: 13, lineHeight: 1,
+                                        padding: "0 2px", display: "flex", alignItems: "center",
+                                      }}
+                                    >
+                                      {isDel ? "…" : "✕"}
+                                    </button>
                                   </div>
                                 );
                               })}

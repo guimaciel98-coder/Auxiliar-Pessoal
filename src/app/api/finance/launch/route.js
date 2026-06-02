@@ -58,16 +58,18 @@ export async function GET() {
       range: `'${LOG}'!A2:E9999`,
     });
 
-    const entries = (res.data.values ?? [])
-      .filter(r => r[0]?.trim())
-      .reverse()
-      .map(([data, descricao, categoria, valor, ciclo]) => ({
-        data:      data ?? "",
+    const raw = res.data.values ?? [];
+    const entries = raw
+      .map(([data, descricao, categoria, valor, ciclo], idx) => ({
+        rowIndex:  idx + 2, // sheet row (1-indexed + header)
+        data:      (data ?? "").trim(),
         descricao: descricao ?? "",
         categoria: categoria ?? "",
         valor:     parseNum(valor),
         ciclo:     (ciclo ?? "").trim(),
-      }));
+      }))
+      .filter(e => e.data)
+      .reverse();
 
     return Response.json({ ok: true, entries });
   } catch (e) {
@@ -109,6 +111,47 @@ export async function POST(req) {
     return Response.json({ ok: true });
   } catch (e) {
     console.error("[POST /api/finance/launch]", e);
+    return Response.json({ ok: false, error: e.message }, { status: 500 });
+  }
+}
+
+// ── DELETE — remove linha pelo rowIndex ───────────────────────────────────────
+export async function DELETE(req) {
+  try {
+    const { rowIndex } = await req.json();
+    if (!rowIndex || rowIndex < 2) {
+      return Response.json({ ok: false, error: "rowIndex inválido" }, { status: 400 });
+    }
+
+    const sheets        = await getSheetsClient();
+    const spreadsheetId = getSpreadsheetId();
+
+    // Pega o sheetId da aba App_Lancamentos
+    const meta   = await sheets.spreadsheets.get({ spreadsheetId });
+    const sheet  = meta.data.sheets.find(s => s.properties.title === LOG);
+    if (!sheet) return Response.json({ ok: false, error: "Aba não encontrada" }, { status: 404 });
+
+    const sheetId = sheet.properties.sheetId;
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension:  "ROWS",
+              startIndex: rowIndex - 1, // 0-indexed
+              endIndex:   rowIndex,
+            },
+          },
+        }],
+      },
+    });
+
+    return Response.json({ ok: true });
+  } catch (e) {
+    console.error("[DELETE /api/finance/launch]", e);
     return Response.json({ ok: false, error: e.message }, { status: 500 });
   }
 }
