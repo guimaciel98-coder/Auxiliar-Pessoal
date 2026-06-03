@@ -95,7 +95,7 @@ const TIPO_COLORS = {
 };
 
 // ── Hero card de um dia do FDS ──────────────────────────────────────────────
-function DayCard({ date, evts, isToday, isHoliday, onAdd, onDelete, onEdit }) {
+function DayCard({ date, evts, isToday, isHoliday, onAdd, onDelete, onEdit, onExclude }) {
   const dow   = date.getDay();
   const day   = date.getDate();
   const month = MES_ABR[date.getMonth()];
@@ -108,6 +108,7 @@ function DayCard({ date, evts, isToday, isHoliday, onAdd, onDelete, onEdit }) {
 
   return (
     <div style={{
+      position: "relative",
       background: `${accent}1a`,
       border: `1px solid ${accent}40`,
       borderTop: `3px solid ${accent}`,
@@ -115,6 +116,17 @@ function DayCard({ date, evts, isToday, isHoliday, onAdd, onDelete, onEdit }) {
       display: "flex", flexDirection: "column", alignItems: "center",
       gap: 6, minHeight: 160,
     }}>
+      {/* Botão excluir data (só em seções de feriado) */}
+      {onExclude && (
+        <span
+          onClick={() => onExclude(toISO(date))}
+          title="Excluir esta data da seção"
+          style={{ position: "absolute", top: 6, left: 8, fontSize: 9, color: "rgba(255,255,255,0.15)", cursor: "pointer", lineHeight: 1, userSelect: "none" }}
+          onMouseEnter={ev => ev.currentTarget.style.color = "#ef4444"}
+          onMouseLeave={ev => ev.currentTarget.style.color = "rgba(255,255,255,0.15)"}
+        >✕</span>
+      )}
+
       {/* Dia semana */}
       <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: isToday ? "#06b6d4" : accent }}>
         {isToday ? "HOJE" : DAY_ABBR[dow]}
@@ -234,12 +246,25 @@ function EventCard({ e, onEdit }) {
 
 // ── Página principal ────────────────────────────────────────────────────────
 export default function EventosPage() {
-  const [events,   setEvents]   = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [showPast, setShowPast] = useState(false);
-  const [modal,    setModal]    = useState(null); // { date: Date, editMode?: bool, sheetRow?: number } | null
-  const [form,     setForm]     = useState({ evento: "", tipo: "" });
-  const [saving,   setSaving]   = useState(false);
+  const [events,        setEvents]        = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [showPast,      setShowPast]      = useState(false);
+  const [modal,         setModal]         = useState(null); // { date: Date, editMode?: bool, sheetRow?: number } | null
+  const [form,          setForm]          = useState({ evento: "", tipo: "" });
+  const [saving,        setSaving]        = useState(false);
+  const [excludedDates, setExcludedDates] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("excludedHolidayDates") || "[]")); }
+    catch { return new Set(); }
+  });
+
+  function excludeDate(iso) {
+    setExcludedDates(prev => {
+      const next = new Set(prev);
+      next.add(iso);
+      localStorage.setItem("excludedHolidayDates", JSON.stringify([...next]));
+      return next;
+    });
+  }
 
   const reload = () => {
     setLoading(true);
@@ -357,7 +382,9 @@ export default function EventosPage() {
     const yearsNeeded = new Set([today.getFullYear(), today.getFullYear() + 1]);
     const allHolidays = new Set([...yearsNeeded].flatMap(y => [...getSpHolidays(y)]));
     for (const hISO of [...allHolidays].sort()) {
-      const hDate = new Date(hISO); hDate.setHours(0,0,0,0);
+      // Fix timezone: parsear como data local para evitar shift UTC-3
+      const [hy, hm, hd] = hISO.split('-').map(Number);
+      const hDate = new Date(hy, hm - 1, hd);
       const daysAway = Math.round((hDate - today) / 86400000);
       if (daysAway < 0) continue;          // só futuros
       if (fdsISOSet.has(hISO)) continue;   // já coberto por FDS
@@ -373,9 +400,17 @@ export default function EventosPage() {
         if (!fdsISOSet.has(toISO(sat)))     days.push(sat);
         if (!fdsISOSet.has(toISO(sunPrev))) days.push(sunPrev);
       } else if (dow === 2) {
-        // Terça-feira: Seg como ponte anterior (só se Seg não for também feriado)
+        // Terça-feira: Sex+Sáb+Dom+Seg como feriado prolongado (só se Seg não for feriado)
         const mon = new Date(hDate); mon.setDate(hDate.getDate() - 2);
-        if (!allHolidays.has(toISO(mon))) days.push(mon);
+        if (!allHolidays.has(toISO(mon))) {
+          const fri = new Date(mon); fri.setDate(mon.getDate() - 3);
+          const sat = new Date(mon); sat.setDate(mon.getDate() - 2);
+          const sun = new Date(mon); sun.setDate(mon.getDate() - 1);
+          if (!fdsISOSet.has(toISO(fri))) days.push(fri);
+          if (!fdsISOSet.has(toISO(sat))) days.push(sat);
+          if (!fdsISOSet.has(toISO(sun))) days.push(sun);
+          days.push(mon);
+        }
       } else {
         // Demais: dia anterior (exceto se domingo)
         const prev = new Date(hDate); prev.setDate(hDate.getDate() - 1);
@@ -507,34 +542,41 @@ export default function EventosPage() {
             ...holidaySections.map(h => ({ ...h, type: "feriado", sortKey: h.holidayISO })),
           ]
             .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
-            .map(({ days, rangeLabel, title, type }, wi) => (
-            <div key={wi} style={{ marginBottom: 28 }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 14 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)" }}>
-                  {title}
-                </span>
-                {wi === 0 && (
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontFamily: "var(--font-mono)" }}>
-                    {rangeLabel}
-                  </span>
-                )}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: `repeat(${days.length},1fr)`, gap: 10 }}>
-                {days.map((d, i) => (
-                  <DayCard
-                    key={i}
-                    date={d}
-                    evts={eventMap[toISO(d)] ?? []}
-                    isToday={toISO(d) === todayISO}
-                    isHoliday={spHolidays.has(toISO(d))}
-                    onAdd={openAdd}
-                    onDelete={handleDelete}
-                    onEdit={openEdit}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
+            .map(({ days, rangeLabel, title, type }, wi) => {
+              const visibleDays = type === "feriado"
+                ? days.filter(d => !excludedDates.has(toISO(d)))
+                : days;
+              if (visibleDays.length === 0) return null;
+              return (
+                <div key={wi} style={{ marginBottom: 28 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 14 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)" }}>
+                      {title}
+                    </span>
+                    {wi === 0 && (
+                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontFamily: "var(--font-mono)" }}>
+                        {rangeLabel}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: `repeat(${visibleDays.length},1fr)`, gap: 10 }}>
+                    {visibleDays.map((d, i) => (
+                      <DayCard
+                        key={i}
+                        date={d}
+                        evts={eventMap[toISO(d)] ?? []}
+                        isToday={toISO(d) === todayISO}
+                        isHoliday={spHolidays.has(toISO(d))}
+                        onAdd={openAdd}
+                        onDelete={handleDelete}
+                        onEdit={openEdit}
+                        onExclude={type === "feriado" ? excludeDate : undefined}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
 
           {/* ── Divider ── */}
           {weekendGroups.length > 0 && (
