@@ -95,7 +95,7 @@ const TIPO_COLORS = {
 };
 
 // ── Hero card de um dia do FDS ──────────────────────────────────────────────
-function DayCard({ date, evts, isToday, isHoliday, onAdd, onDelete }) {
+function DayCard({ date, evts, isToday, isHoliday, onAdd, onDelete, onEdit }) {
   const dow   = date.getDay();
   const day   = date.getDate();
   const month = MES_ABR[date.getMonth()];
@@ -135,7 +135,7 @@ function DayCard({ date, evts, isToday, isHoliday, onAdd, onDelete }) {
             const ts = tipoStyle(e.tipo);
             return (
               <div key={i} style={{ position: "relative", background: ts.bg, border: `1px solid ${ts.border}`, borderRadius: 10, padding: "7px 10px 7px 10px", textAlign: "center" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#f0f0f8", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#f0f0f8", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 28 }}>
                   {e.activity}
                 </div>
                 {e.tipo && (
@@ -144,11 +144,18 @@ function DayCard({ date, evts, isToday, isHoliday, onAdd, onDelete }) {
                   </div>
                 )}
                 {e.sheetRow && (
-                  <span onClick={ev => { ev.stopPropagation(); onDelete(e.sheetRow); }}
-                    style={{ position: "absolute", top: 4, right: 6, fontSize: 10, color: "rgba(255,255,255,0.2)", cursor: "pointer", lineHeight: 1 }}
-                    onMouseEnter={e => e.currentTarget.style.color = "#ef4444"}
-                    onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.2)"}
-                  >✕</span>
+                  <div style={{ position: "absolute", top: 4, right: 5, display: "flex", gap: 4 }}>
+                    <span onClick={ev => { ev.stopPropagation(); onEdit(e, date); }}
+                      style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", cursor: "pointer", lineHeight: 1 }}
+                      onMouseEnter={ev => ev.currentTarget.style.color = "#60a5fa"}
+                      onMouseLeave={ev => ev.currentTarget.style.color = "rgba(255,255,255,0.2)"}
+                    >✎</span>
+                    <span onClick={ev => { ev.stopPropagation(); onDelete(e.sheetRow); }}
+                      style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", cursor: "pointer", lineHeight: 1 }}
+                      onMouseEnter={ev => ev.currentTarget.style.color = "#ef4444"}
+                      onMouseLeave={ev => ev.currentTarget.style.color = "rgba(255,255,255,0.2)"}
+                    >✕</span>
+                  </div>
                 )}
               </div>
             );
@@ -166,7 +173,7 @@ function DayCard({ date, evts, isToday, isHoliday, onAdd, onDelete }) {
 }
 
 // ── Card de evento na lista ─────────────────────────────────────────────────
-function EventCard({ e }) {
+function EventCard({ e, onEdit }) {
   const u = (() => {
     if ((e.tipo ?? "").toLowerCase() === "feriado")
       return { color: "#a855f7", bg: "rgba(168,85,247,0.08)", border: "rgba(168,85,247,0.22)", accent: true,  label: e.daysFromNow === 0 ? "HOJE" : e.daysFromNow === 1 ? "AMANHÃ" : `${e.daysFromNow}d` };
@@ -179,12 +186,19 @@ function EventCard({ e }) {
   const ts = tipoStyle(e.tipo);
 
   return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 14,
-      padding: "13px 16px", borderRadius: 14,
-      background: u.bg, border: `1px solid ${u.border}`,
-      borderLeft: u.accent ? `3px solid ${u.color}` : `1px solid ${u.border}`,
-    }}>
+    <div
+      onClick={onEdit ? () => onEdit(e) : undefined}
+      style={{
+        display: "flex", alignItems: "center", gap: 14,
+        padding: "13px 16px", borderRadius: 14,
+        background: u.bg, border: `1px solid ${u.border}`,
+        borderLeft: u.accent ? `3px solid ${u.color}` : `1px solid ${u.border}`,
+        cursor: onEdit ? "pointer" : "default",
+        transition: "opacity 0.15s",
+      }}
+      onMouseEnter={onEdit ? ev => ev.currentTarget.style.opacity = "0.8" : undefined}
+      onMouseLeave={onEdit ? ev => ev.currentTarget.style.opacity = "1" : undefined}
+    >
       {/* Data */}
       <div style={{ textAlign: "center", minWidth: 38, flexShrink: 0 }}>
         <div style={{ fontSize: 8, fontWeight: 800, color: u.color, letterSpacing: "0.07em", lineHeight: 1, marginBottom: 3, textTransform: "uppercase" }}>
@@ -223,7 +237,7 @@ export default function EventosPage() {
   const [events,   setEvents]   = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [showPast, setShowPast] = useState(false);
-  const [modal,    setModal]    = useState(null); // { date: Date } | null
+  const [modal,    setModal]    = useState(null); // { date: Date, editMode?: bool, sheetRow?: number } | null
   const [form,     setForm]     = useState({ evento: "", tipo: "" });
   const [saving,   setSaving]   = useState(false);
 
@@ -239,7 +253,12 @@ export default function EventosPage() {
 
   function openAdd(date) {
     setForm({ evento: "", tipo: "" });
-    setModal({ date });
+    setModal({ date, editMode: false });
+  }
+
+  function openEdit(evt, date) {
+    setForm({ evento: evt.activity ?? "", tipo: evt.tipo ?? "" });
+    setModal({ date, editMode: true, sheetRow: evt.sheetRow });
   }
 
   async function handleSave() {
@@ -247,13 +266,22 @@ export default function EventosPage() {
     setSaving(true);
     try {
       const d = modal.date;
-      const dd = String(d.getDate()).padStart(2,"0");
-      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const dd   = String(d.getDate()).padStart(2,"0");
+      const mm   = String(d.getMonth()+1).padStart(2,"0");
       const yyyy = d.getFullYear();
-      await fetch("/api/routine/events", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: `${dd}/${mm}/${yyyy}`, evento: form.evento, tipo: form.tipo }),
-      });
+      const dataStr = `${dd}/${mm}/${yyyy}`;
+
+      if (modal.editMode && modal.sheetRow) {
+        await fetch("/api/routine/events", {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sheetRow: modal.sheetRow, data: dataStr, evento: form.evento, tipo: form.tipo }),
+        });
+      } else {
+        await fetch("/api/routine/events", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: dataStr, evento: form.evento, tipo: form.tipo }),
+        });
+      }
       setModal(null);
       reload();
     } finally { setSaving(false); }
@@ -301,11 +329,13 @@ export default function EventosPage() {
     const core = fdsRange(fri); // [sex, sáb, dom]
     const sun  = core[2];
 
-    // Pontão: inclui Quinta e/ou Segunda se feriado
+    // Pontão: inclui Quinta e/ou Segunda se feriado; e Quarta se Quinta é feriado
     const thu = new Date(fri); thu.setDate(fri.getDate() - 1);
+    const wed = new Date(fri); wed.setDate(fri.getDate() - 2);
     const mon = new Date(sun); mon.setDate(sun.getDate() + 1);
+    const thuIsHol = spHolidays.has(toISO(thu));
     const days = [
-      ...(spHolidays.has(toISO(thu)) ? [thu] : []),
+      ...(thuIsHol ? [wed, thu] : []),  // Qua (dia anterior) + Qui (feriado)
       ...core,
       ...(spHolidays.has(toISO(mon)) ? [mon] : []),
     ];
@@ -321,7 +351,7 @@ export default function EventosPage() {
   // IDs de todos os dias dos 3 FDS (+ pontões) para excluir da lista
   const fdsISOSet = new Set(weekends.flatMap(w => w.days.map(toISO)));
 
-  // Feriados midweek próximos (90 dias) que NÃO estão nos FDS já exibidos
+  // Feriados do ano que NÃO estão nos FDS já exibidos — com pontes
   const holidaySections = (() => {
     const sections = [];
     const yearsNeeded = new Set([today.getFullYear(), today.getFullYear() + 1]);
@@ -329,14 +359,33 @@ export default function EventosPage() {
     for (const hISO of [...allHolidays].sort()) {
       const hDate = new Date(hISO); hDate.setHours(0,0,0,0);
       const daysAway = Math.round((hDate - today) / 86400000);
-      if (daysAway < 0 || daysAway > 90) continue;       // só próximos 90 dias
-      if (fdsISOSet.has(hISO)) continue;                   // já coberto por FDS
+      if (daysAway < 0) continue;          // só futuros
+      if (fdsISOSet.has(hISO)) continue;   // já coberto por FDS
       const dow = hDate.getDay();
-      if (dow === 0 || dow === 6) continue;                // fds puro já coberto
-      // Dia anterior ao feriado
-      const prev = new Date(hDate); prev.setDate(hDate.getDate() - 1);
+      if (dow === 0 || dow === 6) continue; // FDS puro já coberto
+
+      const days = [];
+
+      if (dow === 2) {
+        // Terça-feira: Seg como ponte anterior
+        const mon = new Date(hDate); mon.setDate(hDate.getDate() - 2);
+        days.push(mon);
+      } else {
+        // Demais: dia anterior (exceto se domingo)
+        const prev = new Date(hDate); prev.setDate(hDate.getDate() - 1);
+        if (prev.getDay() !== 0) days.push(prev);
+      }
+
+      days.push(hDate);
+
+      if (dow === 4) {
+        // Quinta-feira: Sex como ponte posterior
+        const fri = new Date(hDate); fri.setDate(hDate.getDate() + 1);
+        days.push(fri);
+      }
+
       sections.push({
-        days: [prev, hDate],
+        days,
         holidayISO: hISO,
         title: `🎉 Feriado · ${hDate.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}`,
         daysAway,
@@ -380,16 +429,16 @@ export default function EventosPage() {
             <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "capitalize" }}>
               {modal.date.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
             </div>
-            <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 20 }}>Novo Evento</div>
+            <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 20 }}>{modal.editMode ? "Editar Evento" : "Novo Evento"}</div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>EVENTO</div>
                 <input
                   autoFocus value={form.evento}
-                  onChange={e => setForm(p => ({ ...p, evento: e.target.value }))}
+                  onChange={e => setForm(p => ({ ...p, evento: e.target.value.toUpperCase() }))}
                   onKeyDown={e => e.key === "Enter" && handleSave()}
-                  placeholder="Ex: Almoço em família"
+                  placeholder="EX: ALMOÇO EM FAMÍLIA"
                   style={inputSt}
                 />
               </div>
@@ -422,7 +471,7 @@ export default function EventosPage() {
                 style={{ flex: 2, padding: "11px 0", borderRadius: 10, border: "none",
                   background: (form.evento.trim() && !saving) ? "linear-gradient(135deg,#f59e0b,#d97706)" : "rgba(255,255,255,0.06)",
                   color: "#fff", fontSize: 13, fontWeight: 700, cursor: (form.evento.trim() && !saving) ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
-                {saving ? "Salvando…" : "Salvar"}
+                {saving ? "Salvando…" : modal.editMode ? "Salvar Alterações" : "Salvar"}
               </button>
             </div>
           </div>
@@ -474,6 +523,7 @@ export default function EventosPage() {
                     isHoliday={spHolidays.has(toISO(d))}
                     onAdd={openAdd}
                     onDelete={handleDelete}
+                    onEdit={openEdit}
                   />
                 ))}
               </div>
@@ -500,7 +550,13 @@ export default function EventosPage() {
                   {label}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  {grpEvents.map((e, i) => <EventCard key={i} e={e} />)}
+                  {grpEvents.map((e, i) => (
+                    <EventCard
+                      key={i}
+                      e={e}
+                      onEdit={e.sheetRow ? () => { const d = new Date(e.date); d.setHours(0,0,0,0); openEdit(e, d); } : undefined}
+                    />
+                  ))}
                 </div>
               </div>
             );

@@ -26,6 +26,26 @@ export async function POST(req) {
   }
 }
 
+// PUT — atualiza evento existente na linha sheetRow
+export async function PUT(req) {
+  try {
+    const { sheetRow, data, evento, tipo } = await req.json();
+    if (!sheetRow || !data || !evento?.trim()) {
+      return Response.json({ ok: false, error: "sheetRow, data e evento são obrigatórios" }, { status: 400 });
+    }
+    const sheets = await getSheetsClient();
+    await sheets.spreadsheets.values.update({
+      spreadsheetId:    ID,
+      range:            `'${SHEET}'!A${sheetRow}:C${sheetRow}`,
+      valueInputOption: "RAW",
+      requestBody:      { values: [[data, evento.trim(), tipo ?? ""]] },
+    });
+    return Response.json({ ok: true });
+  } catch (e) {
+    return Response.json({ ok: false, error: e.message }, { status: 500 });
+  }
+}
+
 // DELETE — remove a linha inteira (deleteDimension, não clear)
 export async function DELETE(req) {
   try {
