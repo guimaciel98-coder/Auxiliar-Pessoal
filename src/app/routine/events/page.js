@@ -135,7 +135,7 @@ function DayCard({ date, evts, isToday, isHoliday, onAdd, onDelete, onEdit }) {
             const ts = tipoStyle(e.tipo);
             return (
               <div key={i} style={{ position: "relative", background: ts.bg, border: `1px solid ${ts.border}`, borderRadius: 10, padding: "7px 10px 7px 10px", textAlign: "center" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#f0f0f8", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 28 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#f0f0f8", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {e.activity}
                 </div>
                 {e.tipo && (
