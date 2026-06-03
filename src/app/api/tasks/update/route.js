@@ -21,7 +21,7 @@ export async function POST(req) {
     }
 
     if (dueDate) {
-      if (!recurrence || recurrence === "none") {
+      if (!recurrence || !recurrence.trim() || recurrence.trim() === "none") {
         // due_string com data simples → Todoist remove recorrência existente.
         // due_date preservaria recorrência, por isso usamos due_string aqui.
         Object.assign(updateBody, time
@@ -42,8 +42,8 @@ export async function POST(req) {
     if (subClient !== undefined)    updateBody.section_id  = subClient || null;
     if (description !== undefined)  updateBody.description = description?.trim() ?? "";
 
-    await tdUpdate(taskId, updateBody);
-    return Response.json({ ok: true });
+    const updated = await tdUpdate(taskId, updateBody);
+    return Response.json({ ok: true, due: updated?.due ?? null });
   } catch (e) {
     console.error("[POST /api/tasks/update]", e);
     return Response.json({ error: e.message }, { status: 500 });

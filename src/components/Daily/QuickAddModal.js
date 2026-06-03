@@ -44,7 +44,7 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
     })(),
     time: "",
     priority: "",
-    recurrence: "none",
+    recurrence: "",
   });
 
   // ── Estado: Cliente PDV ───────────────────────────────────────────────────
@@ -88,11 +88,14 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(taskData),
       });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || "Erro ao criar tarefa");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Erro ao criar tarefa");
+      const recText = taskData.recurrence?.trim();
+      if (recText && data.due?.is_recurring === false) {
+        onSuccess("✓ Tarefa criada (recorrência não reconhecida — verifique no Todoist)");
+      } else {
+        onSuccess("✓ Tarefa criada");
       }
-      onSuccess("✓ Tarefa criada");
       onClose();
     } catch (err) {
       setError(err.message || "Erro ao criar tarefa. Tente novamente.");
@@ -337,20 +340,14 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
               </div>
 
               <div className={styles.formGroup}>
-                <label className={styles.label}>RECORRÊNCIA</label>
-                <select
+                <label className={styles.label}>RECORRÊNCIA (Opcional)</label>
+                <input
+                  type="text"
                   value={taskData.recurrence}
                   onChange={e => setTaskData(p => ({ ...p, recurrence: e.target.value }))}
-                  className={styles.select}
-                >
-                  <option value="none">Nenhuma (Tarefa única)</option>
-                  <option value="daily">Todo dia</option>
-                  <option value="weekdays">Dias úteis</option>
-                  <option value="weekly">Toda semana</option>
-                  <option value="biweekly">A cada 2 semanas</option>
-                  <option value="monthly">Todo mês</option>
-                  <option value="yearly">Todo ano</option>
-                </select>
+                  className={styles.input}
+                  placeholder="Ex: toda semana, todo mês, todo primeiro dia útil..."
+                />
               </div>
 
               <div className={styles.formGroup}>

@@ -30,7 +30,7 @@ export async function POST(req) {
 
   try {
     const task = await tdCreate(payload);
-    return Response.json({ ok: true, taskId: task.id }, { status: 201 });
+    return Response.json({ ok: true, taskId: task.id, due: task.due ?? null }, { status: 201 });
   } catch (e) {
     console.error("[POST /api/tasks/create]", e);
     return Response.json({ error: e.message }, { status: 500 });

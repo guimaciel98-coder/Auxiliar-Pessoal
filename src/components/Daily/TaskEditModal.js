@@ -54,7 +54,7 @@ export default function TaskEditModal({ task, onClose, onSuccess, clients: clien
     dueDate:     initialDate,
     time:        initialTime,
     priority:    task._priority   || "",
-    recurrence:  task._recurrence || "none",
+    recurrence:  task._recurrence_string || "",
   });
 
   const handleChange = (e) => {
@@ -72,11 +72,14 @@ export default function TaskEditModal({ task, onClose, onSuccess, clients: clien
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId: task.id, ...formData }),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Erro ao salvar");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Erro ao salvar");
+      const recText = formData.recurrence?.trim();
+      if (recText && data.due?.is_recurring === false) {
+        onSuccess("✓ Tarefa salva (recorrência não reconhecida — verifique no Todoist)");
+      } else {
+        onSuccess("✓ Tarefa atualizada");
       }
-      onSuccess("✓ Tarefa atualizada");
       onClose();
     } catch (err) {
       setError(err.message || "Falha ao salvar. Tente novamente.");
@@ -294,23 +297,15 @@ export default function TaskEditModal({ task, onClose, onSuccess, clients: clien
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.label}>RECORRÊNCIA</label>
-            {task._recurrence && task._recurrence !== "none" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, padding: "5px 10px", background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 7, fontSize: 12, color: "#a5b4fc" }}>
-                <span>↻</span>
-                <span>{task._recurrence_string || formData.recurrence}</span>
-              </div>
-            )}
-            <select name="recurrence" value={formData.recurrence} onChange={handleChange} className={styles.select}>
-              <option value="none">Nenhuma (Tarefa única)</option>
-              <option value="daily">Todo dia</option>
-              <option value="weekdays">Dias úteis</option>
-              <option value="weekly">Toda semana</option>
-              <option value="biweekly">A cada 2 semanas</option>
-              <option value="monthly">Todo mês</option>
-              <option value="yearly">Todo ano</option>
-              <option value="recurring">Recorrente (outra)</option>
-            </select>
+            <label className={styles.label}>RECORRÊNCIA (Opcional)</label>
+            <input
+              type="text"
+              name="recurrence"
+              value={formData.recurrence}
+              onChange={handleChange}
+              className={styles.input}
+              placeholder="Ex: toda semana, todo mês, todo primeiro dia útil..."
+            />
           </div>
 
           {error && (
