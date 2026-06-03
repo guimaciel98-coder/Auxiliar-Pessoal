@@ -1,8 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
 import styles from "./TaskEditModal.module.css";
+import { validateRecurrence } from "@/lib/recurrenceValidation";
 
 const PROJ_LABELS = { pessoal: "Pessoal", vca: "VCA Brasil", pdv: "Ponto de Vista" };
+
+const REC_INPUT_STYLE = {
+  empty:   {},
+  valid:   { borderColor: "rgba(52,211,153,0.6)", boxShadow: "0 0 0 2px rgba(52,211,153,0.15)" },
+  unknown: { borderColor: "rgba(245,158,11,0.6)",  boxShadow: "0 0 0 2px rgba(245,158,11,0.12)"  },
+};
 const PRIO_META   = {
   p1: { label: "P1 — Urgente", color: "var(--status-p1)", bg: "rgba(255,77,77,0.12)", border: "rgba(255,77,77,0.25)" },
   p2: { label: "P2 — Alta",    color: "var(--status-p2)", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.25)" },
@@ -305,7 +312,18 @@ export default function TaskEditModal({ task, onClose, onSuccess, clients: clien
               onChange={handleChange}
               className={styles.input}
               placeholder="Ex: toda semana, todo mês, todo primeiro dia útil..."
+              style={REC_INPUT_STYLE[validateRecurrence(formData.recurrence)]}
             />
+            {validateRecurrence(formData.recurrence) === "unknown" && (
+              <p style={{ margin: "4px 0 0", fontSize: 11, color: "#f59e0b" }}>
+                ⚠ Padrão não reconhecido — o Todoist pode ignorar a recorrência
+              </p>
+            )}
+            {validateRecurrence(formData.recurrence) === "valid" && (
+              <p style={{ margin: "4px 0 0", fontSize: 11, color: "#34d399" }}>
+                ✓ Padrão reconhecido
+              </p>
+            )}
           </div>
 
           {error && (

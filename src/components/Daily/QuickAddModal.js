@@ -2,8 +2,15 @@
 import { useState, useEffect } from "react";
 import styles from "./QuickAddModal.module.css";
 import { PROJ } from "@/config/constants";
+import { validateRecurrence } from "@/lib/recurrenceValidation";
 
 const VCA_MAIN_ID = PROJ.vca.id;
+
+const REC_INPUT_STYLE = {
+  empty:   {},
+  valid:   { borderColor: "rgba(52,211,153,0.6)", boxShadow: "0 0 0 2px rgba(52,211,153,0.15)" },
+  unknown: { borderColor: "rgba(245,158,11,0.6)",  boxShadow: "0 0 0 2px rgba(245,158,11,0.12)"  },
+};
 const VCA_AGENCIES = [
   { id: PROJ.vca.extraIds[0], label: "Ocupe"          },
   { id: PROJ.vca.extraIds[1], label: "Carol Macarone" },
@@ -347,7 +354,18 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
                   onChange={e => setTaskData(p => ({ ...p, recurrence: e.target.value }))}
                   className={styles.input}
                   placeholder="Ex: toda semana, todo mês, todo primeiro dia útil..."
+                  style={REC_INPUT_STYLE[validateRecurrence(taskData.recurrence)]}
                 />
+                {validateRecurrence(taskData.recurrence) === "unknown" && (
+                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#f59e0b" }}>
+                    ⚠ Padrão não reconhecido — o Todoist pode ignorar a recorrência
+                  </p>
+                )}
+                {validateRecurrence(taskData.recurrence) === "valid" && (
+                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#34d399" }}>
+                    ✓ Padrão reconhecido
+                  </p>
+                )}
               </div>
 
               <div className={styles.formGroup}>

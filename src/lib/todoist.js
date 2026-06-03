@@ -238,14 +238,11 @@ const REC_MAP = {
 };
 
 export function buildDuePayload(dueDate, time, recurrence) {
-  const [y, m, d] = dueDate.split("-").map(Number);
-
   const recText = recurrence?.trim();
   if (recText && recText !== "none") {
     const recStr  = REC_MAP[recText] ?? recText;
-    const dateStr = `${EN_MONTHS[m - 1]} ${d} ${y}`;
     const timeStr = time ? ` at ${time}` : "";
-    return { due_string: `${recStr}${timeStr} starting ${dateStr}` };
+    return { due_string: `${recStr}${timeStr}` };
   }
 
   if (time) return { due_datetime: `${dueDate}T${time}:00` };
