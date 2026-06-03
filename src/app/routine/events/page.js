@@ -366,10 +366,16 @@ export default function EventosPage() {
 
       const days = [];
 
-      if (dow === 2) {
-        // Terça-feira: Seg como ponte anterior
+      if (dow === 1) {
+        // Segunda-feira: inclui Sáb + Dom anteriores (fim de semana estendido)
+        const sat     = new Date(hDate); sat.setDate(hDate.getDate() - 2);
+        const sunPrev = new Date(hDate); sunPrev.setDate(hDate.getDate() - 1);
+        if (!fdsISOSet.has(toISO(sat)))     days.push(sat);
+        if (!fdsISOSet.has(toISO(sunPrev))) days.push(sunPrev);
+      } else if (dow === 2) {
+        // Terça-feira: Seg como ponte anterior (só se Seg não for também feriado)
         const mon = new Date(hDate); mon.setDate(hDate.getDate() - 2);
-        days.push(mon);
+        if (!allHolidays.has(toISO(mon))) days.push(mon);
       } else {
         // Demais: dia anterior (exceto se domingo)
         const prev = new Date(hDate); prev.setDate(hDate.getDate() - 1);
@@ -379,9 +385,9 @@ export default function EventosPage() {
       days.push(hDate);
 
       if (dow === 4) {
-        // Quinta-feira: Sex como ponte posterior
+        // Quinta-feira: Sex como ponte posterior (só se Sex não for também feriado)
         const fri = new Date(hDate); fri.setDate(hDate.getDate() + 1);
-        days.push(fri);
+        if (!allHolidays.has(toISO(fri))) days.push(fri);
       }
 
       sections.push({
