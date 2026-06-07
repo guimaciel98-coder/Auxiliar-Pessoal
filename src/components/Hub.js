@@ -184,7 +184,7 @@ export default function Hub() {
         </h1>
       </section>
 
-      {/* ── Grid 2×2 — ordem: Tarefas | Financeiro / Saúde | Rotina ── */}
+      {/* ── Grid 2×2 — ordem: Tarefas | Financeiro / Rotina | Saúde ── */}
       <main className={styles.grid}>
 
         {/* Tarefas */}
@@ -248,35 +248,6 @@ export default function Hub() {
           </div>
         </Link>
 
-        {/* Saúde */}
-        <Link href="/health" className={styles.card} style={{ "--accent": "248,113,113" }}>
-          <div className={styles.cardBody}>
-            <div className={styles.cardHead}>
-              <div className={styles.iconWrap} style={{ background:"rgba(248,113,113,0.15)", color:"#f87171" }}>❤</div>
-              <div>
-                <h2 className={styles.cardTitle}>Saúde</h2>
-                <p className={styles.cardSub}>Médias do mês atual</p>
-              </div>
-            </div>
-            <div className={styles.kpiRow}>
-              <Kpi label="Passos (méd.)"  value={health ? fmtNum(health.steps)   : null} color="#f87171" />
-              <Kpi label="Sono (méd.)"    value={health ? fmtNum(health.sleep_h, 1) : null} unit="h" color="#f87171" />
-              <Kpi label="BPM repouso"    value={health ? fmtNum(health.bpm)     : null} color="#f87171" />
-            </div>
-            <ProgressBar
-              pct={health ? Math.round((health.monthWks / TREINOS_META) * 100) : null}
-              color="#f87171"
-              label={health
-                ? `${health.monthWks} de ${TREINOS_META} treinos este mês`
-                : "carregando..."}
-            />
-            <div className={styles.cardFooter}>
-              <span className={styles.ctaLabel}>Ver saúde</span>
-              <span className={styles.ctaArrow} style={{ color:"#f87171" }}>→</span>
-            </div>
-          </div>
-        </Link>
-
         {/* Rotina */}
         <Link href="/routine" className={styles.card} style={{ "--accent": "56,189,248" }}>
           <div className={styles.cardBody}>
@@ -306,6 +277,35 @@ export default function Hub() {
             <div className={styles.cardFooter}>
               <span className={styles.ctaLabel}>Ver rotina</span>
               <span className={styles.ctaArrow} style={{ color:"#38bdf8" }}>→</span>
+            </div>
+          </div>
+        </Link>
+
+        {/* Saúde */}
+        <Link href="/health" className={styles.card} style={{ "--accent": "248,113,113" }}>
+          <div className={styles.cardBody}>
+            <div className={styles.cardHead}>
+              <div className={styles.iconWrap} style={{ background:"rgba(248,113,113,0.15)", color:"#f87171" }}>❤</div>
+              <div>
+                <h2 className={styles.cardTitle}>Saúde</h2>
+                <p className={styles.cardSub}>Médias do mês atual</p>
+              </div>
+            </div>
+            <div className={styles.kpiRow}>
+              <Kpi label="Passos (méd.)"  value={health ? fmtNum(health.steps)   : null} color="#f87171" />
+              <Kpi label="Sono (méd.)"    value={health ? fmtNum(health.sleep_h, 1) : null} unit="h" color="#f87171" />
+              <Kpi label="BPM repouso"    value={health ? fmtNum(health.bpm)     : null} color="#f87171" />
+            </div>
+            <ProgressBar
+              pct={health ? Math.round((health.monthWks / TREINOS_META) * 100) : null}
+              color="#f87171"
+              label={health
+                ? `${health.monthWks} de ${TREINOS_META} treinos este mês`
+                : "carregando..."}
+            />
+            <div className={styles.cardFooter}>
+              <span className={styles.ctaLabel}>Ver saúde</span>
+              <span className={styles.ctaArrow} style={{ color:"#f87171" }}>→</span>
             </div>
           </div>
         </Link>
