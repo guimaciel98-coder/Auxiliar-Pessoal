@@ -5,27 +5,26 @@
   font-family: var(--font-sans);
   position: relative;
   display: flex; flex-direction: column;
-  padding: 0 0 48px;
 }
 
 /* ── Glows ──────────────────────────────────────────────────────────────── */
 .glowA {
   position: fixed; top: -10%; right: 5%;
-  width: 560px; height: 560px;
-  background: radial-gradient(circle, rgba(129,140,248,0.07) 0%, transparent 65%);
-  filter: blur(70px); pointer-events: none; z-index: 0;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(129,140,248,0.09) 0%, transparent 65%);
+  filter: blur(80px); pointer-events: none; z-index: 0;
 }
 .glowB {
-  position: fixed; bottom: -5%; left: 25%;
-  width: 480px; height: 480px;
-  background: radial-gradient(circle, rgba(248,113,113,0.05) 0%, transparent 65%);
-  filter: blur(70px); pointer-events: none; z-index: 0;
+  position: fixed; bottom: 0; left: 20%;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(248,113,113,0.06) 0%, transparent 65%);
+  filter: blur(80px); pointer-events: none; z-index: 0;
 }
 .glowC {
   position: fixed; top: 40%; left: -5%;
-  width: 350px; height: 350px;
-  background: radial-gradient(circle, rgba(251,191,36,0.04) 0%, transparent 65%);
-  filter: blur(60px); pointer-events: none; z-index: 0;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(56,189,248,0.05) 0%, transparent 65%);
+  filter: blur(70px); pointer-events: none; z-index: 0;
 }
 
 /* ── Top bar ────────────────────────────────────────────────────────────── */
@@ -33,7 +32,7 @@
   position: relative; z-index: 10;
   display: flex; align-items: center; justify-content: space-between;
   padding: 20px 48px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 .brand {
@@ -45,51 +44,49 @@
   background: linear-gradient(135deg, #4338ca, #6d28d9);
   display: flex; align-items: center; justify-content: center;
   font-size: 16px; font-weight: 900; color: #fff;
-  box-shadow: 0 4px 12px rgba(67,56,202,0.35);
+  box-shadow: 0 4px 14px rgba(67,56,202,0.40);
   flex-shrink: 0;
 }
 .brandText { display: flex; flex-direction: column; gap: 1px; }
 .brandName { font-size: 15px; font-weight: 800; color: #f9fafb; letter-spacing: -0.02em; line-height: 1; }
-.brandSub  { font-size: 9px; font-weight: 500; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.07em; }
+.brandSub  { font-size: 9px; font-weight: 500; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.08em; }
 
 .topRight { display: flex; align-items: center; gap: 16px; }
-.clock { font-size: 13px; color: rgba(255,255,255,0.25); font-weight: 500; font-variant-numeric: tabular-nums; }
+.clock { font-size: 13px; color: rgba(255,255,255,0.3); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 .quickBtn {
-  width: 36px; height: 36px; border-radius: 10px;
+  width: 34px; height: 34px; border-radius: 10px;
   background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.6); font-size: 22px; font-weight: 300; line-height: 1;
+  color: rgba(255,255,255,0.6); font-size: 20px; font-weight: 300; line-height: 1;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: background .2s, transform .2s;
+  cursor: pointer; transition: background .2s, transform .15s;
 }
-.quickBtn:hover { background: rgba(255,255,255,0.10); color: #fff; transform: translateY(-1px); }
+.quickBtn:hover { background: rgba(255,255,255,0.12); color: #fff; transform: translateY(-1px); }
 
 /* ── Greeting ───────────────────────────────────────────────────────────── */
 .greeting {
   position: relative; z-index: 1;
-  padding: 44px 48px 36px;
+  padding: 36px 48px 28px;
   text-align: center;
 }
 .greetSmall {
-  font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.28);
-  text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;
+  font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.30);
+  text-transform: uppercase; letter-spacing: 0.10em; margin-bottom: 6px;
 }
 .greetTitle {
-  font-size: 46px; font-weight: 900; letter-spacing: -0.04em; line-height: 1;
+  font-size: 44px; font-weight: 900; letter-spacing: -0.04em; line-height: 1;
   color: #f9fafb;
 }
-.greetDate { color: rgba(255,255,255,0.38); font-weight: 600; }
+.greetDate { color: rgba(255,255,255,0.40); font-weight: 600; }
 
-/* ── Bento grid ─────────────────────────────────────────────────────────── */
+/* ── Grid 2×2 ───────────────────────────────────────────────────────────── */
 .grid {
   position: relative; z-index: 1;
-  flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: auto auto;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
-  padding: 0 48px;
-  max-width: 1140px;
+  padding: 0 48px 48px;
+  max-width: 1080px;
   margin: 0 auto;
   width: 100%;
   align-items: start;
@@ -97,103 +94,100 @@
 
 /* ── Card base ──────────────────────────────────────────────────────────── */
 .card {
-  --accent: 255,255,255;
+  --accent: 200,200,200;
   display: flex; flex-direction: column;
-  border-radius: 22px;
+  border-radius: 20px;
   background:
-    linear-gradient(180deg, rgba(var(--accent), 0.13) 0%, rgba(var(--accent), 0.04) 45%, rgba(0,0,0,0) 100%),
-    rgba(255,255,255,0.02);
-  border: 1px solid rgba(var(--accent), 0.22);
+    linear-gradient(160deg, rgba(var(--accent), 0.16) 0%, rgba(var(--accent), 0.04) 55%, transparent 100%),
+    #1f2937;
+  border: 1px solid rgba(var(--accent), 0.26);
   text-decoration: none; color: inherit; overflow: hidden;
-  transition: background .3s, border-color .3s, transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s;
+  transition: border-color .25s, transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s;
 }
 .card:hover {
-  background:
-    linear-gradient(180deg, rgba(var(--accent), 0.20) 0%, rgba(var(--accent), 0.07) 45%, rgba(0,0,0,0) 100%),
-    rgba(255,255,255,0.03);
-  border-color: rgba(var(--accent), 0.36);
-  transform: translateY(-4px);
-  box-shadow: 0 24px 56px rgba(0,0,0,0.32), 0 0 60px rgba(var(--accent), 0.10);
+  border-color: rgba(var(--accent), 0.42);
+  transform: translateY(-3px);
+  box-shadow: 0 20px 48px rgba(0,0,0,0.40), 0 0 60px rgba(var(--accent), 0.10);
 }
 
-.cardBody { padding: 26px 28px 22px; display: flex; flex-direction: column; gap: 18px; }
-
-/* ── Bento positions ────────────────────────────────────────────────────── */
-.cardTarefas    { grid-column: 1 / 3; }
-.cardSaude      { grid-column: 3; }
-.cardFinanceiro { grid-column: 1; }
-.cardRotina     { grid-column: 2 / 4; }
+.cardBody { padding: 24px 26px 20px; display: flex; flex-direction: column; gap: 16px; }
 
 /* ── Cabeçalho do card ──────────────────────────────────────────────────── */
 .cardHead {
-  display: flex; align-items: flex-start; gap: 16px;
+  display: flex; align-items: center; gap: 14px;
 }
 .iconWrap {
-  width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0;
+  width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 18px; font-weight: 800;
+  font-size: 17px; font-weight: 800;
   transition: transform .2s;
 }
 .card:hover .iconWrap { transform: scale(1.08); }
-.cardTitle { font-size: 18px; font-weight: 800; color: #f9fafb; letter-spacing: -0.02em; }
-.cardSub   { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 3px; line-height: 1.4; }
+
+.cardTitle { font-size: 17px; font-weight: 800; color: #f9fafb; letter-spacing: -0.02em; line-height: 1.1; }
+.cardSub   { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 3px; line-height: 1.4; }
 
 /* ── KPIs ───────────────────────────────────────────────────────────────── */
-.kpiRow {
-  display: flex; gap: 28px;
-}
-.kpi { display: flex; flex-direction: column; gap: 4px; }
+.kpiRow { display: flex; gap: 24px; flex-wrap: wrap; }
+.kpi    { display: flex; flex-direction: column; gap: 3px; }
 .kpiValue {
-  font-size: 30px; font-weight: 900; letter-spacing: -0.04em; line-height: 1;
+  font-size: 28px; font-weight: 900; letter-spacing: -0.04em; line-height: 1;
   display: flex; align-items: baseline; gap: 3px;
 }
-.kpiUnit  { font-size: 14px; font-weight: 600; opacity: 0.7; }
-.kpiLabel { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.28); text-transform: uppercase; letter-spacing: 0.06em; }
+.kpiUnit  { font-size: 13px; font-weight: 600; opacity: 0.7; }
+.kpiLabel {
+  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.30);
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
 .kpiSkeleton {
-  display: inline-block; width: 40px; height: 26px; border-radius: 6px;
-  background: rgba(255,255,255,0.07); animation: pulse 1.4s ease-in-out infinite;
+  display: inline-block; width: 44px; height: 26px; border-radius: 6px;
+  background: rgba(255,255,255,0.08); animation: pulse 1.4s ease-in-out infinite;
 }
 
 /* ── Barra de progresso ─────────────────────────────────────────────────── */
 .progressWrap { display: flex; align-items: center; gap: 10px; }
-.progressBar  { flex: 1; height: 4px; border-radius: 99px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.progressBar  { flex: 1; height: 4px; border-radius: 99px; background: rgba(255,255,255,0.08); overflow: hidden; }
 .progressFill { height: 100%; border-radius: 99px; transition: width .6s cubic-bezier(.16,1,.3,1); }
-.progressLabel { font-size: 11px; color: rgba(255,255,255,0.3); font-weight: 600; white-space: nowrap; }
+.progressLabel { font-size: 11px; color: rgba(255,255,255,0.32); font-weight: 600; white-space: nowrap; }
+
+/* ── Bloco atual (Rotina) ───────────────────────────────────────────────── */
+.routineRow { display: flex; gap: 24px; }
+.routineItem { display: flex; flex-direction: column; gap: 4px; }
+.routineTime {
+  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.30);
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+.routineActivity {
+  font-size: 15px; font-weight: 700; color: #f9fafb;
+  line-height: 1.2; max-width: 160px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 /* ── Rodapé / CTA ───────────────────────────────────────────────────────── */
 .cardFooter {
   display: flex; justify-content: space-between; align-items: center;
-  border-top: 1px solid rgba(255,255,255,0.05);
-  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding-top: 12px;
 }
 .ctaLabel {
-  font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.28);
+  font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.30);
   text-transform: uppercase; letter-spacing: 0.07em; transition: color .2s;
 }
-.card:hover .ctaLabel { color: rgba(255,255,255,0.55); }
-.ctaArrow { font-size: 16px; transition: transform .2s; }
-.card:hover .ctaArrow { transform: translateX(5px); }
+.card:hover .ctaLabel { color: rgba(255,255,255,0.60); }
+.ctaArrow { font-size: 15px; transition: transform .2s; }
+.card:hover .ctaArrow { transform: translateX(4px); }
 
-/* ── Animação pulse skeleton ────────────────────────────────────────────── */
+/* ── Pulse skeleton ─────────────────────────────────────────────────────── */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50%       { opacity: .4; }
+  50%       { opacity: .35; }
 }
 
-/* ── Mobile ─────────────────────────────────────────────────────────────── */
-@media (max-width: 900px) {
-  .grid { grid-template-columns: 1fr 1fr; }
-  .cardTarefas    { grid-column: 1 / 3; }
-  .cardSaude      { grid-column: 1; }
-  .cardFinanceiro { grid-column: 2; }
-  .cardRotina     { grid-column: 1 / 3; }
-}
-@media (max-width: 600px) {
+/* ── Tablet ─────────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
   .topbar  { padding: 16px 20px; }
-  .greeting { padding: 28px 20px 20px; }
-  .greetTitle { font-size: 30px; }
-  .grid    { grid-template-columns: 1fr; padding: 0 20px; }
-  .cardTarefas, .cardSaude, .cardFinanceiro, .cardRotina { grid-column: 1; }
+  .greeting { padding: 24px 20px 20px; }
+  .greetTitle { font-size: 32px; }
+  .grid    { grid-template-columns: 1fr; padding: 0 20px 32px; }
   .card:hover { transform: none; }
-  .kpiValue { font-size: 24px; }
 }
