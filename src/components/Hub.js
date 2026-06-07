@@ -6,6 +6,7 @@ import styles from "./Hub.module.css";
 
 const DAYS   = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
 const MONTHS = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const TREINOS_META = 16; // meta mensal de treinos
 
 function greet(h) {
   if (h < 12) return "Bom dia";
@@ -18,7 +19,9 @@ function fmtNum(v, dec = 0) {
 }
 function fmtBRL(v) {
   if (v == null) return "—";
-  return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const abs = Math.abs(v);
+  const str = abs.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return (v < 0 ? "-R$" : "R$") + str;
 }
 
 function Kpi({ label, value, unit, color }) {
@@ -29,6 +32,18 @@ function Kpi({ label, value, unit, color }) {
         {value != null && unit && <span className={styles.kpiUnit}>{unit}</span>}
       </div>
       <div className={styles.kpiLabel}>{label}</div>
+    </div>
+  );
+}
+
+function ProgressBar({ pct, color, label }) {
+  const clamped = Math.min(100, Math.max(0, pct ?? 0));
+  return (
+    <div className={styles.progressWrap}>
+      <div className={styles.progressBar}>
+        <div className={styles.progressFill} style={{ width: `${clamped}%`, background: color }}/>
+      </div>
+      <span className={styles.progressLabel}>{label}</span>
     </div>
   );
 }
@@ -46,15 +61,7 @@ export default function Hub() {
   const todayBR = `${String(now.getDate()).padStart(2,"0")}/${String(now.getMonth()+1).padStart(2,"0")}/${now.getFullYear()}`;
 
   useEffect(() => {
-    fetch("/api/health")
-      .then(r => r.json())
-      .then(d => {
-        if (!d.ok) return;
-        const today    = d.days?.find(x => x.date === todayBR) ?? d.days?.[0] ?? null;
-        const todayWks = d.workouts?.filter(w => w.date === todayBR) ?? [];
-        setHealth({ today, todayWks });
-      }).catch(() => {});
-
+    // Tarefas
     fetch("/api/tasks")
       .then(r => r.json())
       .then(d => {
@@ -63,34 +70,62 @@ export default function Hub() {
         setTasks({ total: all.length, done });
       }).catch(() => {});
 
+    // Saúde
+    fetch("/api/health")
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) return;
+        const today    = d.days?.find(x => x.date === todayBR) ?? d.days?.[0] ?? null;
+        const todayWks = d.workouts?.filter(w => w.date === todayBR) ?? [];
+        const monthWks = d.workouts?.filter(w => {
+          const parts = w.date?.split("/");
+          return parts && parseInt(parts[1]) === now.getMonth() + 1
+                       && parseInt(parts[2]) === now.getFullYear();
+        }).length ?? 0;
+        setHealth({ today, todayWks, monthWks, averages: d.averages });
+      }).catch(() => {});
+
+    // Financeiro
     fetch("/api/finance")
       .then(r => r.json())
       .then(d => {
         if (!d.ok) return;
-        setFinance({
-          receita: d.receita?.total ?? null,
-          gastos:  d.gastos?.real  ?? null,
-          saldo:   d.summary?.saldoTudo ?? null,
-        });
+        const budgetVar  = d.gastos?.variaveis?.previsaoTotal ?? null;
+        const gastoVar   = d.gastos?.variaveis?.realTotal     ?? null;
+        const saldoVar   = budgetVar != null && gastoVar != null ? budgetVar - gastoVar : null;
+        const pctVar     = budgetVar > 0 ? Math.round((gastoVar / budgetVar) * 100) : null;
+        setFinance({ saldoVar, budgetVar, gastoVar, pctVar });
       }).catch(() => {});
 
+    // Rotina
     fetch("/api/routine")
       .then(r => r.json())
       .then(d => {
         if (!d.ok) return;
         const blocks = d.blocks ?? [];
+        if (!blocks.length) { setRoutine({ current: null, next: null, total: 0, dayPct: 0 }); return; }
+
+        const sorted = [...blocks].sort((a, b) => a.minutes - b.minutes);
+        const first  = sorted[0];
+        const last   = sorted[sorted.length - 1];
+        const end    = last.minutes + (last.duration ?? 60);
+        const start  = first.minutes;
+        const pct    = start < end
+          ? Math.round(((Math.min(nowMin, end) - start) / (end - start)) * 100)
+          : 0;
+
         let current = null, next = null;
-        for (let i = 0; i < blocks.length; i++) {
-          const b   = blocks[i];
-          const end = b.minutes + (b.duration ?? 60);
-          if (b.minutes <= nowMin && nowMin < end) {
+        for (let i = 0; i < sorted.length; i++) {
+          const b   = sorted[i];
+          const bEnd = b.minutes + (b.duration ?? 60);
+          if (b.minutes <= nowMin && nowMin < bEnd) {
             current = b;
-            next    = blocks[i + 1] ?? null;
+            next    = sorted[i + 1] ?? null;
             break;
           }
           if (b.minutes > nowMin && !next) next = b;
         }
-        setRoutine({ current, next, total: blocks.length });
+        setRoutine({ current, next, total: sorted.length, dayPct: Math.max(0, Math.min(100, pct)) });
       }).catch(() => {});
   }, []);
 
@@ -128,7 +163,7 @@ export default function Hub() {
       {/* ── Grid 2×2 ── */}
       <main className={styles.grid}>
 
-        {/* Tarefas */}
+        {/* ── Tarefas ── */}
         <Link href="/daily" className={styles.card} style={{ "--accent": "129,140,248" }}>
           <div className={styles.cardBody}>
             <div className={styles.cardHead}>
@@ -138,31 +173,17 @@ export default function Hub() {
                 <p className={styles.cardSub}>Pessoal · VCA Brasil · Ponto de Vista</p>
               </div>
             </div>
-
             <div className={styles.kpiRow}>
-              <Kpi label="Hoje"      value={tasks ? tasks.total : null} color="#818cf8" />
+              <Kpi label="Hoje"       value={tasks ? tasks.total : null} color="#818cf8" />
               <Kpi label="Concluídas" value={tasks ? tasks.done  : null} color="#818cf8" />
-              {tasks && tasks.total > 0 && (
-                <Kpi label="Progresso"
-                  value={`${Math.round((tasks.done / tasks.total) * 100)}%`}
-                  color="#818cf8" />
-              )}
             </div>
-
             {tasks && (
-              <div className={styles.progressWrap}>
-                <div className={styles.progressBar}>
-                  <div className={styles.progressFill} style={{
-                    width: tasks.total > 0 ? `${Math.round((tasks.done/tasks.total)*100)}%` : "0%",
-                    background: "#818cf8",
-                  }}/>
-                </div>
-                <span className={styles.progressLabel}>
-                  {tasks.total > 0 ? `${tasks.done} de ${tasks.total}` : "sem tarefas"}
-                </span>
-              </div>
+              <ProgressBar
+                pct={tasks.total > 0 ? Math.round((tasks.done / tasks.total) * 100) : 0}
+                color="#818cf8"
+                label={tasks.total > 0 ? `${tasks.done} de ${tasks.total}` : "sem tarefas"}
+              />
             )}
-
             <div className={styles.cardFooter}>
               <span className={styles.ctaLabel}>Acessar painel</span>
               <span className={styles.ctaArrow} style={{ color:"#818cf8" }}>→</span>
@@ -170,21 +191,28 @@ export default function Hub() {
           </div>
         </Link>
 
-        {/* Saúde */}
+        {/* ── Saúde ── */}
         <Link href="/health" className={styles.card} style={{ "--accent": "248,113,113" }}>
           <div className={styles.cardBody}>
             <div className={styles.cardHead}>
               <div className={styles.iconWrap} style={{ background:"rgba(248,113,113,0.15)", color:"#f87171" }}>❤</div>
               <div>
                 <h2 className={styles.cardTitle}>Saúde</h2>
-                <p className={styles.cardSub}>Atividade · Sono · Treinos</p>
+                <p className={styles.cardSub}>Médias dos últimos 30 dias</p>
               </div>
             </div>
             <div className={styles.kpiRow}>
-              <Kpi label="Passos"  value={health ? fmtNum(health.today?.steps) : null} color="#f87171" />
-              <Kpi label="Sono"    value={health ? (health.today?.sleep_h != null ? fmtNum(health.today.sleep_h,1) : "—") : null} unit="h" color="#f87171" />
-              <Kpi label="Treinos" value={health ? health.todayWks.length : null} color="#f87171" />
+              <Kpi label="Passos (méd.)"  value={health ? fmtNum(health.averages?.steps) : null} color="#f87171" />
+              <Kpi label="Sono (méd.)"    value={health ? fmtNum(health.averages?.sleep_h, 1) : null} unit="h" color="#f87171" />
+              <Kpi label="BPM repouso"    value={health ? fmtNum(health.averages?.bpm_rest) : null} color="#f87171" />
             </div>
+            <ProgressBar
+              pct={health ? Math.round((health.monthWks / TREINOS_META) * 100) : null}
+              color="#f87171"
+              label={health
+                ? `${health.monthWks} de ${TREINOS_META} treinos este mês`
+                : "carregando..."}
+            />
             <div className={styles.cardFooter}>
               <span className={styles.ctaLabel}>Ver saúde</span>
               <span className={styles.ctaArrow} style={{ color:"#f87171" }}>→</span>
@@ -192,22 +220,32 @@ export default function Hub() {
           </div>
         </Link>
 
-        {/* Financeiro */}
+        {/* ── Financeiro ── */}
         <Link href="/finance/overview" className={styles.card} style={{ "--accent": "251,191,36" }}>
           <div className={styles.cardBody}>
             <div className={styles.cardHead}>
               <div className={styles.iconWrap} style={{ background:"rgba(251,191,36,0.15)", color:"#fbbf24" }}>R$</div>
               <div>
                 <h2 className={styles.cardTitle}>Financeiro</h2>
-                <p className={styles.cardSub}>Receitas · Gastos · Saldo</p>
+                <p className={styles.cardSub}>Saldo variável disponível</p>
               </div>
             </div>
             <div className={styles.kpiRow}>
-              <Kpi label="Receita" value={finance ? fmtBRL(finance.receita) : null} color="#4ade80" />
-              <Kpi label="Gastos"  value={finance ? fmtBRL(finance.gastos)  : null} color="#f87171" />
-              <Kpi label="Saldo"   value={finance ? fmtBRL(finance.saldo)   : null}
-                color={finance?.saldo >= 0 ? "#fbbf24" : "#f87171"} />
+              <Kpi
+                label="Disponível agora"
+                value={finance ? fmtBRL(finance.saldoVar) : null}
+                color={finance ? (finance.saldoVar >= 0 ? "#fbbf24" : "#f87171") : undefined}
+              />
             </div>
+            {finance && (
+              <ProgressBar
+                pct={finance.pctVar}
+                color={finance.pctVar > 85 ? "#f87171" : finance.pctVar > 60 ? "#fbbf24" : "#4ade80"}
+                label={finance.pctVar != null
+                  ? `${finance.pctVar}% do orçamento variável gasto (${fmtBRL(finance.gastoVar)} de ${fmtBRL(finance.budgetVar)})`
+                  : "sem orçamento definido"}
+              />
+            )}
             <div className={styles.cardFooter}>
               <span className={styles.ctaLabel}>Abrir módulo</span>
               <span className={styles.ctaArrow} style={{ color:"#fbbf24" }}>→</span>
@@ -215,7 +253,7 @@ export default function Hub() {
           </div>
         </Link>
 
-        {/* Rotina */}
+        {/* ── Rotina ── */}
         <Link href="/routine" className={styles.card} style={{ "--accent": "56,189,248" }}>
           <div className={styles.cardBody}>
             <div className={styles.cardHead}>
@@ -223,30 +261,36 @@ export default function Hub() {
               <div>
                 <h2 className={styles.cardTitle}>Rotina</h2>
                 <p className={styles.cardSub}>
-                  {routine ? `${routine.total} blocos hoje` : "Timeline do dia"}
+                  {routine != null ? `${routine.total} blocos hoje` : "Timeline do dia"}
                 </p>
               </div>
             </div>
 
-            {(routine?.current || routine?.next) && (
-              <div className={styles.routineRow}>
-                {routine.current && (
-                  <div className={styles.routineItem}>
-                    <span className={styles.routineTime}>Agora · {routine.current.time}</span>
-                    <span className={styles.routineActivity}>{routine.current.activity}</span>
-                  </div>
-                )}
-                {routine.next && (
-                  <div className={styles.routineItem}>
-                    <span className={styles.routineTime}>Próximo · {routine.next.time}</span>
-                    <span className={styles.routineActivity} style={{ color:"rgba(255,255,255,0.45)" }}>
-                      {routine.next.activity}
-                    </span>
-                  </div>
-                )}
+            {/* Bloco atual */}
+            <div className={styles.routineBlock}>
+              <div className={styles.routineBlockLabel}>Agora</div>
+              <div className={styles.routineBlockName}>
+                {routine == null
+                  ? <span className={styles.kpiSkeleton} style={{ width: 120 }}/>
+                  : routine.current
+                    ? routine.current.activity
+                    : routine.next
+                      ? <span style={{ color:"rgba(255,255,255,0.4)" }}>Em breve: {routine.next.activity}</span>
+                      : <span style={{ color:"rgba(255,255,255,0.3)" }}>Dia encerrado</span>
+                }
               </div>
-            )}
+              {routine?.next && routine.current && (
+                <div className={styles.routineBlockNext}>
+                  A seguir: {routine.next.time} · {routine.next.activity}
+                </div>
+              )}
+            </div>
 
+            <ProgressBar
+              pct={routine?.dayPct ?? null}
+              color="#38bdf8"
+              label={routine != null ? `${routine.dayPct}% do dia concluído` : "carregando..."}
+            />
             <div className={styles.cardFooter}>
               <span className={styles.ctaLabel}>Ver rotina</span>
               <span className={styles.ctaArrow} style={{ color:"#38bdf8" }}>→</span>

@@ -84,9 +84,9 @@
   position: relative; z-index: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  padding: 0 48px 48px;
-  max-width: 1080px;
+  gap: 20px;
+  padding: 0 48px 56px;
+  max-width: 1240px;
   margin: 0 auto;
   width: 100%;
   align-items: start;
@@ -110,7 +110,7 @@
   box-shadow: 0 20px 48px rgba(0,0,0,0.40), 0 0 60px rgba(var(--accent), 0.10);
 }
 
-.cardBody { padding: 24px 26px 20px; display: flex; flex-direction: column; gap: 16px; }
+.cardBody { padding: 28px 30px 24px; display: flex; flex-direction: column; gap: 18px; }
 
 /* ── Cabeçalho do card ──────────────────────────────────────────────────── */
 .cardHead {
@@ -144,24 +144,26 @@
   background: rgba(255,255,255,0.08); animation: pulse 1.4s ease-in-out infinite;
 }
 
+/* ── Bloco de rotina ────────────────────────────────────────────────────── */
+.routineBlock { display: flex; flex-direction: column; gap: 4px; }
+.routineBlockLabel {
+  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.30);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.routineBlockName {
+  font-size: 22px; font-weight: 800; color: #f9fafb;
+  letter-spacing: -0.02em; line-height: 1.2;
+}
+.routineBlockNext {
+  font-size: 11px; color: rgba(255,255,255,0.35);
+  font-weight: 500; margin-top: 2px;
+}
+
 /* ── Barra de progresso ─────────────────────────────────────────────────── */
 .progressWrap { display: flex; align-items: center; gap: 10px; }
 .progressBar  { flex: 1; height: 4px; border-radius: 99px; background: rgba(255,255,255,0.08); overflow: hidden; }
 .progressFill { height: 100%; border-radius: 99px; transition: width .6s cubic-bezier(.16,1,.3,1); }
 .progressLabel { font-size: 11px; color: rgba(255,255,255,0.32); font-weight: 600; white-space: nowrap; }
-
-/* ── Bloco atual (Rotina) ───────────────────────────────────────────────── */
-.routineRow { display: flex; gap: 24px; }
-.routineItem { display: flex; flex-direction: column; gap: 4px; }
-.routineTime {
-  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.30);
-  text-transform: uppercase; letter-spacing: 0.07em;
-}
-.routineActivity {
-  font-size: 15px; font-weight: 700; color: #f9fafb;
-  line-height: 1.2; max-width: 160px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
 
 /* ── Rodapé / CTA ───────────────────────────────────────────────────────── */
 .cardFooter {
