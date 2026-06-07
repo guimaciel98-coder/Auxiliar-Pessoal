@@ -38,6 +38,10 @@ const KNOWN_PATTERNS = [
   /\btodo\s+(primeiro|[uú]ltimo|segundo|terceiro)\s+dia\s+[úu]til\b/i,
   /\btodo\s+[úu]ltimo\b/i,
 
+  // Ordinal + dia da semana (ex: "todo segundo domingo", "todo primeiro sábado")
+  /\btodo\s+(primeiro|segundo|terceiro|quarto|[uú]ltimo)\s+(segunda|ter[cç]a|quarta|quinta|sexta|s[aá]bado|domingo)\b/i,
+  /\bevery\s+(1st|2nd|3rd|4th|last)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i,
+
   // Anual
   /\btodo\s+ano\b/i,
   /\banual\b/i,
