@@ -240,9 +240,13 @@ const REC_MAP = {
 export function buildDuePayload(dueDate, time, recurrence) {
   const recText = recurrence?.trim();
   if (recText && recText !== "none") {
+    const mappedToEnglish = recText in REC_MAP;
     const recStr  = REC_MAP[recText] ?? recText;
     const timeStr = time ? ` at ${time}` : "";
-    return { due_string: `${recStr}${timeStr}` };
+    const payload = { due_string: `${recStr}${timeStr}` };
+    // Texto em português (não mapeado para inglês) precisa de due_lang
+    if (!mappedToEnglish) payload.due_lang = "pt";
+    return payload;
   }
 
   if (time) return { due_datetime: `${dueDate}T${time}:00` };
