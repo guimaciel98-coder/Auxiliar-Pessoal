@@ -234,19 +234,78 @@ const REC_MAP = {
   biweekly:  "every 2 weeks",
   monthly:   "every month",
   yearly:    "every year",
-  recurring: "every week", // fallback genérico — melhor que "every day"
+  recurring: "every week",
 };
+
+const ORDINALS_PT = [
+  [/^primeiro$/i,  "1st"],
+  [/^segundo$/i,   "2nd"],
+  [/^terceiro$/i,  "3rd"],
+  [/^quarto$/i,    "4th"],
+  [/^[uú]ltimo$/i, "last"],
+];
+const WEEKDAYS_PT = [
+  [/^segunda(-feira)?$/i,  "monday"],
+  [/^ter[cç]a(-feira)?$/i, "tuesday"],
+  [/^quarta(-feira)?$/i,   "wednesday"],
+  [/^quinta(-feira)?$/i,   "thursday"],
+  [/^sexta(-feira)?$/i,    "friday"],
+  [/^s[aá]bado$/i,         "saturday"],
+  [/^domingo$/i,           "sunday"],
+];
+
+function ptOrd(w)  { for (const [re,en] of ORDINALS_PT) if (re.test(w)) return en; return null; }
+function ptDay(w)  { for (const [re,en] of WEEKDAYS_PT) if (re.test(w)) return en; return null; }
+
+function normalizePTRec(text) {
+  if (!text?.trim()) return text;
+  const t = text.trim();
+
+  // "todo ORDINAL DIA-DA-SEMANA" → "every Nth weekday"
+  const m1 = t.match(/^todo\s+(\S+)\s+(\S+)/i);
+  if (m1) {
+    const ord = ptOrd(m1[1]), day = ptDay(m1[2]);
+    if (ord && day) return `every ${ord} ${day}`;
+  }
+
+  // "toda/todo DIA-DA-SEMANA" → "every weekday"
+  const m2 = t.match(/^tod[ao]\s+(\S+)/i);
+  if (m2) {
+    const day = ptDay(m2[1]);
+    if (day) return `every ${day}`;
+  }
+
+  // Padrões simples
+  if (/^toda\s+semana$/i.test(t))              return "every week";
+  if (/^todo\s+m[eê]s$/i.test(t))              return "every month";
+  if (/^todo\s+dia$/i.test(t))                 return "every day";
+  if (/^todo\s+ano$/i.test(t))                 return "every year";
+  if (/^diariamente$/i.test(t))                return "every day";
+  if (/^semanal(mente)?$/i.test(t))            return "every week";
+  if (/^mensal(mente)?$/i.test(t))             return "every month";
+  if (/^anual(mente)?$/i.test(t))              return "every year";
+  if (/^quinzenal(mente)?$/i.test(t))          return "every 2 weeks";
+  if (/^dias?\s+[úu]teis?$/i.test(t))          return "every weekday";
+  if (/^todo\s+dia\s+[úu]til$/i.test(t))       return "every weekday";
+
+  const mN = t.match(/^a\s+cada\s+(\d+)\s+(dia|semana|m[eê]s|ano)s?$/i);
+  if (mN) {
+    const n   = mN[1];
+    const unit = mN[2].toLowerCase().replace("ê","e").replace("e","e");
+    const units = { dia:"days", semana:"weeks", mes:"months", ano:"years" };
+    const u = units[unit] ?? units[unit.replace("ê","e")];
+    if (u) return `every ${n} ${u}`;
+  }
+
+  return t; // passthrough — Todoist vai tentar parsear como inglês
+}
 
 export function buildDuePayload(dueDate, time, recurrence) {
   const recText = recurrence?.trim();
   if (recText && recText !== "none") {
-    const mappedToEnglish = recText in REC_MAP;
-    const recStr  = REC_MAP[recText] ?? recText;
+    const recStr  = REC_MAP[recText] ?? normalizePTRec(recText);
     const timeStr = time ? ` at ${time}` : "";
-    const payload = { due_string: `${recStr}${timeStr}` };
-    // Texto em português (não mapeado para inglês) precisa de due_lang
-    if (!mappedToEnglish) payload.due_lang = "pt";
-    return payload;
+    return { due_string: `${recStr}${timeStr}` };
   }
 
   if (time) return { due_datetime: `${dueDate}T${time}:00` };
