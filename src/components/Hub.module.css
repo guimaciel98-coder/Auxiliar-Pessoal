@@ -133,6 +133,7 @@
 .kpiValue {
   font-size: 28px; font-weight: 900; letter-spacing: -0.04em; line-height: 1;
   display: flex; align-items: baseline; gap: 3px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .kpiUnit  { font-size: 13px; font-weight: 600; opacity: 0.7; }
 .kpiLabel {
@@ -142,21 +143,6 @@
 .kpiSkeleton {
   display: inline-block; width: 44px; height: 26px; border-radius: 6px;
   background: rgba(255,255,255,0.08); animation: pulse 1.4s ease-in-out infinite;
-}
-
-/* ── Bloco de rotina ────────────────────────────────────────────────────── */
-.routineBlock { display: flex; flex-direction: column; gap: 4px; }
-.routineBlockLabel {
-  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.30);
-  text-transform: uppercase; letter-spacing: 0.08em;
-}
-.routineBlockName {
-  font-size: 22px; font-weight: 800; color: #f9fafb;
-  letter-spacing: -0.02em; line-height: 1.2;
-}
-.routineBlockNext {
-  font-size: 11px; color: rgba(255,255,255,0.35);
-  font-weight: 500; margin-top: 2px;
 }
 
 /* ── Barra de progresso ─────────────────────────────────────────────────── */
