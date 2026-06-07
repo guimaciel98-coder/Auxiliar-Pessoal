@@ -6,7 +6,6 @@ import styles from "./Hub.module.css";
 
 const DAYS   = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
 const MONTHS = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
-const MONTHS_SHORT = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
 
 function greet(h) {
   if (h < 12) return "Bom dia";
@@ -31,9 +30,9 @@ function Kpi({ label, value, unit, color }) {
 }
 
 export default function Hub() {
-  const [modal, setModal]       = useState(false);
-  const [health, setHealth]     = useState(null);
-  const [tasks, setTasks]       = useState(null);
+  const [modal, setModal]   = useState(false);
+  const [health, setHealth] = useState(null);
+  const [tasks, setTasks]   = useState(null);
 
   const now    = new Date();
   const hour   = now.getHours();
@@ -46,7 +45,7 @@ export default function Hub() {
         if (!d.ok) return;
         const today = d.days?.find(x => x.date === todayBR) ?? d.days?.[0] ?? null;
         const todayWks = d.workouts?.filter(w => w.date === todayBR) ?? [];
-        setHealth({ today, todayWks, workoutsTotal: d.workouts?.length ?? 0 });
+        setHealth({ today, todayWks });
       }).catch(() => {});
 
     fetch("/api/tasks")
@@ -60,12 +59,11 @@ export default function Hub() {
 
   return (
     <div className={styles.root}>
-      {/* Glows */}
       <div className={styles.glowA} />
       <div className={styles.glowB} />
       <div className={styles.glowC} />
 
-      {/* ── Brand bar ────────────────────────────────────────────── */}
+      {/* ── Brand bar ── */}
       <header className={styles.topbar}>
         <Link href="/" className={styles.brand}>
           <div className={styles.brandMark}>G</div>
@@ -82,7 +80,7 @@ export default function Hub() {
         </div>
       </header>
 
-      {/* ── Greeting ─────────────────────────────────────────────── */}
+      {/* ── Greeting ── */}
       <section className={styles.greeting}>
         <p className={styles.greetSmall}>{greet(hour)}</p>
         <h1 className={styles.greetTitle}>
@@ -90,15 +88,17 @@ export default function Hub() {
         </h1>
       </section>
 
-      {/* ── Grid de módulos ─────────────────────────────────────── */}
+      {/* ── Bento grid ── */}
       <main className={styles.grid}>
 
-        {/* ── Tarefas — coluna esquerda, grande ── */}
-        <Link href="/daily" className={`${styles.card} ${styles.cardTarefas}`}>
-          <div className={styles.cardBar} style={{ background:"#818cf8" }}/>
+        {/* Tarefas — 2 colunas */}
+        <Link href="/daily"
+          className={`${styles.card} ${styles.cardTarefas}`}
+          style={{ "--accent": "129,140,248" }}
+        >
           <div className={styles.cardBody}>
             <div className={styles.cardHead}>
-              <div className={styles.iconWrap} style={{ background:"#818cf812", color:"#818cf8" }}>✓</div>
+              <div className={styles.iconWrap} style={{ background:"rgba(129,140,248,0.12)", color:"#818cf8" }}>✓</div>
               <div>
                 <h2 className={styles.cardTitle}>Tarefas</h2>
                 <p className={styles.cardSub}>Pessoal · VCA Brasil · Ponto de Vista</p>
@@ -124,76 +124,78 @@ export default function Hub() {
               </div>
             )}
 
-            <div className={styles.cardFooter} style={{ borderColor:"#818cf820" }}>
+            <div className={styles.cardFooter}>
               <span className={styles.ctaLabel}>Acessar painel</span>
               <span className={styles.ctaArrow} style={{ color:"#818cf8" }}>→</span>
             </div>
           </div>
         </Link>
 
-        {/* ── Coluna direita: 3 cards empilhados ── */}
-        <div className={styles.rightCol}>
-
-          {/* Saúde */}
-          <Link href="/health" className={`${styles.card} ${styles.cardSmall}`}>
-            <div className={styles.cardBar} style={{ background:"#f87171" }}/>
-            <div className={styles.cardBody}>
-              <div className={styles.cardHead}>
-                <div className={styles.iconWrap} style={{ background:"#f8717112", color:"#f87171" }}>❤</div>
-                <div>
-                  <h2 className={styles.cardTitle}>Saúde</h2>
-                  <p className={styles.cardSub}>Atividade · Sono · Treinos</p>
-                </div>
-              </div>
-              <div className={styles.kpiRow}>
-                <Kpi label="Passos" value={health ? fmt(health.today?.steps) : null} color="#f87171" />
-                <Kpi label="Sono" value={health ? (health.today?.sleep_h != null ? fmt(health.today.sleep_h,1) : "—") : null} unit="h" color="#f87171" />
-                <Kpi label="Treinos hoje" value={health ? health.todayWks.length : null} color="#f87171" />
-              </div>
-              <div className={styles.cardFooter} style={{ borderColor:"#f8717120" }}>
-                <span className={styles.ctaLabel}>Ver saúde</span>
-                <span className={styles.ctaArrow} style={{ color:"#f87171" }}>→</span>
+        {/* Saúde — 1 coluna */}
+        <Link href="/health"
+          className={`${styles.card} ${styles.cardSaude}`}
+          style={{ "--accent": "248,113,113" }}
+        >
+          <div className={styles.cardBody}>
+            <div className={styles.cardHead}>
+              <div className={styles.iconWrap} style={{ background:"rgba(248,113,113,0.12)", color:"#f87171" }}>❤</div>
+              <div>
+                <h2 className={styles.cardTitle}>Saúde</h2>
+                <p className={styles.cardSub}>Atividade · Sono · Treinos</p>
               </div>
             </div>
-          </Link>
+            <div className={styles.kpiRow}>
+              <Kpi label="Passos" value={health ? fmt(health.today?.steps) : null} color="#f87171" />
+              <Kpi label="Sono" value={health ? (health.today?.sleep_h != null ? fmt(health.today.sleep_h,1) : "—") : null} unit="h" color="#f87171" />
+              <Kpi label="Treinos" value={health ? health.todayWks.length : null} color="#f87171" />
+            </div>
+            <div className={styles.cardFooter}>
+              <span className={styles.ctaLabel}>Ver saúde</span>
+              <span className={styles.ctaArrow} style={{ color:"#f87171" }}>→</span>
+            </div>
+          </div>
+        </Link>
 
-          {/* Financeiro */}
-          <Link href="/finance/overview" className={`${styles.card} ${styles.cardSmall}`}>
-            <div className={styles.cardBar} style={{ background:"#fbbf24" }}/>
-            <div className={styles.cardBody}>
-              <div className={styles.cardHead}>
-                <div className={styles.iconWrap} style={{ background:"#fbbf2412", color:"#fbbf24" }}>R$</div>
-                <div>
-                  <h2 className={styles.cardTitle}>Financeiro</h2>
-                  <p className={styles.cardSub}>Receitas · Gastos · Saldo</p>
-                </div>
-              </div>
-              <div className={styles.cardFooter} style={{ borderColor:"#fbbf2420" }}>
-                <span className={styles.ctaLabel}>Abrir módulo</span>
-                <span className={styles.ctaArrow} style={{ color:"#fbbf24" }}>→</span>
+        {/* Financeiro — 1 coluna */}
+        <Link href="/finance/overview"
+          className={`${styles.card} ${styles.cardFinanceiro}`}
+          style={{ "--accent": "251,191,36" }}
+        >
+          <div className={styles.cardBody}>
+            <div className={styles.cardHead}>
+              <div className={styles.iconWrap} style={{ background:"rgba(251,191,36,0.12)", color:"#fbbf24" }}>R$</div>
+              <div>
+                <h2 className={styles.cardTitle}>Financeiro</h2>
+                <p className={styles.cardSub}>Receitas · Gastos · Saldo</p>
               </div>
             </div>
-          </Link>
+            <div className={styles.cardFooter}>
+              <span className={styles.ctaLabel}>Abrir módulo</span>
+              <span className={styles.ctaArrow} style={{ color:"#fbbf24" }}>→</span>
+            </div>
+          </div>
+        </Link>
 
-          {/* Rotina */}
-          <Link href="/routine" className={`${styles.card} ${styles.cardSmall}`}>
-            <div className={styles.cardBar} style={{ background:"#38bdf8" }}/>
-            <div className={styles.cardBody}>
-              <div className={styles.cardHead}>
-                <div className={styles.iconWrap} style={{ background:"#38bdf812", color:"#38bdf8" }}>⏱</div>
-                <div>
-                  <h2 className={styles.cardTitle}>Rotina</h2>
-                  <p className={styles.cardSub}>Timeline do dia</p>
-                </div>
-              </div>
-              <div className={styles.cardFooter} style={{ borderColor:"#38bdf820" }}>
-                <span className={styles.ctaLabel}>Ver rotina</span>
-                <span className={styles.ctaArrow} style={{ color:"#38bdf8" }}>→</span>
+        {/* Rotina — 2 colunas */}
+        <Link href="/routine"
+          className={`${styles.card} ${styles.cardRotina}`}
+          style={{ "--accent": "56,189,248" }}
+        >
+          <div className={styles.cardBody}>
+            <div className={styles.cardHead}>
+              <div className={styles.iconWrap} style={{ background:"rgba(56,189,248,0.12)", color:"#38bdf8" }}>⏱</div>
+              <div>
+                <h2 className={styles.cardTitle}>Rotina</h2>
+                <p className={styles.cardSub}>Timeline do dia</p>
               </div>
             </div>
-          </Link>
+            <div className={styles.cardFooter}>
+              <span className={styles.ctaLabel}>Ver rotina</span>
+              <span className={styles.ctaArrow} style={{ color:"#38bdf8" }}>→</span>
+            </div>
+          </div>
+        </Link>
 
-        </div>
       </main>
 
       {modal && <QuickAddModal onClose={() => setModal(false)} onSuccess={() => setModal(false)} />}
