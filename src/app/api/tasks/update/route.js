@@ -6,7 +6,7 @@ export async function POST(req) {
   try { body = await req.json(); }
   catch { return Response.json({ error: "Payload JSON inválido" }, { status: 400 }); }
 
-  const { taskId, title, dueDate, time, priority, project, subClient, recurrence, description } = body;
+  const { taskId, title, dueDate, time, priority, project, subClient, recurrence, description, recurrenceModified } = body;
   if (!taskId) return Response.json({ error: "taskId obrigatório" }, { status: 400 });
 
   try {
@@ -14,21 +14,27 @@ export async function POST(req) {
 
     if (title)    updateBody.content  = title.trim();
 
-    // FIX: "" → P_TO_TD[""] = 1 → remove prioridade no Todoist
     if (priority !== undefined) {
       const p = P_TO_TD[priority];
       if (p !== undefined) updateBody.priority = p;
     }
 
     if (dueDate) {
-      if (!recurrence || !recurrence.trim() || recurrence.trim() === "none") {
-        // due_string com data simples → Todoist remove recorrência existente.
-        // due_date preservaria recorrência, por isso usamos due_string aqui.
+      if (!recurrenceModified) {
+        // Usuário não tocou no campo de recorrência → preserva recorrência existente.
+        // due_date/due_datetime move a data sem apagar o padrão de repetição.
+        Object.assign(updateBody, time
+          ? { due_datetime: `${dueDate}T${time}:00` }
+          : { due_date: dueDate }
+        );
+      } else if (!recurrence || !recurrence.trim() || recurrence.trim() === "none") {
+        // Usuário explicitamente apagou → due_string com data remove a recorrência.
         Object.assign(updateBody, time
           ? { due_datetime: `${dueDate}T${time}:00` }
           : { due_string: dueDate }
         );
       } else {
+        // Usuário definiu/alterou o padrão → traduz PT→EN e envia como due_string.
         Object.assign(updateBody, buildDuePayload(dueDate, time, recurrence));
       }
     }

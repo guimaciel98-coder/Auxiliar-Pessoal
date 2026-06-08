@@ -53,6 +53,10 @@ export default function TaskEditModal({ task, onClose, onSuccess, clients: clien
     ? `${String(brtDate.getUTCHours()).padStart(2, "0")}:${String(brtDate.getUTCMinutes()).padStart(2, "0")}`
     : "";
 
+  // Recorrência: só pré-preenche se a task É de fato recorrente
+  const isRecurring = task._repeat_forever === true;
+  const currentRecStr = isRecurring ? (task._recurrence_string || "") : "";
+
   const [formData, setFormData] = useState({
     title:       task.name        || "",
     description: task.description || "",
@@ -61,13 +65,26 @@ export default function TaskEditModal({ task, onClose, onSuccess, clients: clien
     dueDate:     initialDate,
     time:        initialTime,
     priority:    task._priority   || "",
-    recurrence:  task._recurrence_string || "",
+    recurrence:  currentRecStr,
   });
+
+  // Rastreia se o usuário tocou no campo de recorrência nesta sessão de edição.
+  // Se não tocou, o backend usa due_date (preserva recorrência existente).
+  const [recurrenceModified, setRecurrenceModified] = useState(false);
+  // Controla visibilidade do campo de recorrência
+  const [recurrenceOpen, setRecurrenceOpen] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "recurrence") setRecurrenceModified(true);
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  function handleRemoveRecurrence() {
+    setFormData(prev => ({ ...prev, recurrence: "" }));
+    setRecurrenceModified(true);
+    setRecurrenceOpen(false);
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,16 +94,11 @@ export default function TaskEditModal({ task, onClose, onSuccess, clients: clien
       const res = await fetch("/api/tasks/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId: task.id, ...formData }),
+        body: JSON.stringify({ taskId: task.id, ...formData, recurrenceModified }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Erro ao salvar");
-      const recText = formData.recurrence?.trim();
-      if (recText && data.due?.is_recurring === false) {
-        onSuccess("✓ Tarefa salva (recorrência não reconhecida — verifique no Todoist)");
-      } else {
-        onSuccess("✓ Tarefa atualizada");
-      }
+      onSuccess("✓ Tarefa atualizada");
       onClose();
     } catch (err) {
       setError(err.message || "Falha ao salvar. Tente novamente.");
@@ -304,25 +316,59 @@ export default function TaskEditModal({ task, onClose, onSuccess, clients: clien
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.label}>RECORRÊNCIA (Opcional)</label>
-            <input
-              type="text"
-              name="recurrence"
-              value={formData.recurrence}
-              onChange={handleChange}
-              className={styles.input}
-              placeholder="Ex: toda semana, todo mês, todo primeiro dia útil..."
-              style={REC_INPUT_STYLE[validateRecurrence(formData.recurrence)]}
-            />
-            {validateRecurrence(formData.recurrence) === "unknown" && (
-              <p style={{ margin: "4px 0 0", fontSize: 11, color: "#f59e0b" }}>
-                ⚠ Padrão não reconhecido — o Todoist pode ignorar a recorrência
-              </p>
+            <label className={styles.label}>RECORRÊNCIA</label>
+
+            {/* Task recorrente e campo ainda não aberto → mostra chip */}
+            {isRecurring && !recurrenceOpen && !recurrenceModified && (
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:2 }}>
+                <span style={{
+                  display:"inline-flex", alignItems:"center", gap:6,
+                  padding:"5px 10px", borderRadius:8, fontSize:13, fontWeight:600,
+                  background:"rgba(129,140,248,0.12)", color:"#818cf8",
+                  border:"1px solid rgba(129,140,248,0.25)",
+                }}>
+                  ↻ {currentRecStr || "recorrente"}
+                </span>
+                <button type="button" onClick={() => setRecurrenceOpen(true)}
+                  style={{ fontSize:11, color:"rgba(255,255,255,0.4)", background:"none", border:"none", cursor:"pointer", padding:"4px 6px" }}>
+                  Alterar
+                </button>
+                <button type="button" onClick={handleRemoveRecurrence}
+                  style={{ fontSize:11, color:"#f87171", background:"none", border:"none", cursor:"pointer", padding:"4px 6px" }}>
+                  Remover
+                </button>
+              </div>
             )}
-            {validateRecurrence(formData.recurrence) === "valid" && (
-              <p style={{ margin: "4px 0 0", fontSize: 11, color: "#34d399" }}>
-                ✓ Padrão reconhecido
-              </p>
+
+            {/* Campo de texto: tarefas sem recorrência, ou quando usuário clicou Alterar */}
+            {(!isRecurring || recurrenceOpen || recurrenceModified) && (
+              <>
+                <input
+                  type="text"
+                  name="recurrence"
+                  value={formData.recurrence}
+                  onChange={handleChange}
+                  className={styles.input}
+                  placeholder="Ex: toda semana, todo segundo domingo, todo mês..."
+                  style={REC_INPUT_STYLE[validateRecurrence(formData.recurrence)]}
+                  autoFocus={recurrenceOpen}
+                />
+                {validateRecurrence(formData.recurrence) === "unknown" && (
+                  <p style={{ margin:"4px 0 0", fontSize:11, color:"#f59e0b" }}>
+                    ⚠ Padrão não reconhecido — o Todoist pode ignorar
+                  </p>
+                )}
+                {validateRecurrence(formData.recurrence) === "valid" && (
+                  <p style={{ margin:"4px 0 0", fontSize:11, color:"#34d399" }}>
+                    ✓ Padrão reconhecido
+                  </p>
+                )}
+                {!isRecurring && !formData.recurrence && (
+                  <p style={{ margin:"4px 0 0", fontSize:11, color:"rgba(255,255,255,0.25)" }}>
+                    Deixe vazio para tarefa sem recorrência
+                  </p>
+                )}
+              </>
             )}
           </div>
 
