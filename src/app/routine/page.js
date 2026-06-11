@@ -549,7 +549,7 @@ function TabSemana({ onSelectDay }) {
           cat: c, pct: (catMins[c] / totalMins) * 100,
         }));
 
-        // Resumo textual: só categorias com ≥30min, exceto livre e pessoal
+        // Resumo textual: só categorias com ≥30min
         const catSummary = catOrder
           .filter(c => catMins[c] >= 30)
           .map(c => ({ cat: c, label: CAT[c]?.label ?? c, time: minsToLabel(catMins[c]) }))

@@ -5,10 +5,10 @@ import { NextResponse } from "next/server";
 export function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  // Deixa passar: login, API (auth própria), assets Next.js
+  // Deixa passar sem checagem: login, rotas de autenticação própria, assets Next.js
   if (
     pathname.startsWith("/login") ||
-    pathname.startsWith("/api/") ||
+    pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon")
   ) {
@@ -17,12 +17,18 @@ export function middleware(req) {
 
   const cookie   = req.cookies.get("session")?.value;
   const expected = process.env.SESSION_TOKEN;
+  const authed   = cookie && expected && cookie === expected;
 
-  if (!cookie || !expected || cookie !== expected) {
-    return NextResponse.redirect(new URL("/login", req.url));
+  if (authed) {
+    return NextResponse.next();
   }
 
-  return NextResponse.next();
+  // Rotas de API: sem sessão válida, responde 401 em vez de redirecionar (não há HTML pra redirecionar)
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
+  return NextResponse.redirect(new URL("/login", req.url));
 }
 
 export const config = {
