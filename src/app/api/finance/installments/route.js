@@ -146,6 +146,17 @@ export async function POST(req) {
     const newRow    = parseInt(rowMatch[1]);
     const sourceRow = newRow - 1; // linha anterior (tem as fórmulas)
 
+    // Parcelas automáticas já entram marcadas como pagas no mês corrente,
+    // assim como o fechamento de mês faz para as demais parcelas automáticas.
+    if (auto) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range:            `'${SHEET}'!J${newRow}`,
+        valueInputOption: "RAW",
+        requestBody: { values: [["TRUE"]] },
+      });
+    }
+
     if (sourceRow >= 2) {
       // 3. Descobre quais colunas da linha anterior têm fórmulas
       const formulaRes = await sheets.spreadsheets.values.get({
