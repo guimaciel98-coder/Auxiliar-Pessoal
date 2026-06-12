@@ -129,15 +129,9 @@ export default function Hub() {
       .then(d => {
         if (!d.ok) return;
         const blocks = d.blocks ?? [];
-        if (!blocks.length) { setRoutine({ current: null, total: 0, dayPct: 0 }); return; }
+        if (!blocks.length) { setRoutine({ current: null, total: 0, eventPct: 0 }); return; }
 
         const sorted = [...blocks].sort((a, b) => a.minutes - b.minutes);
-        const start  = sorted[0].minutes;
-        const last   = sorted[sorted.length - 1];
-        const end    = last.minutes + (last.duration ?? 60);
-        const pct    = start < end
-          ? Math.round(((Math.min(nowMin, end) - start) / (end - start)) * 100)
-          : 0;
 
         let current = null;
         for (const b of sorted) {
@@ -145,7 +139,17 @@ export default function Hub() {
             current = b; break;
           }
         }
-        setRoutine({ current, total: sorted.length, dayPct: Math.max(0, Math.min(100, pct)) });
+
+        let eventPct = 0;
+        if (current) {
+          const start = current.minutes;
+          const end   = start + (current.duration ?? 60);
+          eventPct = end > start
+            ? Math.round(((nowMin - start) / (end - start)) * 100)
+            : 0;
+        }
+
+        setRoutine({ current, total: sorted.length, eventPct: Math.max(0, Math.min(100, eventPct)) });
       }).catch(() => {});
   }, []);
 
@@ -270,9 +274,11 @@ export default function Hub() {
               />
             </div>
             <ProgressBar
-              pct={routine?.dayPct ?? null}
+              pct={routine?.current ? routine.eventPct : null}
               color="#38bdf8"
-              label={routine != null ? `${routine.dayPct}% do dia concluído` : "carregando..."}
+              label={routine == null ? "carregando..."
+                : routine.current ? `${routine.eventPct}% do bloco atual concluído`
+                : "sem bloco em andamento"}
             />
             <div className={styles.cardFooter}>
               <span className={styles.ctaLabel}>Ver rotina</span>
