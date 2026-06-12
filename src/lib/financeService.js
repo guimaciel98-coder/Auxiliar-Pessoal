@@ -5,7 +5,7 @@
  *
  *  App_Gastos_Fixos     A:Grupo | B:Item | C:Previsao | D:Real | E:Controle
  *  App_Gastos_Variaveis A:Grupo | B:Item | C:Previsao | D:Real | E:Controle
- *  App_Ganhos           A:Grupo | B:Item | C:Valor    | D:Confirmado
+ *  App_Ganhos           A:Grupo | B:Item | C:Valor | D:Confirmado | E:Prazo
  *  App_Poupanca         A:Mes   | B:Valor| C:Atingido
  *  App_Parcelas         A:Nome  | B:Desc | C:ValorTotal | D:ValorMensal |
  *                       E:TotalParc | F:ParcelasPagas | G:DataInicio | H:Ativo | I:Auto
@@ -43,7 +43,7 @@ export async function fetchFinancialData() {
   const [fixosRes, variaveisRes, ganhosRes, poupancaRes, parcelasRes, configRes, lancRes] = await Promise.all([
     sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Gastos_Fixos'!A2:F500" }), // F = Auto
     sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Gastos_Variaveis'!A2:E500" }),
-    sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Ganhos'!A2:D500" }),
+    sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Ganhos'!A2:E500" }),
     sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Poupanca'!A2:C100" }),
     sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Parcelas'!A2:I300" }).catch(() => ({ data: { values: [] } })),
     sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Config'!A1:B20" }).catch(() => ({ data: { values: [] } })),
@@ -137,11 +137,11 @@ export async function fetchFinancialData() {
     const item      = String(row[1] ?? "").trim();
     const valor     = Math.abs(parseNum(row[2] ?? "0"));
     const confirmado = String(row[3] ?? "").toUpperCase() === "TRUE";
+    const prazo     = String(row[4] ?? "").trim() || null;
     if (!item || !valor) continue;
-    const entry = { item, valor, confirmado };
-    if (String(item).toLowerCase().includes("emprestimo")) emprestimos.push(entry);
-    else if (grupo === "CLT")                               clt.push(entry);
-    else                                                    pdv.push(entry);
+    if (grupo === "CLT")              clt.push({ item, valor, confirmado });
+    else if (grupo === "EMPRESTIMOS") emprestimos.push({ item, valor, confirmado, prazo });
+    else                               pdv.push({ item, valor, confirmado });
   }
   // CLT = fixo, sempre conta. PDV e empréstimos só contam quando confirmados.
   const totalCLT = clt.reduce((s, i) => s + i.valor, 0);

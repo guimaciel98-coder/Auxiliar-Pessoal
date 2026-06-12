@@ -6,6 +6,14 @@ import styles from "../Finance.module.css";
 import { useFinance } from "@/hooks/useFinance";
 import { fmtFin } from "@/lib/fmtFin";
 
+const MES_ABBR_PT = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+function fmtPrazo(prazo) {
+  if (!prazo) return null;
+  const [m, y] = String(prazo).split("/").map(Number);
+  if (!m || !y) return null;
+  return `Até ${MES_ABBR_PT[m - 1]}/${String(y).slice(2)}`;
+}
+
 export default function IncomePage() {
   const { data, loading, error, hideNumbers, refetch } = useFinance();
   const fmt = (v) => fmtFin(v, hideNumbers);
@@ -15,20 +23,20 @@ export default function IncomePage() {
   const [editingItem, setEditingItem] = useState(null); // { item, grupo } quando editando
   const [saving, setSaving]     = useState(false);
   const [toast, setToast]       = useState(null);
-  const [form, setForm]         = useState({ grupo: "PDV", item: "", valor: "", confirmado: false });
+  const [form, setForm]         = useState({ grupo: "PDV", item: "", valor: "", confirmado: false, prazo: "" });
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 2800); }
 
   function openAdd() {
     setEditingItem(null);
-    setForm({ grupo: "PDV", item: "", valor: "", confirmado: false });
+    setForm({ grupo: "PDV", item: "", valor: "", confirmado: false, prazo: "" });
     setModal(true);
   }
 
   function openEdit(item, grupoLabel) {
-    const grupoMap = { "CLT": "CLT", "PDV / Freelas": "PDV", "Outros": "OUTROS" };
+    const grupoMap = { "CLT": "CLT", "PDV": "PDV", "Empréstimos": "EMPRESTIMOS" };
     setEditingItem(item.item);
-    setForm({ grupo: grupoMap[grupoLabel] ?? "PDV", item: item.item, valor: String(item.valor), confirmado: item.confirmado });
+    setForm({ grupo: grupoMap[grupoLabel] ?? "PDV", item: item.item, valor: String(item.valor), confirmado: item.confirmado, prazo: item.prazo ?? "" });
     setModal(true);
   }
 
@@ -38,12 +46,13 @@ export default function IncomePage() {
     setSaving(true);
     try {
       const isEdit = editingItem !== null;
+      const prazo  = form.grupo === "EMPRESTIMOS" ? form.prazo.trim() : "";
       const res = await fetch("/api/finance/ganho/add", {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(isEdit
-          ? { itemAtual: editingItem, grupo: form.grupo, item: form.item.trim(), valor: parseFloat(form.valor), confirmado: form.confirmado }
-          : { grupo: form.grupo, item: form.item.trim(), valor: parseFloat(form.valor), confirmado: form.confirmado }
+          ? { itemAtual: editingItem, grupo: form.grupo, item: form.item.trim(), valor: parseFloat(form.valor), confirmado: form.confirmado, prazo }
+          : { grupo: form.grupo, item: form.item.trim(), valor: parseFloat(form.valor), confirmado: form.confirmado, prazo }
         ),
       });
       const j = await res.json();
@@ -77,8 +86,8 @@ export default function IncomePage() {
 
   const incomeGroups = [
     { label: "CLT",          items: ganhos.items?.clt         ?? [], total: ganhos.clt         ?? 0 },
-    { label: "PDV / Freelas",items: ganhos.items?.pdv         ?? [], total: ganhos.pdv         ?? 0 },
-    { label: "Outros",       items: ganhos.items?.emprestimos ?? [], total: ganhos.emprestimos ?? 0 },
+    { label: "PDV",          items: ganhos.items?.pdv         ?? [], total: ganhos.pdv         ?? 0 },
+    { label: "Empréstimos",  items: ganhos.items?.emprestimos ?? [], total: ganhos.emprestimos ?? 0 },
   ].filter(g => g.items.length > 0);
 
   const grandTotal = incomeGroups.reduce((s, g) => s + g.total, 0);
@@ -111,13 +120,13 @@ export default function IncomePage() {
               <div>
                 <label style={{ display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>Grupo</label>
                 <div style={{ display: "flex", gap: 8 }}>
-                  {["CLT", "PDV", "Outros"].map(g => (
-                    <button key={g} type="button" onClick={() => setForm(f => ({ ...f, grupo: g }))}
+                  {[{ key: "CLT", label: "CLT" }, { key: "PDV", label: "PDV" }, { key: "EMPRESTIMOS", label: "Empréstimos" }].map(({ key, label }) => (
+                    <button key={key} type="button" onClick={() => setForm(f => ({ ...f, grupo: key }))}
                       style={{ flex: 1, padding: "9px 0", borderRadius: 10, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s",
-                        background: form.grupo === g ? "rgba(0,229,160,0.15)" : "rgba(255,255,255,0.04)",
-                        border: `1px solid ${form.grupo === g ? "rgba(0,229,160,0.4)" : "rgba(255,255,255,0.1)"}`,
-                        color: form.grupo === g ? "#00e5a0" : "rgba(255,255,255,0.45)" }}>
-                      {g}
+                        background: form.grupo === key ? "rgba(0,229,160,0.15)" : "rgba(255,255,255,0.04)",
+                        border: `1px solid ${form.grupo === key ? "rgba(0,229,160,0.4)" : "rgba(255,255,255,0.1)"}`,
+                        color: form.grupo === key ? "#00e5a0" : "rgba(255,255,255,0.45)" }}>
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -132,6 +141,14 @@ export default function IncomePage() {
                 <input type="number" step="0.01" min="0.01" value={form.valor} onChange={e => setForm(f => ({ ...f, valor: e.target.value }))} placeholder="0,00" required
                   style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "#f0f0f8", fontSize: 18, fontFamily: "var(--font-mono), monospace", fontWeight: 700, outline: "none", boxSizing: "border-box" }} />
               </div>
+              {form.grupo === "EMPRESTIMOS" && (
+                <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>Prazo final (M/AAAA)</label>
+                  <input value={form.prazo} onChange={e => setForm(f => ({ ...f, prazo: e.target.value }))} placeholder="Ex: 4/2027" required
+                    style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "#f0f0f8", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 6 }}>Mês/ano em que esse recebimento termina e deixa de contar na projeção.</p>
+                </div>
+              )}
               <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
                 <input type="checkbox" checked={form.confirmado} onChange={e => setForm(f => ({ ...f, confirmado: e.target.checked }))} style={{ width: 16, height: 16, accentColor: "#10b981" }} />
                 <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>Já recebido</span>
@@ -236,6 +253,12 @@ export default function IncomePage() {
                       }}>
                         {fmt(item.valor)}
                       </span>
+
+                      {fmtPrazo(item.prazo) && (
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: -8, marginBottom: 4 }}>
+                          {fmtPrazo(item.prazo)}
+                        </span>
+                      )}
 
                       {/* Rodapé: status + botões */}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto" }}>

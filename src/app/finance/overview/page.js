@@ -73,14 +73,16 @@ function parsePrazo(prazo) {
  * buildProjection — projeta poupança mês a mês até dez/26.
  *
  * Fórmula por mês:
- *   mensal = poupancaRealBase + freed
- *   freed  = soma das parcelas que JÁ encerraram ANTES deste mês
+ *   mensal = poupancaRealBase + freed - lostIncome
+ *   freed       = soma das parcelas (gastos) que JÁ encerraram ANTES deste mês
+ *   lostIncome  = soma dos ganhos com prazo (empréstimos) que JÁ encerraram ANTES deste mês
  *
- * poupancaRealBase já inclui o custo de todas as parcelas ativas agora.
- * Conforme cada parcela encerra, seu valorMensal é somado ao freed,
- * aumentando o que sobra — sem esperar o mês virar para computar.
+ * poupancaRealBase já inclui o custo de todas as parcelas ativas e o
+ * recebimento de todos os empréstimos confirmados agora. Conforme cada
+ * parcela encerra, seu valorMensal é somado ao freed (sobra mais);
+ * conforme cada empréstimo encerra, seu valor é subtraído (sobra menos).
  */
-function buildProjection(acumulado, poupancaRealBase, commitments) {
+function buildProjection(acumulado, poupancaRealBase, commitments, incomeCommitments = []) {
   const now   = new Date();
   let   month = now.getMonth() + 1;
   let   year  = now.getFullYear();
@@ -98,7 +100,15 @@ function buildProjection(acumulado, poupancaRealBase, commitments) {
       return jaEncerrou ? s + c.valorMensal : s;
     }, 0);
 
-    running += poupancaRealBase + freed;
+    // Valor acumulado dos empréstimos (ganhos com prazo) que já encerraram ANTES deste mês
+    const lostIncome = incomeCommitments.reduce((s, c) => {
+      const p = parsePrazo(c.prazo);
+      if (!p) return s; // sem prazo → recebimento contínuo, não some
+      const jaEncerrou = (p.ano < year) || (p.ano === year && p.mes < month);
+      return jaEncerrou ? s + c.valor : s;
+    }, 0);
+
+    running += poupancaRealBase + freed - lostIncome;
 
     result.push({
       mes:      `${MES_NUM_ABBR[month - 1]}/${String(year).slice(2)}`,
@@ -170,6 +180,11 @@ export default function OverviewPage() {
   const poupanca     = data?.poupanca ?? {};
   const variaveis    = data?.gastos?.variaveis?.items ?? [];
   const compromissos = data?.compromissos?.items ?? [];
+
+  // Empréstimos confirmados com prazo — contam em ganhoTudo agora, mas deixam
+  // de contar na projeção a partir do mês em que o prazo encerra.
+  const emprestimosComPrazo = (data?.ganhos?.items?.emprestimos ?? [])
+    .filter(e => e.confirmado && e.prazo);
 
   // ── Saldo Disponível (variáveis) — definido antes de gastosAteMomento ────
   const varPrevTotal = data?.gastos?.variaveis?.previsaoTotal ?? variaveis.reduce((s,i) => s + (i.previsao||0), 0);
@@ -256,7 +271,7 @@ export default function OverviewPage() {
     // Usa poupancaReal (ganhos − gastos do mês atual) como base da projeção.
     // buildProjection adiciona mês a mês o valor das parcelas que vão encerrando.
     if (poupancaMensalBase !== undefined || poupancaAcumulada) {
-      buildProjection(poupancaAcumulada, poupancaMensalBase, compromissos).forEach(d => {
+      buildProjection(poupancaAcumulada, poupancaMensalBase, compromissos, emprestimosComPrazo).forEach(d => {
         const e = map.get(d.mes);
         map.set(d.mes, { ...(e ?? { mes: d.mes }), projecao: d.projecao });
       });
@@ -271,7 +286,7 @@ export default function OverviewPage() {
     }
 
     return Array.from(map.values());
-  }, [historico, poupancaAcumulada, summary.ganhoTudo, varPrevTotal, varRealTotal, gastosParcelasMes, poupancaMensalBase, compromissos, data]);
+  }, [historico, poupancaAcumulada, summary.ganhoTudo, varPrevTotal, varRealTotal, gastosParcelasMes, poupancaMensalBase, compromissos, emprestimosComPrazo, data]);
 
   const dataAtual = new Date().toLocaleDateString("pt-BR", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
