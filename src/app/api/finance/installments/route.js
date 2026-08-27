@@ -66,17 +66,42 @@ export async function GET() {
         const nTotal  = Math.max(0, parseInt(totalParcelas ?? "0") || 0);
         const isAuto  = String(autoCol ?? "FALSE").toUpperCase() === "TRUE";
 
-        // Para auto: calcula meses decorridos desde dataInicio (inclui mês atual)
-        // Para manual: lê contagem da col F (incrementada pelo usuário via PATCH)
+        // Se DataFim já passou (mês anterior ao atual), a parcela está encerrada
+        {
+          const dfParts = String(dataFim ?? "").split("/");
+          const dfM = parseInt(dfParts[0]);
+          const dfY = parseInt(dfParts[1]);
+          if (dfM >= 1 && dfM <= 12 && dfY > 2000) {
+            const chk = new Date(Date.now() - 3 * 3600 * 1000);
+            const chkM = chk.getUTCMonth() + 1;
+            const chkY = chk.getUTCFullYear();
+            if (dfY < chkY || (dfY === chkY && dfM < chkM)) return null;
+          }
+        }
+
+        // Auto: exclui mês atual (incrementado no fechamento via PATCH)
+        // Manual: inclui mês atual (usuário paga por conta própria)
         const _parts = String(dataInicio ?? "0/0").split("/");
         const _ms = parseInt(_parts[0]), _ys = parseInt(_parts[1]);
         let nPagas;
-        if (isAuto && _ms && _ys) {
+        if (_ms && _ys) {
           const now = new Date(Date.now() - 3 * 3600 * 1000); // BRT (UTC-3)
-          const nowMonth = now.getUTCMonth(); // 0-indexed = mês anterior 1-indexed
-          const nowYear  = nowMonth === 0 ? now.getUTCFullYear() - 1 : now.getUTCFullYear();
-          const computed = (nowYear - _ys) * 12 + (nowMonth - _ms) + 1;
-          nPagas = Math.min(nTotal, Math.max(0, computed));
+          if (isAuto) {
+            const nowFull = now.getUTCFullYear();
+            const nowM1   = now.getUTCMonth() + 1; // 1-indexed
+            if (_ys === nowFull && _ms === nowM1) {
+              // Criada este mês: primeiro pagamento já contabilizado
+              nPagas = Math.min(nTotal, 1);
+            } else {
+              const nowMonth = now.getUTCMonth(); // 0-indexed → exclui mês atual
+              const nowYear  = nowMonth === 0 ? now.getUTCFullYear() - 1 : now.getUTCFullYear();
+              nPagas = Math.min(nTotal, Math.max(0, (nowYear - _ys) * 12 + (nowMonth - _ms) + 1));
+            }
+          } else {
+            const nowMonth = now.getUTCMonth() + 1; // 1-indexed → inclui mês atual
+            const nowYear  = now.getUTCFullYear();
+            nPagas = Math.min(nTotal, Math.max(0, (nowYear - _ys) * 12 + (nowMonth - _ms) + 1));
+          }
         } else {
           nPagas = Math.min(nTotal, Math.max(0, parseInt(parcelasPagas ?? "0") || 0));
         }
@@ -128,13 +153,20 @@ export async function POST(req) {
     const vTotal  = parseFloat(valorTotal);
     const vMensal = Math.round((vTotal / nParc) * 100) / 100;
 
+    // Para parcelas manuais: inicializa F com meses já decorridos desde dataInicio
+    const nowBRT   = new Date(Date.now() - 3 * 3600 * 1000);
+    const nowM     = nowBRT.getUTCMonth() + 1; // 1-indexed
+    const nowY     = nowBRT.getUTCFullYear();
+    const elapsed  = (ms && ys) ? Math.max(0, (nowY - ys) * 12 + (nowM - ms) + 1) : 0;
+    const initPagas = auto ? 0 : Math.min(nParc, elapsed);
+
     // 1. Append da nova linha
     const appendRes = await sheets.spreadsheets.values.append({
       spreadsheetId,
       range:           `'${SHEET}'!A:I`,
       valueInputOption: "USER_ENTERED",
       requestBody: {
-        values: [[nome.trim(), dataFim, vTotal, vMensal, 0, 0, dataInicio, "TRUE", auto ? "TRUE" : "FALSE"]],
+        values: [[nome.trim(), dataFim, vTotal, vMensal, 0, initPagas, dataInicio, "TRUE", auto ? "TRUE" : "FALSE"]],
       },
     });
 
@@ -318,30 +350,16 @@ export async function PATCH(req) {
       return Response.json({ ok: true, newPagas: prev, concluida: false });
     }
 
-    // ── Incremento: lê E (total) e F com FORMULA para detectar fórmula ──────
-    const [resE, resF] = await Promise.all([
-      sheets.spreadsheets.values.get({ spreadsheetId, range: `'${SHEET}'!E${sheetRow}` }),
-      sheets.spreadsheets.values.get({ spreadsheetId, range: `'${SHEET}'!F${sheetRow}`, valueRenderOption: "FORMULA" }),
-    ]);
-    const totalStr   = resE.data.values?.[0]?.[0] ?? "0";
-    const fCell      = resF.data.values?.[0]?.[0] ?? "0";
-    const hasFormula = typeof fCell === "string" && fCell.startsWith("=");
-    const total      = parseInt(totalStr) || 0;
-    const pagas      = hasFormula ? 0 : (parseInt(String(fCell)) || 0);
-    const newPagas   = pagas + 1;
-
-    const updates = [
-      { range: `'${SHEET}'!F${sheetRow}`, values: [[String(newPagas)]] },
-      { range: `'${SHEET}'!J${sheetRow}`, values: [["TRUE"]] },
-    ];
-    if (total > 0 && newPagas >= total) {
-      updates.push({ range: `'${SHEET}'!H${sheetRow}`, values: [["FALSE"]] });
-    }
+    // ── Pagamento manual: apenas marca J=TRUE (pago este mês) ────────────────
+    // parcelasPagas é calculado automaticamente via datas no GET — F não é alterado
     await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId, requestBody: { valueInputOption: "RAW", data: updates },
+      spreadsheetId,
+      requestBody: { valueInputOption: "RAW", data: [
+        { range: `'${SHEET}'!J${sheetRow}`, values: [["TRUE"]] },
+      ]},
     });
 
-    return Response.json({ ok: true, newPagas, concluida: total > 0 && newPagas >= total });
+    return Response.json({ ok: true });
   } catch (e) {
     console.error("[PATCH /api/finance/installments]", e);
     return Response.json({ ok: false, error: e.message }, { status: 500 });

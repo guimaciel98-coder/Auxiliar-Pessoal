@@ -136,22 +136,12 @@ export async function POST(req) {
         .then(r => r.data.values ?? []).catch(() => []),
     ]);
 
-    // Auto-computa cycleStartDate a partir de melhor_dia_compra se não informado
+    // cycleStartDate = hoje (dia em que o fechamento ocorreu)
     if (!cycleStartDate) {
-      const melhorDia = (() => {
-        for (const row of configRows) {
-          if (String(row[0] ?? "").trim().toLowerCase() === "melhor_dia_compra") {
-            return parseInt(row[1] ?? "") || null;
-          }
-        }
-        return null;
-      })();
-      if (melhorDia) {
-        const now   = new Date();
-        const dd    = String(melhorDia).padStart(2, "0");
-        const mm    = String(now.getMonth() + 1).padStart(2, "0");
-        cycleStartDate = `${dd}/${mm}/${now.getFullYear()}`;
-      }
+      const now = new Date();
+      const dd  = String(now.getDate()).padStart(2, "0");
+      const mm  = String(now.getMonth() + 1).padStart(2, "0");
+      cycleStartDate = `${dd}/${mm}/${now.getFullYear()}`;
     }
 
     const updates = [];
@@ -182,29 +172,32 @@ export async function POST(req) {
     });
     resultado.ganhosResetados = ganhosResetados;
 
-    // ── 3. Parcelas: auto → avança F+1; todas → reseta Pago(J)=FALSE ────────────
+    // ── 3. Parcelas: encerradas → desativa (H=FALSE); ativas → reseta Pago(J) ──
     // App_Parcelas: A:Nome B:DataFim C:ValorTotal D:ValorMensal E:TotalParc F:ParcelasPagas G:DataInicio H:Ativo I:Auto J:Pago
     let parcelasAvancadas = 0, parcelasConcluidas = 0;
+    const closingNow = new Date();
+    const closingM   = closingNow.getMonth() + 1;
+    const closingY   = closingNow.getFullYear();
     parcelasRows.forEach((row, i) => {
       const nome   = String(row[0] ?? "").trim();
       const ativo  = String(row[7] ?? "TRUE").toUpperCase();
       const isAuto = String(row[8] ?? "FALSE").toUpperCase() === "TRUE";
       if (!nome || ativo === "FALSE") return;
 
-      // Auto → J=TRUE (já pago automaticamente); manual → J=FALSE (aguarda ação)
-      updates.push({ range: `'${PARCELAS}'!J${i + 2}`, values: [[isAuto ? "TRUE" : "FALSE"]] });
+      // Se DataFim <= mês do fechamento → parcela concluída → desativa
+      const dfParts = String(row[1] ?? "").split("/");
+      const dfM = parseInt(dfParts[0]);
+      const dfY = parseInt(dfParts[1]);
+      const isComplete = dfM >= 1 && dfM <= 12 && dfY > 2000 &&
+        (dfY < closingY || (dfY === closingY && dfM <= closingM));
 
-      // Incrementa F apenas para parcelas automáticas
-      if (isAuto) {
-        const totalParc = parseInt(row[4] ?? "0") || 0;
-        const pagas     = parseInt(row[5] ?? "0") || 0;
-        const newPagas  = pagas + 1;
-        updates.push({ range: `'${PARCELAS}'!F${i + 2}`, values: [[String(newPagas)]] });
-        parcelasAvancadas++;
-        if (totalParc > 0 && newPagas >= totalParc) {
-          updates.push({ range: `'${PARCELAS}'!H${i + 2}`, values: [["FALSE"]] });
-          parcelasConcluidas++;
-        }
+      if (isComplete) {
+        updates.push({ range: `'${PARCELAS}'!H${i + 2}`, values: [["FALSE"]] });
+        parcelasConcluidas++;
+      } else {
+        // Auto → J=TRUE (já pago automaticamente); manual → J=FALSE (aguarda ação)
+        updates.push({ range: `'${PARCELAS}'!J${i + 2}`, values: [[isAuto ? "TRUE" : "FALSE"]] });
+        if (isAuto) parcelasAvancadas++;
       }
     });
     resultado.parcelasAvancadas  = parcelasAvancadas;
