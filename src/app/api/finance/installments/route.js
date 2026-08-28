@@ -76,10 +76,19 @@ export async function GET() {
     const spreadsheetId = getSpreadsheetId();
     await ensureSheet(sheets, spreadsheetId);
 
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `'${SHEET}'!A2:J300`,
-    });
+    // Lê parcelas e App_Config em paralelo para descobrir o mês de referência
+    const [res, cfgRes] = await Promise.all([
+      sheets.spreadsheets.values.get({ spreadsheetId, range: `'${SHEET}'!A2:J300` }),
+      sheets.spreadsheets.values.get({ spreadsheetId, range: `'App_Config'!A1:B20` }).catch(() => ({ data: { values: [] } })),
+    ]);
+
+    // Mês de referência: usa mes_referencia do App_Config se disponível,
+    // senão usa o mês atual do sistema
+    const cfgMap = {};
+    (cfgRes.data.values ?? []).forEach(r => { if (r[0]) cfgMap[String(r[0]).trim().toLowerCase()] = r[1] ?? ""; });
+    const refData = parseDataMesAno(cfgMap["mes_referencia"]);
+    const refM = refData?.m ?? (new Date().getMonth() + 1);
+    const refY = refData?.y ?? new Date().getFullYear();
 
     const rows = res.data.values ?? [];
     const items = rows
@@ -93,14 +102,9 @@ export async function GET() {
         const nTotal  = Math.max(0, parseInt(totalParcelas ?? "0") || 0);
         const isAuto  = String(autoCol ?? "FALSE").toUpperCase() === "TRUE";
 
-        // Se DataFim já passou (mês anterior ao atual), a parcela está encerrada
+        // Se DataFim < mês de referência, a parcela está encerrada
         const dfData = parseDataMesAno(dataFim);
-        if (dfData) {
-          const chk = new Date(Date.now() - 3 * 3600 * 1000);
-          const chkM = chk.getUTCMonth() + 1;
-          const chkY = chk.getUTCFullYear();
-          if (dfData.y < chkY || (dfData.y === chkY && dfData.m < chkM)) return null;
-        }
+        if (dfData && (dfData.y < refY || (dfData.y === refY && dfData.m < refM))) return null;
 
         // Lógica de parcelas pagas (como cartão de crédito):
         // - Auto + J=FALSE (mês ainda aberto): exclui mês atual da contagem

@@ -322,6 +322,11 @@ export async function POST(req) {
       const cfgMap = {};
       cfgCurrent.forEach(r => { if (r[0]) cfgMap[String(r[0]).trim().toLowerCase()] = r[1] ?? ""; });
 
+      // mes_referencia = mês seguinte ao fechado (usado por installments GET)
+      const _d = new Date();
+      _d.setMonth(_d.getMonth() + 1);
+      cfgMap["mes_referencia"] = `${_d.getMonth() + 1}/${_d.getFullYear()}`;
+
       if (cycleStartDate) cfgMap["ciclo_inicio"]      = cycleStartDate;
       if (melhorDia)      cfgMap["melhor_dia_compra"] = String(parseInt(melhorDia));
 
