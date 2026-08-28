@@ -12,6 +12,33 @@ function parseNum(raw) {
   return parseFloat(String(raw ?? "0").trim().replace(/[R$\s.]/g, "").replace(",", ".")) || 0;
 }
 
+// Suporta "M/YYYY" (ex: "8/2026") e "ago/26" / "agosto/2026"
+function parseDataMesAno(raw) {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+  const numMatch = s.match(/^(\d{1,2})\/(\d{2,4})$/);
+  if (numMatch) {
+    const m = parseInt(numMatch[1]);
+    let y = parseInt(numMatch[2]);
+    if (y < 100) y += 2000;
+    return (m >= 1 && m <= 12 && y > 2000) ? { m, y } : null;
+  }
+  const txtMatch = s.match(/([a-zÀ-ɏ]+)\/(\d{2,4})/i);
+  if (txtMatch) {
+    const MAP = {
+      janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,
+      julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12,
+      jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12,
+    };
+    const key = txtMatch[1].toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+    const m = MAP[key];
+    let y = parseInt(txtMatch[2]);
+    if (y < 100) y += 2000;
+    return (m && y > 2000) ? { m, y } : null;
+  }
+  return null;
+}
+
 // Fórmulas Google Sheets — usam YEAR/MONTH que funcionam com serial de data
 function formulaTotalParcelas(row) {
   return `=(YEAR(B${row})-YEAR(G${row}))*12+MONTH(B${row})-MONTH(G${row})+1`;
@@ -67,40 +94,42 @@ export async function GET() {
         const isAuto  = String(autoCol ?? "FALSE").toUpperCase() === "TRUE";
 
         // Se DataFim já passou (mês anterior ao atual), a parcela está encerrada
-        {
-          const dfParts = String(dataFim ?? "").split("/");
-          const dfM = parseInt(dfParts[0]);
-          const dfY = parseInt(dfParts[1]);
-          if (dfM >= 1 && dfM <= 12 && dfY > 2000) {
-            const chk = new Date(Date.now() - 3 * 3600 * 1000);
-            const chkM = chk.getUTCMonth() + 1;
-            const chkY = chk.getUTCFullYear();
-            if (dfY < chkY || (dfY === chkY && dfM < chkM)) return null;
-          }
+        const dfData = parseDataMesAno(dataFim);
+        if (dfData) {
+          const chk = new Date(Date.now() - 3 * 3600 * 1000);
+          const chkM = chk.getUTCMonth() + 1;
+          const chkY = chk.getUTCFullYear();
+          if (dfData.y < chkY || (dfData.y === chkY && dfData.m < chkM)) return null;
         }
 
-        // Auto: exclui mês atual (incrementado no fechamento via PATCH)
-        // Manual: inclui mês atual (usuário paga por conta própria)
-        const _parts = String(dataInicio ?? "0/0").split("/");
-        const _ms = parseInt(_parts[0]), _ys = parseInt(_parts[1]);
+        // Lógica de parcelas pagas (como cartão de crédito):
+        // - Auto + J=FALSE (mês ainda aberto): exclui mês atual da contagem
+        // - Auto + J=TRUE  (fechamento já rodou): inclui mês atual (pagamento confirmado)
+        // - Manual: inclui mês atual sempre
+        const di = parseDataMesAno(dataInicio);
+        const _ms = di?.m ?? 0;
+        const _ys = di?.y ?? 0;
         let nPagas;
         if (_ms && _ys) {
           const now = new Date(Date.now() - 3 * 3600 * 1000); // BRT (UTC-3)
+          const nowFull = now.getUTCFullYear();
+          const nowM1   = now.getUTCMonth() + 1; // 1-indexed
           if (isAuto) {
-            const nowFull = now.getUTCFullYear();
-            const nowM1   = now.getUTCMonth() + 1; // 1-indexed
             if (_ys === nowFull && _ms === nowM1) {
-              // Criada este mês: primeiro pagamento já contabilizado
+              // Criada este mês: primeiro pagamento contabilizado
               nPagas = Math.min(nTotal, 1);
+            } else if (String(pagoCol ?? "FALSE").toUpperCase() === "TRUE") {
+              // Fechamento já rodou (J=TRUE): pagamento deste mês confirmado → inclui
+              nPagas = Math.min(nTotal, Math.max(0, (nowFull - _ys) * 12 + (nowM1 - _ms) + 1));
             } else {
-              const nowMonth = now.getUTCMonth(); // 0-indexed → exclui mês atual
-              const nowYear  = nowMonth === 0 ? now.getUTCFullYear() - 1 : now.getUTCFullYear();
-              nPagas = Math.min(nTotal, Math.max(0, (nowYear - _ys) * 12 + (nowMonth - _ms) + 1));
+              // Mês ainda em aberto: exclui mês atual
+              const nowM0  = now.getUTCMonth(); // 0-indexed
+              const nowY0  = nowM0 === 0 ? nowFull - 1 : nowFull;
+              nPagas = Math.min(nTotal, Math.max(0, (nowY0 - _ys) * 12 + (nowM0 - _ms) + 1));
             }
           } else {
-            const nowMonth = now.getUTCMonth() + 1; // 1-indexed → inclui mês atual
-            const nowYear  = now.getUTCFullYear();
-            nPagas = Math.min(nTotal, Math.max(0, (nowYear - _ys) * 12 + (nowMonth - _ms) + 1));
+            // Manual: inclui mês atual sempre
+            nPagas = Math.min(nTotal, Math.max(0, (nowFull - _ys) * 12 + (nowM1 - _ms) + 1));
           }
         } else {
           nPagas = Math.min(nTotal, Math.max(0, parseInt(parcelasPagas ?? "0") || 0));
@@ -283,6 +312,19 @@ export async function PUT() {
       if (fixedB && fixedB !== rawB) {
         updates.push({ range: `'${SHEET}'!B${rowNum}`, values: [[fixedB]] });
         migrated++;
+      }
+
+      // Se DataFim já passou, desativa a parcela (H=FALSE) — limpeza do banco
+      const effectiveB = fixedB || rawB;
+      const dfPut = parseDataMesAno(effectiveB);
+      const nowPut = new Date(Date.now() - 3 * 3600 * 1000);
+      const nowPutM = nowPut.getUTCMonth() + 1;
+      const nowPutY = nowPut.getUTCFullYear();
+      if (dfPut && (dfPut.y < nowPutY || (dfPut.y === nowPutY && dfPut.m < nowPutM))) {
+        if (String(row[7] ?? "TRUE").toUpperCase() !== "FALSE") {
+          updates.push({ range: `'${SHEET}'!H${rowNum}`, values: [["FALSE"]] });
+        }
+        return; // Parcela encerrada — não recalcular fórmulas
       }
 
       // Fórmula E (YEAR/MONTH funcionam em seriais)
