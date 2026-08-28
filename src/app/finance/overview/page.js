@@ -82,33 +82,41 @@ function parsePrazo(prazo) {
  * parcela encerra, seu valorMensal é somado ao freed (sobra mais);
  * conforme cada empréstimo encerra, seu valor é subtraído (sobra menos).
  */
-function buildProjection(acumulado, poupancaRealBase, commitments, incomeCommitments = []) {
+function buildProjection(acumulado, poupancaRealBase, commitments, incomeCommitments = [], firstMonthValue = null) {
   const now   = new Date();
-  let   month = now.getMonth() + 1;
+  // Começa do próximo mês — o mês atual ainda está em andamento
+  let   month = now.getMonth() + 2;
   let   year  = now.getFullYear();
+  if (month > 12) { month = 1; year++; }
   let   running = acumulado;
   const result  = [];
+  let   isFirst = true;
 
   // Simula até dez/26
   while (year < 2026 || (year === 2026 && month <= 12)) {
     // Valor acumulado das parcelas que já encerraram ANTES deste mês
-    // (encerrou no mês passado ou antes → dinheiro livre a partir deste mês)
     const freed = commitments.reduce((s, c) => {
       const p = parsePrazo(c.prazo);
-      if (!p) return s; // sem data fim → ainda ativa, não libera
+      if (!p) return s;
       const jaEncerrou = (p.ano < year) || (p.ano === year && p.mes < month);
       return jaEncerrou ? s + c.valorMensal : s;
     }, 0);
 
-    // Valor acumulado dos empréstimos (ganhos com prazo) que já encerraram ANTES deste mês
+    // Valor acumulado dos empréstimos que já encerraram ANTES deste mês
     const lostIncome = incomeCommitments.reduce((s, c) => {
       const p = parsePrazo(c.prazo);
-      if (!p) return s; // sem prazo → recebimento contínuo, não some
+      if (!p) return s;
       const jaEncerrou = (p.ano < year) || (p.ano === year && p.mes < month);
       return jaEncerrou ? s + c.valor : s;
     }, 0);
 
-    running += poupancaRealBase + freed - lostIncome;
+    if (isFirst && firstMonthValue !== null) {
+      // Próximo mês usa a Poupança Real do mês atual (o que realmente aconteceu)
+      running += firstMonthValue;
+    } else {
+      running += poupancaRealBase + freed - lostIncome;
+    }
+    isFirst = false;
 
     result.push({
       mes:      `${MES_NUM_ABBR[month - 1]}/${String(year).slice(2)}`,
@@ -205,14 +213,17 @@ export default function OverviewPage() {
   const gastosParcelasMes = compromissos.reduce((s, c) => s + c.valorMensal, 0);
 
   const gastosAteMomento = gastosVariaveisReal + gastosFixosPagos + gastosParcelasMes;
-  const poupancaReal     = (summary.ganhoTudo ?? 0) - gastosAteMomento;
+  const poupancaReal     = (summary.ganhoConfirmado ?? summary.ganhoTudo ?? 0) - gastosAteMomento;
 
   // Para projeção: variáveis consideradas como totalmente pagas no orçamento (real se excedeu)
   const todosFixosMensal   = (data?.gastos?.fixos?.items ?? [])
     .filter(i => !i.item.includes("Até"))
     .reduce((s, i) => s + i.real, 0);
-  const varParaProjecao    = Math.max(varPrevTotal, varRealTotal);
-  const poupancaMensalBase = (summary.ganhoTudo ?? 0) - todosFixosMensal - varParaProjecao - gastosParcelasMes;
+  const varParaProjecao    = varPrevTotal;
+  const poupancaMensalBase = (summary.ganhoTotal ?? summary.ganhoTudo ?? 0) - todosFixosMensal - varParaProjecao - gastosParcelasMes;
+  // Previsão só com renda fixa (CLT + empréstimos) — sem PDV variável
+  const poupancaPrevCLT = ((data?.ganhos?.clt ?? 0) + (data?.ganhos?.emprestimosTotal ?? data?.ganhos?.emprestimos ?? 0))
+    - todosFixosMensal - varParaProjecao - gastosParcelasMes;
 
   // Poupança acumulada — último mês atingido (valor já é acumulado na planilha)
   const historico         = savingsData?.historico ?? poupanca.historico ?? [];
@@ -271,7 +282,9 @@ export default function OverviewPage() {
     // Usa poupancaReal (ganhos − gastos do mês atual) como base da projeção.
     // buildProjection adiciona mês a mês o valor das parcelas que vão encerrando.
     if (poupancaMensalBase !== undefined || poupancaAcumulada) {
-      buildProjection(poupancaAcumulada, poupancaMensalBase, compromissos, emprestimosComPrazo).forEach(d => {
+      // Só usa poupancaReal no primeiro mês quando há excedente nos gastos variáveis
+      const firstMonthOverride = varRealTotal > varPrevTotal ? poupancaReal : null;
+      buildProjection(poupancaAcumulada, poupancaMensalBase, compromissos, emprestimosComPrazo, firstMonthOverride).forEach(d => {
         const e = map.get(d.mes);
         map.set(d.mes, { ...(e ?? { mes: d.mes }), projecao: d.projecao });
       });
@@ -363,38 +376,57 @@ export default function OverviewPage() {
                 ))}
               </div>
 
-              {/* Linha 2: Poupança Real + Poupança Previsão */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {/* Linha 2: Poupança Real + Prev. CLT + Prev. Tudo */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
                 {[
                   {
-                    label: "Poupança Real",
+                    label: "Real",
+                    sublabel: "POUPANÇA",
                     value: poupancaReal,
-                    hint: ["ganhos − gastos", "mês atual"],
+                    hint: ["ganhos confirmados", "− gastos realizados"],
                     icon: "🏦",
+                    accent: null,
                   },
                   {
-                    label: "Poupança Prev.",
-                    value: poupancaMensalBase,
-                    hint: ["fim de mês", "se gastar o previsto"],
-                    icon: "📈",
+                    label: "Prev. CLT",
+                    sublabel: "POUPANÇA",
+                    value: poupancaPrevCLT,
+                    hint: ["CLT + empréstimos", "− gastos previstos"],
+                    icon: "🔒",
+                    accent: "#6366f1",
                   },
-                ].map(({ label, value, hint, icon }) => {
+                  {
+                    label: "Prev. Total",
+                    sublabel: "POUPANÇA",
+                    value: poupancaMensalBase,
+                    hint: ["todos os ganhos", "− gastos previstos"],
+                    icon: "📊",
+                    accent: "#8b5cf6",
+                  },
+                ].map(({ label, sublabel, value, hint, icon, accent }) => {
                   const pos = value >= 0;
                   const cor = pos ? "#10b981" : "#ef4444";
+                  const borderCol = accent
+                    ? (pos ? `${accent}30` : "rgba(239,68,68,0.18)")
+                    : (pos ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)");
+                  const bgCol = accent
+                    ? (pos ? `${accent}08` : "rgba(239,68,68,0.06)")
+                    : (pos ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.06)");
                   return (
                     <div key={label} style={{
-                      padding: "14px 16px",
-                      background: pos ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.06)",
-                      border: `1px solid ${pos ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)"}`,
+                      padding: "12px 14px",
+                      background: bgCol,
+                      border: `1px solid ${borderCol}`,
                       borderRadius: 16,
                     }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                        <span style={{ fontSize: 18 }}>{icon}</span>
-                        <div style={{ fontSize: 9, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", lineHeight: 1.4 }}>
-                          {label}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+                        <span style={{ fontSize: 16 }}>{icon}</span>
+                        <div style={{ lineHeight: 1.3 }}>
+                          <div style={{ fontSize: 8, color: accent ?? "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>{sublabel}</div>
+                          <div style={{ fontSize: 10, color: "var(--text-primary)", fontWeight: 700 }}>{label}</div>
                         </div>
                       </div>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: cor, lineHeight: 1, marginBottom: 6 }}>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: cor, lineHeight: 1, marginBottom: 5 }}>
                         {fmt(value)}
                       </div>
                       <div style={{ fontSize: 9, color: "var(--text-muted)", lineHeight: 1.5 }}>
@@ -545,18 +577,28 @@ export default function OverviewPage() {
                   const now        = new Date();
                   const today      = now.getDate();
                   const melhorDia  = data?.config?.melhorDiaCompra;
+                  const cicloInicio = data?.config?.cicloInicio; // "DD/MM/YYYY"
 
                   let daysLeft, totalDays, pctElapsed;
 
                   if (melhorDia) {
                     const lastDay   = melhorDia - 1;
-                    // Define início e fim do ciclo financeiro atual
-                    const endDate   = today < melhorDia
-                      ? new Date(now.getFullYear(), now.getMonth(), lastDay)
-                      : new Date(now.getFullYear(), now.getMonth() + 1, lastDay);
-                    const startDate = today < melhorDia
-                      ? new Date(now.getFullYear(), now.getMonth() - 1, melhorDia)
-                      : new Date(now.getFullYear(), now.getMonth(), melhorDia);
+                    let startDate, endDate;
+                    if (cicloInicio) {
+                      const [ciDd, ciMm, ciYyyy] = cicloInicio.split("/").map(Number);
+                      startDate = new Date(ciYyyy, ciMm - 1, ciDd);
+                      // Fim: lastDay do mês seguinte ao início do ciclo
+                      const endMon = ciMm % 12; // 0-indexed do próximo mês
+                      const endYr  = ciMm === 12 ? ciYyyy + 1 : ciYyyy;
+                      endDate = new Date(endYr, endMon, lastDay);
+                    } else {
+                      endDate   = today < melhorDia
+                        ? new Date(now.getFullYear(), now.getMonth(), lastDay)
+                        : new Date(now.getFullYear(), now.getMonth() + 1, lastDay);
+                      startDate = today < melhorDia
+                        ? new Date(now.getFullYear(), now.getMonth() - 1, melhorDia)
+                        : new Date(now.getFullYear(), now.getMonth(), melhorDia);
+                    }
                     const todayMs   = new Date(now.getFullYear(), now.getMonth(), today).getTime();
                     const startMs   = startDate.getTime();
                     const endMs     = endDate.getTime();

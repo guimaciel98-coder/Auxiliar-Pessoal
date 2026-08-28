@@ -25,7 +25,31 @@ export default function IncomePage() {
   const [toast, setToast]       = useState(null);
   const [form, setForm]         = useState({ grupo: "PDV", item: "", valor: "", confirmado: false, prazo: "" });
 
+  const [menuOpen, setMenuOpen]       = useState(null); // nome do item com menu aberto
+  const [deleting, setDeleting]       = useState(null); // nome do item sendo excluído
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // nome aguardando confirmação
+
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 2800); }
+
+  async function handleDelete(itemName) {
+    if (deleteConfirm !== itemName) { setDeleteConfirm(itemName); return; }
+    setDeleteConfirm(null);
+    setDeleting(itemName);
+    try {
+      const res = await fetch("/api/finance/ganho/add", {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item: itemName }),
+      });
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error);
+      showToast("✓ Ganho removido");
+      refetch(true);
+    } catch (err) {
+      showToast(`⚠ ${err.message}`);
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   function openAdd() {
     setEditingItem(null);
@@ -96,6 +120,10 @@ export default function IncomePage() {
     <div className={styles.container}>
       <ModuleHeader title="Ganhos" />
       <Navigation />
+
+      {menuOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 40 }} onClick={() => { setMenuOpen(null); setDeleteConfirm(null); }} />
+      )}
 
       {toast && (
         <div style={{
@@ -278,7 +306,7 @@ export default function IncomePage() {
                         >
                           {toggling.has(item.item) ? "…" : item.confirmado ? "✓" : "○"}
                         </div>
-                        <div style={{ display: "flex", gap: 6 }}>
+                        <div style={{ display: "flex", gap: 6, position: "relative" }}>
                           <button onClick={() => openEdit(item, group.label)} style={{
                             fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
                             fontFamily: "inherit", background: "rgba(255,255,255,0.05)",
@@ -287,15 +315,52 @@ export default function IncomePage() {
                           }}>
                             Editar
                           </button>
-                          <button style={{
-                            fontSize: 15, lineHeight: 1, width: 28, height: 28, borderRadius: 6,
-                            fontFamily: "inherit", background: "rgba(255,255,255,0.05)",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            color: "rgba(255,255,255,0.4)", cursor: "pointer",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                          }}>
-                            ···
-                          </button>
+                          <div style={{ position: "relative" }}>
+                            <button
+                              onClick={() => { setMenuOpen(menuOpen === item.item ? null : item.item); setDeleteConfirm(null); }}
+                              style={{
+                                fontSize: 15, lineHeight: 1, width: 28, height: 28, borderRadius: 6,
+                                fontFamily: "inherit", background: "rgba(255,255,255,0.05)",
+                                border: "1px solid rgba(255,255,255,0.1)",
+                                color: "rgba(255,255,255,0.4)", cursor: "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                              }}>
+                              ···
+                            </button>
+                            {menuOpen === item.item && (
+                              <div
+                                style={{
+                                  position: "absolute", bottom: 34, right: 0, zIndex: 50,
+                                  background: "rgba(17,24,39,0.98)", border: "1px solid rgba(255,255,255,0.12)",
+                                  borderRadius: 10, overflow: "hidden", minWidth: 130,
+                                  boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                                }}
+                              >
+                                {deleteConfirm === item.item ? (
+                                  <button
+                                    onClick={() => handleDelete(item.item)}
+                                    disabled={deleting === item.item}
+                                    style={{
+                                      width: "100%", padding: "10px 14px", fontSize: 12, fontWeight: 700,
+                                      fontFamily: "inherit", background: "rgba(239,68,68,0.15)",
+                                      border: "none", color: "#f87171", cursor: "pointer", textAlign: "left",
+                                    }}>
+                                    {deleting === item.item ? "Removendo…" : "Confirmar exclusão"}
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleDelete(item.item)}
+                                    style={{
+                                      width: "100%", padding: "10px 14px", fontSize: 12, fontWeight: 600,
+                                      fontFamily: "inherit", background: "transparent",
+                                      border: "none", color: "#f87171", cursor: "pointer", textAlign: "left",
+                                    }}>
+                                    🗑 Excluir
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

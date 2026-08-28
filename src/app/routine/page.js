@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import Navigation from "@/components/ui/Navigation";
 import ModuleHeader from "@/components/ui/ModuleHeader";
 import styles from "./Routine.module.css";
@@ -635,6 +636,203 @@ function TabSemana({ onSelectDay }) {
         );
       })}
     </div>
+    </div>
+  );
+}
+
+// ─── (Férias movido para /routine/ferias/page.js) ─────────────────────────────
+// ─── (TabFerias removida — agora é subpágina) ─────────────────────────────────
+const __FERIAS_DAYS_OLD_REMOVED = [
+  { day:1,  date:"2026-07-01", wd:"Qua", title:"Burocracia pesada", blocks:[
+    {p:"manhã",text:"CIN (Carteira de Identidade)"},{p:"tarde",text:"Marcar médicos"},{p:"academia",text:"Academia"}]},
+  { day:2,  date:"2026-07-02", wd:"Qui", title:"Compras + organização", blocks:[
+    {p:"manhã",text:"Agendar natação e pilates"},{p:"tarde",text:"Compras — sunga, perfume, suporte gabinete"}]},
+  { day:3,  date:"2026-07-03", wd:"Sex", title:"Resolver e relaxar", blocks:[
+    {p:"manhã",text:"FUP gabinete"},{p:"tarde",text:"Arrumar tela"},{p:"noite",text:"Jantar fora (Pinheiros/Vila Madalena)"}]},
+  { day:4,  date:"2026-07-04", wd:"Sáb", title:"Cultura + gastronomia", blocks:[
+    {p:"manhã",text:"Pilates"},{p:"tarde",text:"Pinacoteca (grátis no sábado)"},{p:"noite",text:"Rodízio japonês"}]},
+  { day:5,  date:"2026-07-05", wd:"Dom", title:"Ar livre + lazer", blocks:[
+    {p:"manhã",text:"Corrida no parque"},{p:"tarde",text:"Piquenique"},{p:"noite",text:"Jogos em casa"}]},
+  { day:6,  date:"2026-07-06", wd:"Seg", title:"Treino + cozinha", blocks:[
+    {p:"academia",text:"Academia"},{p:"tarde",text:"Tarde livre"},{p:"noite",text:"Cozinhar receita nova juntos"}]},
+  { day:7,  date:"2026-07-07", wd:"Ter", title:"Museu + cinema", blocks:[
+    {p:"academia",text:"Academia"},{p:"tarde",text:"MASP (grátis na terça)"},{p:"noite",text:"Cinema"}]},
+  { day:8,  date:"2026-07-08", wd:"Qua", title:"Esporte + cultura", blocks:[
+    {p:"manhã",text:"Natação"},{p:"tarde",text:"Museu do Futebol"},{p:"noite",text:"Série em casa"}]},
+  { day:9,  date:"2026-07-09", wd:"Qui", title:"Social + passeio", blocks:[
+    {p:"manhã",text:"Café da manhã fora"},{p:"tarde",text:"Ver Projeto Social"},{p:"noite",text:"Passeio noturno"}]},
+  { day:10, date:"2026-07-10", wd:"Sex", title:"Dia livre total", blocks:[
+    {p:"manhã",text:"Acordar sem pressa"},{p:"tarde",text:"Maratona de série"},{p:"noite",text:"Delivery"}]},
+  { day:11, date:"2026-07-11", wd:"Sáb", title:"Feira + jantar", blocks:[
+    {p:"manhã",text:"Pilates"},{p:"tarde",text:"Feira da Liberdade"},{p:"noite",text:"Jantar no bairro"}]},
+  { day:12, date:"2026-07-12", wd:"Dom", title:"Casa + corrida", blocks:[
+    {p:"manhã",text:"Faxina da casa"},{p:"tarde",text:"Corrida + tarde em casa"}]},
+  { day:13, date:"2026-07-13", wd:"Seg", title:"Saúde + agenda", blocks:[
+    {p:"academia",text:"Academia"},{p:"tarde",text:"Consultas médicas"},{p:"noite",text:"Agendar psicóloga"}]},
+  { day:14, date:"2026-07-14", wd:"Ter", title:"Trabalho + cultura", blocks:[
+    {p:"academia",text:"Academia"},{p:"tarde",text:"Pagamento PDV + MASP"},{p:"noite",text:"Jantar especial"}]},
+  { day:15, date:"2026-07-15", wd:"Qua", title:"Encerramento", blocks:[
+    {p:"academia",text:"Academia"},{p:"tarde",text:"Tarde livre no parque"},{p:"noite",text:"Rodízio japonês (encerramento)"}]},
+];
+
+const PERIOD_META = {
+  "manhã":    { color: "#f59e0b", bg: "rgba(245,158,11,0.10)", icon: "☀" },
+  "tarde":    { color: "#3b82f6", bg: "rgba(59,130,246,0.10)", icon: "🌤" },
+  "noite":    { color: "#8b5cf6", bg: "rgba(139,92,246,0.10)", icon: "🌙" },
+  "academia": { color: "#10b981", bg: "rgba(16,185,129,0.10)", icon: "💪" },
+};
+
+const LS_FER_CHK  = "ferias_checked_2026";
+const LS_FER_EDIT = "ferias_edits_2026";
+
+function TabFerias() {
+  const todayISO = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  })();
+  const todayIdx = _FERIAS_DAYS_OLD.findIndex(d => d.date === todayISO);
+
+  const [sel, setSel] = useState(todayIdx >= 0 ? todayIdx : 0);
+  const [checked, setChecked] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(LS_FER_CHK) || "{}"); } catch { return {}; }
+  });
+  const [edits, setEdits] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(LS_FER_EDIT) || "{}"); } catch { return {}; }
+  });
+  const [editing, setEditing] = useState(null);
+
+  useEffect(() => { try { localStorage.setItem(LS_FER_CHK, JSON.stringify(checked)); } catch {} }, [checked]);
+  useEffect(() => { try { localStorage.setItem(LS_FER_EDIT, JSON.stringify(edits)); } catch {} }, [edits]);
+
+  function toggleCheck(di, bi) {
+    const k = `${di}-${bi}`;
+    setChecked(p => { const n = { ...p }; if (n[k]) delete n[k]; else n[k] = true; return n; });
+  }
+  function saveEdit(di, bi, text) {
+    const k = `${di}-${bi}`;
+    const orig = _FERIAS_DAYS_OLD[di].blocks[bi].text;
+    setEdits(p => { const n = { ...p }; if (text === orig || !text.trim()) delete n[k]; else n[k] = text; return n; });
+    setEditing(null);
+  }
+  function blockText(di, bi) { return edits[`${di}-${bi}`] || _FERIAS_DAYS_OLD[di].blocks[bi].text; }
+
+  const completedDays = _FERIAS_DAYS_OLD.filter((d, di) =>
+    d.blocks.length > 0 && d.blocks.every((_, bi) => checked[`${di}-${bi}`])
+  ).length;
+  const totalBlocks  = _FERIAS_DAYS_OLD.reduce((s, d) => s + d.blocks.length, 0);
+  const checkedCount = Object.keys(checked).length;
+  const pct = totalBlocks > 0 ? Math.round((checkedCount / totalBlocks) * 100) : 0;
+
+  const cur = _FERIAS_DAYS_OLD[sel];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Progresso geral */}
+      <div style={{ padding: "18px 20px", borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+          <span style={{ fontSize: 15, fontWeight: 900, color: "#f59e0b" }}>🏖 Férias Jul 2026</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>{completedDays} de 15 dias</span>
+        </div>
+        <div style={{ height: 6, borderRadius: 99, overflow: "hidden", background: "rgba(255,255,255,0.06)" }}>
+          <div style={{ height: "100%", width: `${pct}%`, borderRadius: 99, background: "linear-gradient(90deg,#f59e0b,#10b981)", transition: "width 0.4s" }} />
+        </div>
+        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 6, textAlign: "right" }}>
+          {checkedCount} de {totalBlocks} atividades · {pct}%
+        </div>
+      </div>
+
+      {/* Seletor de dia */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <button onClick={() => setSel(Math.max(0, sel - 1))} disabled={sel === 0}
+          style={{ background: "none", border: "none", fontSize: 18, color: sel > 0 ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.1)", cursor: sel > 0 ? "pointer" : "default", padding: "4px 2px", flexShrink: 0 }}>◀</button>
+        <div style={{ flex: 1, display: "flex", gap: 4, overflowX: "auto", paddingBottom: 4 }}>
+          {_FERIAS_DAYS_OLD.map((d, i) => {
+            const isSel = i === sel;
+            const isT   = d.date === todayISO;
+            const isDone = d.blocks.length > 0 && d.blocks.every((_, bi) => checked[`${i}-${bi}`]);
+            return (
+              <button key={i} onClick={() => setSel(i)} style={{
+                flexShrink: 0, width: 32, height: 32, borderRadius: 99,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 12, fontWeight: 800, cursor: "pointer",
+                border: isT ? "2px solid #f59e0b" : isSel ? "2px solid rgba(255,255,255,0.3)" : "1px solid rgba(255,255,255,0.08)",
+                background: isDone ? "rgba(16,185,129,0.15)" : isSel ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.03)",
+                color: isDone ? "#10b981" : isSel ? "#fff" : "rgba(255,255,255,0.35)",
+              }}>{d.day}</button>
+            );
+          })}
+        </div>
+        <button onClick={() => setSel(Math.min(14, sel + 1))} disabled={sel === 14}
+          style={{ background: "none", border: "none", fontSize: 18, color: sel < 14 ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.1)", cursor: sel < 14 ? "pointer" : "default", padding: "4px 2px", flexShrink: 0 }}>▶</button>
+      </div>
+
+      {/* Card do dia */}
+      {cur && (
+        <div style={{
+          padding: "18px 20px", borderRadius: 16, background: "rgba(255,255,255,0.03)",
+          border: `1px solid ${cur.date === todayISO ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.08)"}`,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 20, fontWeight: 900, color: cur.date === todayISO ? "#f59e0b" : "rgba(255,255,255,0.8)" }}>
+                Dia {cur.day}
+              </span>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.3)" }}>{cur.wd}, {parseInt(cur.date.split("-")[2])} jul</span>
+              {cur.date === todayISO && (
+                <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 99, background: "rgba(245,158,11,0.12)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.25)" }}>HOJE</span>
+              )}
+            </div>
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.3)", marginBottom: 16, fontStyle: "italic" }}>{cur.title}</div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {cur.blocks.map((block, bi) => {
+              const k = `${sel}-${bi}`;
+              const done = !!checked[k];
+              const meta = PERIOD_META[block.p] || PERIOD_META["tarde"];
+              const isEd = editing === k;
+              const txt = blockText(sel, bi);
+              return (
+                <div key={bi} style={{
+                  display: "flex", alignItems: "flex-start", gap: 10,
+                  padding: "12px 14px", borderRadius: 12,
+                  background: done ? "rgba(16,185,129,0.04)" : meta.bg,
+                  border: `1px solid ${done ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.06)"}`,
+                  opacity: done ? 0.55 : 1, transition: "all 0.2s",
+                }}>
+                  <button onClick={() => toggleCheck(sel, bi)} style={{
+                    flexShrink: 0, width: 22, height: 22, borderRadius: 6,
+                    border: `2px solid ${done ? "#10b981" : meta.color}`,
+                    background: done ? "rgba(16,185,129,0.2)" : "transparent",
+                    color: done ? "#10b981" : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", fontSize: 12, fontWeight: 900, marginTop: 1,
+                  }}>{done ? "✓" : ""}</button>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                      <span style={{ fontSize: 11 }}>{meta.icon}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: meta.color }}>{block.p}</span>
+                    </div>
+                    {isEd ? (
+                      <input autoFocus defaultValue={txt}
+                        onBlur={e => saveEdit(sel, bi, e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
+                        style={{ width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "5px 8px", color: "#f0f0f8", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                      />
+                    ) : (
+                      <div onClick={() => setEditing(k)} style={{
+                        fontSize: 13, fontWeight: 500, cursor: "text", lineHeight: 1.4,
+                        color: done ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.75)",
+                        textDecoration: done ? "line-through" : "none",
+                      }}>{txt}</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

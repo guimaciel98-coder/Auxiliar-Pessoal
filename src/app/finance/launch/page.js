@@ -11,8 +11,17 @@ import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 
 const MES_PT_FULL = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
-function cicloAtualLabel(melhorDia) {
+function cicloAtualLabel(melhorDia, cicloInicio) {
   if (!melhorDia) return null;
+  if (cicloInicio) {
+    const parts = cicloInicio.split("/").map(Number);
+    const ciMm = parts[1], ciYyyy = parts[2];
+    if (ciMm && ciYyyy) {
+      const nextMon = ciMm % 12; // 0-indexed do mês seguinte
+      const nextYr  = ciMm === 12 ? ciYyyy + 1 : ciYyyy;
+      return `${MES_PT_FULL[nextMon]}/${String(nextYr).slice(2)}`;
+    }
+  }
   const now   = new Date();
   const today = now.getDate();
   const mIdx  = today < melhorDia ? now.getMonth() : now.getMonth() + 1;
@@ -57,11 +66,12 @@ export default function LaunchPage() {
   const fmtShort = (v) => fmtFin(v, hideNumbers);
 
   const categories = (finData?.gastos?.variaveis?.items ?? []).map(i => i.item);
-  const melhorDia  = finData?.config?.melhorDiaCompra ?? null;
-  const cicloAtual = cicloAtualLabel(melhorDia);
+  const melhorDia   = finData?.config?.melhorDiaCompra ?? null;
+  const cicloInicio = finData?.config?.cicloInicio ?? null;
+  const cicloAtual  = cicloAtualLabel(melhorDia, cicloInicio);
 
   // ── Estado: lançamento ───────────────────────────────────────────────────
-  const [form, setForm]     = useState({ date: todayISO(), category: "", value: "" });
+  const [form, setForm]     = useState({ date: todayISO(), category: "", value: "", ciclo: "" });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(null); // rowIndex sendo apagado
 
@@ -101,6 +111,34 @@ export default function LaunchPage() {
   const [openCiclos,     setOpenCiclos]     = useState({});
   const [monthsHistory,  setMonthsHistory]  = useState([]);
   const [monthsLoad,     setMonthsLoad]     = useState(true);
+
+  // ── Ciclo padrão + lista de ciclos disponíveis ────────────────────────────
+  useEffect(() => {
+    if (cicloAtual && !form.ciclo) setForm(p => ({ ...p, ciclo: cicloAtual }));
+  }, [cicloAtual]);
+
+  const availableCycles = (() => {
+    const generated = [];
+    if (melhorDia) {
+      const now = new Date();
+      let sM = now.getDate() < melhorDia ? now.getMonth() : now.getMonth() + 1;
+      let sY = now.getFullYear();
+      if (sM > 11) { sM -= 12; sY++; }
+      for (let i = 0; i < 6; i++) {
+        let m = sM - i, y = sY;
+        while (m < 0) { m += 12; y--; }
+        generated.push(`${MES_PT_FULL[m]}/${String(y).slice(2)}`);
+      }
+    }
+    const fromEntries = entries.map(e => e.ciclo).filter(Boolean);
+    const all = [...new Set([...generated, ...fromEntries])];
+    const parse = (s) => {
+      const [mes, ano] = (s ?? "").split("/");
+      const mIdx = MES_PT_FULL.indexOf(mes?.toLowerCase());
+      return mIdx >= 0 ? (2000 + parseInt(ano || "0")) * 12 + mIdx : 0;
+    };
+    return all.sort((a, b) => parse(b) - parse(a));
+  })();
 
   // ── Toast ────────────────────────────────────────────────────────────────
   const [toast, setToast] = useState(null);
@@ -159,12 +197,12 @@ export default function LaunchPage() {
     try {
       const res = await fetch("/api/finance/launch", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: form.date, descricao: "", category: form.category, value: parseFloat(form.value), ciclo: cicloAtual ?? "" }),
+        body: JSON.stringify({ date: form.date, descricao: "", category: form.category, value: parseFloat(form.value), ciclo: form.ciclo || cicloAtual || "" }),
       });
       const j = await res.json();
       if (!j.ok) throw new Error(j.error);
       showToast("✓ Lançamento registrado!");
-      setForm({ date: todayISO(), category: form.category, value: "" });
+      setForm(p => ({ date: todayISO(), category: p.category, value: "", ciclo: p.ciclo }));
       loadEntries();
       refetch(true);
     } catch (err) { showToast(`⚠ ${err.message}`, true); }
@@ -200,11 +238,12 @@ export default function LaunchPage() {
     if (!byCiclo[c][e.data]) byCiclo[c][e.data] = [];
     byCiclo[c][e.data].push(e);
   }
-  const ciclosSorted = Object.keys(byCiclo).sort((a, b) => {
-    if (a === cicloAtual) return -1;
-    if (b === cicloAtual) return 1;
-    return a < b ? 1 : -1;
-  });
+  const parseCiclo = (s) => {
+    const [mes, ano] = (s ?? "").split("/");
+    const mIdx = MES_PT_FULL.indexOf(mes?.toLowerCase());
+    return mIdx >= 0 ? (2000 + parseInt(ano || "0")) * 12 + mIdx : 0;
+  };
+  const ciclosSorted = Object.keys(byCiclo).sort((a, b) => parseCiclo(a) - parseCiclo(b));
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -386,6 +425,18 @@ export default function LaunchPage() {
                 <div>
                   <label style={labelSt}>Data</label>
                   <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} required style={{ ...inputSt, colorScheme: "dark" }} />
+                </div>
+                <div>
+                  <label style={labelSt}>Ciclo</label>
+                  <select
+                    value={form.ciclo}
+                    onChange={e => setForm(p => ({ ...p, ciclo: e.target.value }))}
+                    style={{ ...inputSt, appearance: "none", cursor: "pointer", textTransform: "capitalize" }}
+                  >
+                    {availableCycles.map(c => (
+                      <option key={c} value={c}>{c}{c === cicloAtual ? " (atual)" : ""}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label style={labelSt}>Categoria</label>

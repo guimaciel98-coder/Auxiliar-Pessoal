@@ -84,7 +84,6 @@ export async function PATCH(req) {
       if (campos.nome           !== undefined) updates.push({ range: `'App_Parcelas'!A${row}`, values: [[campos.nome]] });
       if (campos.dataFim        !== undefined) updates.push({ range: `'App_Parcelas'!B${row}`, values: [[campos.dataFim]] });
       if (campos.auto           !== undefined) updates.push({ range: `'App_Parcelas'!I${row}`, values: [[campos.auto ? "TRUE" : "FALSE"]] });
-      if (campos.parcelasPagas  !== undefined) updates.push({ range: `'App_Parcelas'!F${row}`, values: [[Number(campos.parcelasPagas)]] });
       if (campos.valorTotal !== undefined) {
         updates.push({ range: `'App_Parcelas'!C${row}`, values: [[vTotal]] });
         updates.push({ range: `'App_Parcelas'!D${row}`, values: [[vMensal]] });
@@ -95,23 +94,26 @@ export async function PATCH(req) {
       if (campos.dataInicio !== undefined || campos.dataFim !== undefined) {
         const fmtE = `=(YEAR(B${row})-YEAR(G${row}))*12+MONTH(B${row})-MONTH(G${row})+1`;
         updates.push({ range: `'App_Parcelas'!E${row}`, values: [[fmtE]] });
-        // F: auto → calcula por tempo; manual → reset 0 para limpar qualquer erro
-        const isAutoRow = String(campos.auto !== undefined ? (campos.auto ? "TRUE" : "FALSE") : (cur[8] ?? "FALSE")).toUpperCase() === "TRUE";
-        const [ms, ys] = String(dIni).split("/").map(Number);
-        if (isAutoRow && ms >= 1 && ms <= 12 && ys > 2000) {
-          const now = new Date();
-          const nowM = now.getMonth() + 1;
-          const nowY = now.getFullYear();
-          const [me, ye] = String(dFim).split("/").map(Number);
-          const nTotal = (me >= 1 && me <= 12 && ye > 2000) ?
-            Math.max(1, (ye - ys) * 12 + (me - ms) + 1) : 0;
-          const computed = (nowY - ys) * 12 + (nowM - ms) + 1;
-          const fVal = nTotal > 0 ? Math.min(nTotal, Math.max(0, computed)) : Math.max(0, computed);
-          updates.push({ range: `'App_Parcelas'!F${row}`, values: [[fVal]] });
-        } else {
-          updates.push({ range: `'App_Parcelas'!F${row}`, values: [[0]] });
+        // F: auto → calcula por tempo; manual com parcelasPagas explícito → usa o valor fornecido; manual sem → mantém atual
+        if (campos.parcelasPagas === undefined) {
+          const isAutoRow = String(campos.auto !== undefined ? (campos.auto ? "TRUE" : "FALSE") : (cur[8] ?? "FALSE")).toUpperCase() === "TRUE";
+          const [ms, ys] = String(dIni).split("/").map(Number);
+          if (isAutoRow && ms >= 1 && ms <= 12 && ys > 2000) {
+            const now = new Date();
+            const nowM = now.getMonth() + 1;
+            const nowY = now.getFullYear();
+            const [me, ye] = String(dFim).split("/").map(Number);
+            const nTotal = (me >= 1 && me <= 12 && ye > 2000) ?
+              Math.max(1, (ye - ys) * 12 + (me - ms) + 1) : 0;
+            const computed = (nowY - ys) * 12 + (nowM - ms) + 1;
+            const fVal = nTotal > 0 ? Math.min(nTotal, Math.max(0, computed)) : Math.max(0, computed);
+            updates.push({ range: `'App_Parcelas'!F${row}`, values: [[fVal]] });
+          }
         }
       }
+
+      // parcelasPagas explícito sempre sobrescreve F (processado por último)
+      if (campos.parcelasPagas !== undefined) updates.push({ range: `'App_Parcelas'!F${row}`, values: [[Number(campos.parcelasPagas)]] });
 
       if (updates.length) {
         await sheets.spreadsheets.values.batchUpdate({

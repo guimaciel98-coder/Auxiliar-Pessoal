@@ -25,6 +25,7 @@ export default function DailyOrchestrator({ mode = "today" }) {
   } = useTasks(mode);
 
   const [filter, setFilter]           = useState("all");
+  const [search, setSearch]           = useState("");
   const [rescheduleOpen, setRescheduleOpen] = useState(null);
   const [editingTask, setEditingTask]  = useState(null);
   const [clients, setClients]         = useState([]);
@@ -94,6 +95,7 @@ export default function DailyOrchestrator({ mode = "today" }) {
   }
 
   function visible(t) {
+    if (search && !t.name?.toLowerCase().includes(search.toLowerCase())) return false;
     if (filter === "urgent") return t.urgent || t.high;
     if (filter === "all")    return true;
     return t.proj === filter;
@@ -136,6 +138,8 @@ export default function DailyOrchestrator({ mode = "today" }) {
         dateLabel={dl}
         filter={filter}
         setFilter={setFilter}
+        search={search}
+        setSearch={setSearch}
         completedCount={completedCount}
         totalCount={totalCount}
         onRefresh={(msg) => { sync(); if (msg) showToast(msg); }}

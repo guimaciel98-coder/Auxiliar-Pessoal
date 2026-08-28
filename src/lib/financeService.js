@@ -53,11 +53,13 @@ export async function fetchFinancialData() {
   // ── Ciclo do cartão: lê ciclo_inicio e melhor_dia_compra do App_Config ──────
   let variaveisRealMap = null;
   let melhorDiaCompra  = null;
+  let cicloInicio      = null; // string "DD/MM/YYYY"
   let cicloInicioMs    = 0;
 
   for (const row of configRes.data.values ?? []) {
     const key = String(row[0] ?? "").trim().toLowerCase();
     if (key === "ciclo_inicio") {
+      cicloInicio   = String(row[1] ?? "").trim() || null;
       cicloInicioMs = parseDateBR(String(row[1] ?? ""));
     }
     if (key === "melhor_dia_compra") {
@@ -65,9 +67,20 @@ export async function fetchFinancialData() {
     }
   }
 
-  // Calcula o label do ciclo atual (ex: "maio/26") a partir de melhor_dia_compra
+  // Calcula o label do ciclo atual (ex: "agosto/26")
+  // Se cicloInicio existe, usa o mês seguinte ao início do ciclo.
+  // Fallback: calcula a partir de melhorDia e data atual.
   const MES_PT_ABBR = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
   function cicloAtualLabel(melhorDia) {
+    if (cicloInicio) {
+      const parts = cicloInicio.split("/").map(Number);
+      const ciMm = parts[1], ciYyyy = parts[2];
+      if (ciMm && ciYyyy) {
+        const nextMon = ciMm % 12; // 0-indexed do mês seguinte
+        const nextYr  = ciMm === 12 ? ciYyyy + 1 : ciYyyy;
+        return `${MES_PT_ABBR[nextMon]}/${String(nextYr).slice(2)}`;
+      }
+    }
     const now    = new Date(Date.now() - 3 * 3600 * 1000); // BRT = UTC-3
     const today  = now.getUTCDate();
     const mIdx   = today < melhorDia ? now.getUTCMonth() : now.getUTCMonth() + 1;
@@ -143,11 +156,19 @@ export async function fetchFinancialData() {
     else if (grupo === "EMPRESTIMOS") emprestimos.push({ item, valor, confirmado, prazo });
     else                               pdv.push({ item, valor, confirmado });
   }
-  // CLT = fixo, sempre conta. PDV e empréstimos só contam quando confirmados.
-  const totalCLT = clt.reduce((s, i) => s + i.valor, 0);
+  // Totais brutos (sem filtro de confirmação)
+  const totalCLT     = clt.reduce((s, i) => s + i.valor, 0);
+  const totalPDVAll  = pdv.reduce((s, i) => s + i.valor, 0);
+  const totalEmpAll  = emprestimos.reduce((s, i) => s + i.valor, 0);
+  // Totais filtrados por confirmação
   const totalPDV = pdv.reduce((s, i) => i.confirmado ? s + i.valor : s, 0);
   const totalEmp = emprestimos.reduce((s, i) => i.confirmado ? s + i.valor : s, 0);
+  // ganhoTudo: CLT sempre + PDV/Emp confirmados (usado em projeções conservadoras)
   const ganhoTudo = totalCLT + totalPDV + totalEmp;
+  // ganhoConfirmado: só o que tem check (inclusive CLT)
+  const ganhoConfirmado = clt.reduce((s, i) => i.confirmado ? s + i.valor : s, 0) + totalPDV + totalEmp;
+  // ganhoTotal: todos os ganhos esperados, confirmados ou não (cenário otimista)
+  const ganhoTotal = totalCLT + totalPDVAll + totalEmpAll;
 
   // ── Poupança ─────────────────────────────────────────────────────────────────
   const historico = [];
@@ -206,19 +227,22 @@ export async function fetchFinancialData() {
 
   return {
     summary: {
-      ganhoCLT:     Math.abs(totalCLT),
-      ganhoTudo:    Math.abs(ganhoTudo),
+      ganhoCLT:          Math.abs(totalCLT),
+      ganhoTudo:         Math.abs(ganhoTudo),
+      ganhoConfirmado:   Math.abs(ganhoConfirmado),
+      ganhoTotal:        Math.abs(ganhoTotal),
       gastosBudget: Math.abs(gastosBudget),
       gastosReal:   Math.abs(gastosReal),
       saldoCLT:     totalCLT  - gastosBudget,
       saldoTudo:    ganhoTudo - gastosBudget,
     },
     ganhos: {
-      clt:         totalCLT,
-      pdv:         totalPDV,
-      emprestimos: totalEmp,
-      total:       ganhoTudo,
-      items:       { clt, pdv, emprestimos },
+      clt:              totalCLT,
+      pdv:              totalPDV,
+      emprestimos:      totalEmp,
+      emprestimosTotal: totalEmpAll,
+      total:            ganhoTudo,
+      items:            { clt, pdv, emprestimos },
     },
     gastos: {
       budget:    Math.abs(gastosBudget),
@@ -237,7 +261,7 @@ export async function fetchFinancialData() {
       items:         commitItems,
       totalRestante: commitItems.reduce((s, c) => s + c.totalRestante, 0),
     },
-    config: { melhorDiaCompra },
+    config: { melhorDiaCompra, cicloInicio },
   };
 }
 

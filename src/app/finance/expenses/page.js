@@ -120,6 +120,8 @@ export default function ExpensesPage() {
   // Overrides otimistas para o ctrl e auto dos fixos (item → boolean)
   const [ctrlOvr, setCtrlOvr]   = useState({});
   const [autoOvr, setAutoOvr]   = useState({});
+  const [fixoRemoving, setFixoRemoving] = useState(new Set());
+  const [fixoConfirm,  setFixoConfirm]  = useState(null);
 
   // Detecta mobile para margens responsivas dos gráficos
   const [isMobile, setIsMobile] = useState(false);
@@ -153,11 +155,12 @@ export default function ExpensesPage() {
       setEditForm({ nome: item.item, grupo: item.grupo || "Casa", real: String(item.real), previsao: String(item.previsao), auto: item.auto ?? false });
     } else {
       setEditForm({
-        nome:       item.nome,
-        valorTotal: String(item.valorTotal),
-        dataInicio: toInputMonth(item.dataInicio),
-        dataFim:    toInputMonth(item.dataFim),
-        auto:       item.auto ?? false,
+        nome:          item.nome,
+        valorTotal:    String(item.valorTotal),
+        dataInicio:    toInputMonth(item.dataInicio),
+        dataFim:       toInputMonth(item.dataFim),
+        auto:          item.auto ?? false,
+        parcelasPagas: String(item.parcelasPagas ?? 0),
       });
     }
     setEditModal({ type, item });
@@ -180,11 +183,12 @@ export default function ExpensesPage() {
       } else {
         nomeAtual = item.nome;
         campos = {
-          nome:       editForm.nome.trim(),
-          valorTotal: parseFloat(editForm.valorTotal) || 0,
-          dataInicio: toSheetMonth(editForm.dataInicio),
-          dataFim:    toSheetMonth(editForm.dataFim),
-          auto:       editForm.auto,
+          nome:          editForm.nome.trim(),
+          valorTotal:    parseFloat(editForm.valorTotal) || 0,
+          dataInicio:    toSheetMonth(editForm.dataInicio),
+          dataFim:       toSheetMonth(editForm.dataFim),
+          auto:          editForm.auto,
+          parcelasPagas: parseInt(editForm.parcelasPagas) || 0,
         };
       }
       const res  = await fetch("/api/finance/update", {
@@ -288,7 +292,7 @@ export default function ExpensesPage() {
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error);
-      showToast(`✓ Parcela paga — ${json.newPagas}/${item.totalParcelas}`);
+      showToast(`✓ ${item.nome} — parcela paga`);
       loadParcelas();
     } catch (e) { showToast(`⚠ ${e.message}`, true); }
     finally { setParcPaying(p => { const s = new Set(p); s.delete(item.sheetRow); return s; }); }
@@ -325,6 +329,23 @@ export default function ExpensesPage() {
       showToast(`🗑 ${item.nome} removido`);
     } catch (e) { showToast(`⚠ ${e.message}`); }
     finally { setParcRemoving(p => { const s = new Set(p); s.delete(item.sheetRow); return s; }); }
+  }
+
+  async function handleFixoRemove(item) {
+    if (fixoConfirm !== item.item) { setFixoConfirm(item.item); return; }
+    setFixoConfirm(null);
+    setFixoRemoving(p => new Set(p).add(item.item));
+    try {
+      const res  = await fetch("/api/finance/fixo/delete", {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item: item.item }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      refetch(true);
+      showToast(`🗑 ${item.item} removido`);
+    } catch (e) { showToast(`⚠ ${e.message}`); }
+    finally { setFixoRemoving(p => { const s = new Set(p); s.delete(item.item); return s; }); }
   }
 
   async function handleParcSubmit(e) {
@@ -792,6 +813,20 @@ export default function ExpensesPage() {
                                       {fmt(item.real)}
                                     </div>
                                     <button onClick={() => openEdit("fixo", item)} title="Editar" style={editBtnStyle}>✎</button>
+                                    <button
+                                      onClick={() => handleFixoRemove(item)}
+                                      disabled={fixoRemoving.has(item.item)}
+                                      onBlur={() => setTimeout(() => setFixoConfirm(v => v === item.item ? null : v), 200)}
+                                      style={{
+                                        padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600, fontFamily: "inherit",
+                                        border: `1px solid ${fixoConfirm === item.item ? "rgba(239,68,68,0.6)" : "rgba(239,68,68,0.25)"}`,
+                                        background: fixoConfirm === item.item ? "rgba(239,68,68,0.18)" : "transparent",
+                                        color: "#ef4444", cursor: "pointer", transition: "all 0.15s",
+                                        opacity: fixoRemoving.has(item.item) ? 0.5 : 1,
+                                      }}
+                                    >
+                                      {fixoRemoving.has(item.item) ? "…" : fixoConfirm === item.item ? "Confirmar" : "🗑"}
+                                    </button>
                                   </div>
                                 </div>
                               );
@@ -1298,6 +1333,11 @@ export default function ExpensesPage() {
                     </div>
                   )}
                   <AutoToggle value={editForm.auto} onChange={v => setEditForm(f => ({ ...f, auto: v }))} />
+                  {!editForm.auto && (
+                    <div><label style={lbl}>Parcelas Pagas</label>
+                      <input type="number" min="0" max={editModal?.item?.totalParcelas ?? 999} value={editForm.parcelasPagas} onChange={e => setEditForm(f => ({ ...f, parcelasPagas: e.target.value }))} style={inputStyle} />
+                    </div>
+                  )}
                 </>)}
 
                 <div style={{ display: "flex", gap: 10, marginTop: 6 }}>

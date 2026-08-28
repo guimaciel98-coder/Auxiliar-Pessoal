@@ -1,4 +1,4 @@
-import { tdUpdate, P_TO_TD, buildDuePayload } from "@/lib/todoist";
+import { tdUpdate, tdGetTask, P_TO_TD, buildDuePayload } from "@/lib/todoist";
 import { PROJ } from "@/config/constants";
 
 export async function POST(req) {
@@ -21,12 +21,25 @@ export async function POST(req) {
 
     if (dueDate) {
       if (!recurrenceModified) {
-        // Usuário não tocou no campo de recorrência → preserva recorrência existente.
-        // due_date/due_datetime move a data sem apagar o padrão de repetição.
-        Object.assign(updateBody, time
+        // Busca o estado atual da task para detectar recorrência
+        let origRecStr = null;
+        try {
+          const current = await tdGetTask(taskId);
+          if (current?.due?.is_recurring) origRecStr = current.due.string;
+        } catch {}
+
+        const duePart = time
           ? { due_datetime: `${dueDate}T${time}:00` }
-          : { due_date: dueDate }
-        );
+          : { due_date: dueDate };
+
+        if (origRecStr) {
+          // Task recorrente: envia due_string (preserva recorrência) +
+          // due_date (tenta mover a data). Se a API ignorar due_date,
+          // a data será a próxima ocorrência natural — mas recorrência fica salva.
+          Object.assign(updateBody, duePart, { due_string: origRecStr });
+        } else {
+          Object.assign(updateBody, duePart);
+        }
       } else if (!recurrence || !recurrence.trim() || recurrence.trim() === "none") {
         // Usuário explicitamente apagou → due_string com data remove a recorrência.
         Object.assign(updateBody, time
@@ -39,7 +52,6 @@ export async function POST(req) {
       }
     }
 
-    // Envia project_id diretamente — Todoist ignora se já for o mesmo (sem round-trip extra)
     if (project) {
       const projCfg = PROJ[project];
       if (projCfg) updateBody.project_id = projCfg.id;
@@ -48,7 +60,24 @@ export async function POST(req) {
     if (subClient !== undefined)    updateBody.section_id  = subClient || null;
     if (description !== undefined)  updateBody.description = description?.trim() ?? "";
 
+    // Atualização principal
     const updated = await tdUpdate(taskId, updateBody);
+
+    // Se a task era recorrente e perdeu a recorrência, restaura com due_string
+    if (dueDate && !recurrenceModified) {
+      let origRecStr = null;
+      try {
+        // Lê novamente o updateBody que foi enviado (contém due_string se era recorrente)
+        origRecStr = updateBody.due_string ?? null;
+      } catch {}
+
+      if (origRecStr && updated?.due && !updated.due.is_recurring) {
+        console.warn("[update] recorrência perdida — restaurando:", origRecStr);
+        const restored = await tdUpdate(taskId, { due_string: origRecStr });
+        return Response.json({ ok: true, due: restored?.due ?? null });
+      }
+    }
+
     return Response.json({ ok: true, due: updated?.due ?? null });
   } catch (e) {
     console.error("[POST /api/tasks/update]", e);

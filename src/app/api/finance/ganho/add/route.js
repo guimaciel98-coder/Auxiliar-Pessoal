@@ -2,6 +2,43 @@ import { getSheetsClient, getSpreadsheetId } from "@/lib/googleSheets";
 
 export const dynamic = "force-dynamic";
 
+// DELETE — remove linha de App_Ganhos pelo nome do item
+// Body: { item: string }
+export async function DELETE(req) {
+  try {
+    const { item } = await req.json();
+    if (!item?.trim()) return Response.json({ ok: false, error: "item é obrigatório" }, { status: 400 });
+
+    const sheets        = await getSheetsClient();
+    const spreadsheetId = getSpreadsheetId();
+
+    const res  = await sheets.spreadsheets.values.get({ spreadsheetId, range: "'App_Ganhos'!A2:E500" });
+    const rows = res.data.values ?? [];
+    const idx  = rows.findIndex(r => String(r[1] ?? "").trim() === item.trim());
+    if (idx === -1) return Response.json({ ok: false, error: `"${item}" não encontrado` }, { status: 404 });
+
+    const meta    = await sheets.spreadsheets.get({ spreadsheetId });
+    const sheet   = meta.data.sheets.find(s => s.properties.title === "App_Ganhos");
+    const sheetId = sheet?.properties?.sheetId ?? 0;
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [{
+          deleteDimension: {
+            range: { sheetId, dimension: "ROWS", startIndex: idx + 1, endIndex: idx + 2 },
+          },
+        }],
+      },
+    });
+
+    return Response.json({ ok: true });
+  } catch (e) {
+    console.error("[DELETE /api/finance/ganho/add]", e.message);
+    return Response.json({ ok: false, error: e.message }, { status: 500 });
+  }
+}
+
 // PATCH — edita ganho existente em App_Ganhos
 // Body: { itemAtual: string, grupo?: string, item?: string, valor?: number, confirmado?: boolean, prazo?: string }
 export async function PATCH(req) {

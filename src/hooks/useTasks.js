@@ -33,6 +33,7 @@ export function useTasks(mode = "today") {
   const [toast, setToast]         = useState(null);
 
   const isLoadingRef = useRef(false);
+  const reloadTimerRef = useRef(null);
 
   function showToast(message, onUndo = null) {
     const key = Date.now();
@@ -198,15 +199,19 @@ export function useTasks(mode = "today") {
       const name = taskName;
 
       const undoComplete = async () => {
+        if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
         setToast(null);
         try {
-          await fetch("/api/tasks/reopen", {
+          const res = await fetch("/api/tasks/reopen", {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ taskId }),
           });
+          if (!res.ok) throw new Error("Erro ao reabrir");
           removeHidden(taskId);
-          setTimeout(load, 500);
-        } catch {}
+          load();
+        } catch (e) {
+          showToast("⚠ Erro ao desfazer");
+        }
       };
 
       showToast(
@@ -214,7 +219,7 @@ export function useTasks(mode = "today") {
         undoComplete
       );
 
-      setTimeout(load, 2000);
+      reloadTimerRef.current = setTimeout(load, 5000);
     } catch (e) {
       setFading(prev => { const s = new Set(prev); s.delete(taskId); return s; });
       removeHidden(taskId);
