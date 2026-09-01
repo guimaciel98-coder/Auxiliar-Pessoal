@@ -57,8 +57,18 @@ const GROUP_COLOR = {
   pessoal:    "#10b981",
   outros:     "#8b5cf6",
 };
+const GROUP_ORDER = ["Casa Nova", "Casa", "Pessoal", "Outros"];
 function grpColor(grupo) {
   return GROUP_COLOR[String(grupo).toLowerCase()] ?? "#6b7280";
+}
+function sortGroups(entries) {
+  return [...entries].sort(([a], [b]) => {
+    const ai = GROUP_ORDER.findIndex(g => g.toLowerCase() === a.toLowerCase());
+    const bi = GROUP_ORDER.findIndex(g => g.toLowerCase() === b.toLowerCase());
+    const ar = ai === -1 ? 999 : ai;
+    const br = bi === -1 ? 999 : bi;
+    return ar - br;
+  });
 }
 
 function DonutCenter({ viewBox, total }) {
@@ -681,7 +691,7 @@ export default function ExpensesPage() {
                       <p style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: 14 }}>
                         Nenhum gasto fixo encontrado.
                       </p>
-                    ) : Object.entries(fixoGroups).map(([grupo, items]) => {
+                    ) : sortGroups(Object.entries(fixoGroups)).map(([grupo, items]) => {
                       const gc         = grpColor(grupo);
                       const groupTotal = items.reduce((s, i) => s + i.real, 0);
                       const grpPagos   = items.filter(i => ctrlOvr[i.item] ?? i.ctrl).length;
