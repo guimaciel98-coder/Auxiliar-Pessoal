@@ -1283,7 +1283,7 @@ export default function ExpensesPage() {
                   </div>
                   <div><label style={lbl}>Grupo</label>
                     <select value={editForm.grupo} onChange={e => setEditForm(f => ({ ...f, grupo: e.target.value }))} style={inputStyle}>
-                      <option>Casa</option><option>Casa Novo</option><option>Pessoal</option><option>Outros</option>
+                      <option>Casa</option><option>Casa Nova</option><option>Pessoal</option><option>Outros</option>
                     </select>
                   </div>
                   <div><label style={lbl}>Previsão Mensal (R$)</label>
@@ -1298,7 +1298,7 @@ export default function ExpensesPage() {
                   </div>
                   <div><label style={lbl}>Grupo</label>
                     <select value={editForm.grupo} onChange={e => setEditForm(f => ({ ...f, grupo: e.target.value }))} style={inputStyle}>
-                      <option>Casa</option><option>Casa Novo</option><option>Pessoal</option><option>Outros</option>
+                      <option>Casa</option><option>Casa Nova</option><option>Pessoal</option><option>Outros</option>
                     </select>
                   </div>
                   <div style={{ display: "flex", gap: 12 }}>
@@ -1361,7 +1361,7 @@ export default function ExpensesPage() {
             <label style={lbl}>Grupo</label>
             <select value={createForm.grupo} onChange={e => setCreateForm(f => ({ ...f, grupo: e.target.value }))} style={inputStyle}>
               <option value="Casa">Casa</option>
-              <option value="Casa Novo">Casa Novo</option>
+              <option value="Casa Nova">Casa Nova</option>
               <option value="Pessoal">Pessoal</option>
               <option value="Outros">Outros</option>
             </select>
