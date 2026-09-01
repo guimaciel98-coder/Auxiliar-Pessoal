@@ -52,10 +52,10 @@ function groupByGrupo(items) {
 }
 
 const GROUP_COLOR = {
-  casa:      "#3b82f6",
-  "casa novo": "#f59e0b",
-  pessoal:   "#10b981",
-  outros:    "#8b5cf6",
+  casa:       "#3b82f6",
+  "casa nova": "#f59e0b",
+  pessoal:    "#10b981",
+  outros:     "#8b5cf6",
 };
 function grpColor(grupo) {
   return GROUP_COLOR[String(grupo).toLowerCase()] ?? "#6b7280";
