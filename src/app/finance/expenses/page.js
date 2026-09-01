@@ -52,9 +52,10 @@ function groupByGrupo(items) {
 }
 
 const GROUP_COLOR = {
-  casa:    "#3b82f6",
-  pessoal: "#10b981",
-  outros:  "#8b5cf6",
+  casa:      "#3b82f6",
+  "casa novo": "#f59e0b",
+  pessoal:   "#10b981",
+  outros:    "#8b5cf6",
 };
 function grpColor(grupo) {
   return GROUP_COLOR[String(grupo).toLowerCase()] ?? "#6b7280";
@@ -1282,7 +1283,7 @@ export default function ExpensesPage() {
                   </div>
                   <div><label style={lbl}>Grupo</label>
                     <select value={editForm.grupo} onChange={e => setEditForm(f => ({ ...f, grupo: e.target.value }))} style={inputStyle}>
-                      <option>Casa</option><option>Pessoal</option><option>Outros</option>
+                      <option>Casa</option><option>Casa Novo</option><option>Pessoal</option><option>Outros</option>
                     </select>
                   </div>
                   <div><label style={lbl}>Previsão Mensal (R$)</label>
@@ -1297,7 +1298,7 @@ export default function ExpensesPage() {
                   </div>
                   <div><label style={lbl}>Grupo</label>
                     <select value={editForm.grupo} onChange={e => setEditForm(f => ({ ...f, grupo: e.target.value }))} style={inputStyle}>
-                      <option>Casa</option><option>Pessoal</option><option>Outros</option>
+                      <option>Casa</option><option>Casa Novo</option><option>Pessoal</option><option>Outros</option>
                     </select>
                   </div>
                   <div style={{ display: "flex", gap: 12 }}>
@@ -1360,6 +1361,7 @@ export default function ExpensesPage() {
             <label style={lbl}>Grupo</label>
             <select value={createForm.grupo} onChange={e => setCreateForm(f => ({ ...f, grupo: e.target.value }))} style={inputStyle}>
               <option value="Casa">Casa</option>
+              <option value="Casa Novo">Casa Novo</option>
               <option value="Pessoal">Pessoal</option>
               <option value="Outros">Outros</option>
             </select>
