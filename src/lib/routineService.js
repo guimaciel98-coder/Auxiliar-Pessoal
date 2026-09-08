@@ -461,7 +461,7 @@ export async function fetchSpecialAgenda() {
     const sheets = await getSheetsClient();
     const res    = await sheets.spreadsheets.values.get({
       spreadsheetId: ROUTINE_SPREADSHEET_ID,
-      range:         "'App_Eventos'!A2:C500",
+      range:         "'App_Eventos'!A2:D500",
     });
 
     const rows  = res.data.values ?? [];
@@ -497,6 +497,7 @@ export async function fetchSpecialAgenda() {
           weekday,
           activity:    r[1].trim(),
           tipo:        r[2]?.trim() || null,
+          horario:     r[3]?.trim() || null,
           daysFromNow,
           isPast:      daysFromNow < 0,
           isToday:     daysFromNow === 0,

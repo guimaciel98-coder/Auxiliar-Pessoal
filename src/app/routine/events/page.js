@@ -1,708 +1,491 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Navigation from "@/components/ui/Navigation";
 import ModuleHeader from "@/components/ui/ModuleHeader";
 import styles from "../Routine.module.css";
 
-const DAY_ABBR = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-const DAY_FULL = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+// ── Helpers de data ──────────────────────────────────────────────────────────
+const DAY_ABR  = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 const MES_ABR  = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-const MES_FULL = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const MES_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 function toISO(d) { return d.toISOString().slice(0, 10); }
-
-// Sexta do próximo (ou atual) final de semana
-function getNextFriday(today) {
-  const dow = today.getDay(); // 0=Dom..6=Sáb
-  let daysToFri;
-  if (dow === 5) daysToFri = 0;
-  else if (dow === 6) daysToFri = -1;
-  else if (dow === 0) daysToFri = -2;
-  else daysToFri = 5 - dow;
-  const fri = new Date(today);
-  fri.setDate(today.getDate() + daysToFri);
-  return fri;
+function addDays(d, n) { const r = new Date(d); r.setDate(d.getDate() + n); return r; }
+function startOfWeek(d) { // segunda-feira
+  const r = new Date(d); r.setHours(0,0,0,0);
+  const dow = r.getDay(); // 0=dom
+  r.setDate(r.getDate() - (dow === 0 ? 6 : dow - 1));
+  return r;
 }
 
-// Retorna Sexta-Domingo de um final de semana a partir da sexta
-function fdsRange(fri) {
-  const sat = new Date(fri); sat.setDate(fri.getDate() + 1);
-  const sun = new Date(fri); sun.setDate(fri.getDate() + 2);
-  return [fri, sat, sun];
-}
-
-// Cálculo da Páscoa (algoritmo anônimo gregoriano)
+// ── Feriados SP com nomes ────────────────────────────────────────────────────
 function calcEaster(year) {
-  const a = year % 19;
-  const b = Math.floor(year / 100);
-  const c = year % 100;
-  const d = Math.floor(b / 4);
-  const e = b % 4;
-  const f = Math.floor((b + 8) / 25);
-  const g = Math.floor((b - f + 1) / 3);
-  const h = (19 * a + b - d - g + 15) % 30;
-  const i = Math.floor(c / 4);
-  const k = c % 4;
-  const l = (32 + 2 * e + 2 * i - h - k) % 7;
-  const m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const month = Math.floor((h + l - 7 * m + 114) / 31);
-  const day   = ((h + l - 7 * m + 114) % 31) + 1;
-  return new Date(year, month - 1, day);
+  const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4;
+  const f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3);
+  const h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4;
+  const l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  const month=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1;
+  return new Date(year,month-1,day);
 }
-
-// Feriados de São Paulo (nacionais + estaduais + municipais + móveis)
-function getSpHolidays(year) {
-  const iso = (m, d) => `${year}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-  const set = new Set([
-    iso(1,  1),  // Confraternização Universal
-    iso(1, 25),  // Aniversário de São Paulo
-    iso(4, 21),  // Tiradentes
-    iso(5,  1),  // Dia do Trabalho
-    iso(7,  9),  // Revolução Constitucionalista (SP)
-    iso(9,  7),  // Independência do Brasil
-    iso(10,12),  // Nossa Senhora Aparecida
-    iso(11, 2),  // Finados
-    iso(11,15),  // Proclamação da República
-    iso(11,20),  // Consciência Negra
-    iso(12,25),  // Natal
-  ]);
+function getHolidays(year) {
+  const iso=(m,d)=>`${year}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  const fixed = [
+    [iso(1, 1),  "Confraternização Universal"],
+    [iso(1,25),  "Aniversário de São Paulo"],
+    [iso(4,21),  "Tiradentes"],
+    [iso(5, 1),  "Dia do Trabalho"],
+    [iso(7, 9),  "Revolução Constitucionalista"],
+    [iso(9, 7),  "Independência do Brasil"],
+    [iso(10,12), "Nossa Senhora Aparecida"],
+    [iso(11, 2), "Finados"],
+    [iso(11,15), "Proclamação da República"],
+    [iso(11,20), "Consciência Negra"],
+    [iso(12,25), "Natal"],
+  ];
   const easter = calcEaster(year);
-  const addDays = (n) => { const d = new Date(easter); d.setDate(easter.getDate() + n); return toISO(d); };
-  set.add(addDays(-48)); // Carnaval — Segunda
-  set.add(addDays(-47)); // Carnaval — Terça
-  set.add(addDays( -2)); // Sexta-feira da Paixão
-  set.add(addDays( 60)); // Corpus Christi
-  return set;
+  const easterISO = d => { const x=new Date(easter); x.setDate(easter.getDate()+d); return toISO(x); };
+  const mobile = [
+    [easterISO(-48), "Carnaval — Segunda-feira"],
+    [easterISO(-47), "Carnaval — Terça-feira"],
+    [easterISO( -2), "Sexta-feira da Paixão"],
+    [easterISO( 60), "Corpus Christi"],
+  ];
+  const map = {};
+  for (const [k, v] of [...fixed, ...mobile]) map[k] = v;
+  return map;
 }
 
-// Tipo → estilo
-function tipoStyle(tipo) {
-  const t = (tipo ?? "").toLowerCase();
-  if (t === "feriado")  return { color: "#a855f7", bg: "rgba(168,85,247,0.1)",  border: "rgba(168,85,247,0.25)",  pill: "#a855f7" };
-  if (t === "família" || t === "familia") return { color: "#f59e0b", bg: "rgba(245,158,11,0.1)", border: "rgba(245,158,11,0.25)", pill: "#f59e0b" };
-  if (t === "saúde" || t === "saude") return { color: "#10b981", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.2)", pill: "#10b981" };
-  if (t === "social")  return { color: "#818cf8", bg: "rgba(129,140,248,0.08)", border: "rgba(129,140,248,0.2)", pill: "#818cf8" };
-  if (t === "lazer")   return { color: "#60a5fa", bg: "rgba(96,165,250,0.08)",  border: "rgba(96,165,250,0.2)",  pill: "#60a5fa" };
-  return { color: "rgba(255,255,255,0.6)", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.1)", pill: "rgba(255,255,255,0.4)" };
-}
-
-const TIPO_OPTIONS = ["família","feriado","saúde","social","lazer","pessoal","trabalho"];
-
-const TIPO_COLORS = {
-  "feriado":  "#a855f7", "família": "#f59e0b", "saude": "#10b981",
-  "saúde":    "#10b981", "social":  "#818cf8", "lazer": "#60a5fa",
-  "pessoal":  "#00e5a0", "trabalho":"#2196f3",
+// ── Tipos / cores ────────────────────────────────────────────────────────────
+const TIPO_OPTIONS = ["família","trabalho","saúde","social","lazer","pessoal","viagem","médico","outro"];
+const TIPO_COLOR = {
+  "família":  "#f59e0b", "trabalho": "#3b82f6", "saúde":   "#10b981",
+  "social":   "#818cf8", "lazer":    "#60a5fa", "pessoal": "#00e5a0",
+  "viagem":   "#f97316", "médico":   "#ef4444", "outro":   "#9ca3af",
 };
+function tipoColor(t) { return TIPO_COLOR[(t||"").toLowerCase()] ?? "#9ca3af"; }
 
-// ── Hero card de um dia do FDS ──────────────────────────────────────────────
-function DayCard({ date, evts, isToday, isHoliday, onAdd, onDelete, onEdit, onExclude }) {
-  const dow   = date.getDay();
-  const day   = date.getDate();
-  const month = MES_ABR[date.getMonth()];
-  const hasEvent = evts.length > 0;
-  const isFeriado = isHoliday || evts.some(e => (e.tipo ?? "").toLowerCase() === "feriado");
-
-  // Sexta=laranja, Sábado=verde, Domingo=azul, Feriado=roxo (sobrescreve)
-  const DAY_COLORS = { 5: "#f97316", 6: "#22c55e", 0: "#3b82f6" };
-  const accent = isFeriado ? "#a855f7" : (DAY_COLORS[dow] ?? "rgba(255,255,255,0.2)");
-
-  return (
-    <div style={{
-      position: "relative",
-      background: `${accent}1a`,
-      border: `1px solid ${accent}40`,
-      borderTop: `3px solid ${accent}`,
-      borderRadius: 18, padding: "18px 14px 16px",
-      display: "flex", flexDirection: "column", alignItems: "center",
-      gap: 6, minHeight: 160,
-    }}>
-      {/* Botão excluir data (só em seções de feriado) */}
-      {onExclude && (
-        <span
-          onClick={() => onExclude(toISO(date))}
-          title="Excluir esta data da seção"
-          style={{ position: "absolute", top: 6, left: 8, fontSize: 9, color: "rgba(255,255,255,0.15)", cursor: "pointer", lineHeight: 1, userSelect: "none" }}
-          onMouseEnter={ev => ev.currentTarget.style.color = "#ef4444"}
-          onMouseLeave={ev => ev.currentTarget.style.color = "rgba(255,255,255,0.15)"}
-        >✕</span>
-      )}
-
-      {/* Dia semana */}
-      <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: isToday ? "#06b6d4" : accent }}>
-        {isToday ? "HOJE" : DAY_ABBR[dow]}
-      </div>
-
-      {/* Número do dia */}
-      <div style={{ fontSize: 42, fontWeight: 900, lineHeight: 1, color: accent, letterSpacing: "-0.03em" }}>
-        {day}
-      </div>
-      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: -4, marginBottom: 6 }}>
-        {month}
-      </div>
-
-      {/* Eventos */}
-      {hasEvent ? (
-        <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 5 }}>
-          {evts.map((e, i) => {
-            const ts = tipoStyle(e.tipo);
-            return (
-              <div key={i} style={{ position: "relative", background: ts.bg, border: `1px solid ${ts.border}`, borderRadius: 10, padding: "7px 10px 7px 10px", textAlign: "center" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#f0f0f8", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {e.activity}
-                </div>
-                {e.tipo && (
-                  <div style={{ fontSize: 9, fontWeight: 700, color: ts.color, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 3 }}>
-                    {e.tipo}
-                  </div>
-                )}
-                {e.sheetRow && (
-                  <div style={{ position: "absolute", top: 4, right: 5, display: "flex", gap: 4 }}>
-                    <span onClick={ev => { ev.stopPropagation(); onEdit(e, date); }}
-                      style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", cursor: "pointer", lineHeight: 1 }}
-                      onMouseEnter={ev => ev.currentTarget.style.color = "#60a5fa"}
-                      onMouseLeave={ev => ev.currentTarget.style.color = "rgba(255,255,255,0.2)"}
-                    >✎</span>
-                    <span onClick={ev => { ev.stopPropagation(); onDelete(e.sheetRow); }}
-                      style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", cursor: "pointer", lineHeight: 1 }}
-                      onMouseEnter={ev => ev.currentTarget.style.color = "#ef4444"}
-                      onMouseLeave={ev => ev.currentTarget.style.color = "rgba(255,255,255,0.2)"}
-                    >✕</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          <button onClick={() => onAdd(date)} style={{ marginTop: 2, padding: "6px 0", borderRadius: 8, border: "1px dashed rgba(255,255,255,0.15)", background: "transparent", color: "rgba(255,255,255,0.25)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>+</button>
-        </div>
-      ) : (
-        <button onClick={() => onAdd(date)} style={{ marginTop: "auto", width: "100%", padding: "10px 0", borderRadius: 10, border: "1px dashed rgba(255,255,255,0.15)", background: "transparent", color: "rgba(255,255,255,0.3)", fontSize: 18, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(245,158,11,0.4)"; e.currentTarget.style.color = "#f59e0b"; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; e.currentTarget.style.color = "rgba(255,255,255,0.3)"; }}
-        >+</button>
-      )}
-    </div>
-  );
+// ── Formatação de hora ───────────────────────────────────────────────────────
+function fmtHora(h) {
+  if (!h) return null;
+  const m = h.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return h;
+  return `${m[1]}h${m[2] !== "00" ? m[2] : ""}`;
 }
 
-// ── Card de evento na lista ─────────────────────────────────────────────────
-function EventCard({ e, onEdit }) {
-  const u = (() => {
-    if ((e.tipo ?? "").toLowerCase() === "feriado")
-      return { color: "#a855f7", bg: "rgba(168,85,247,0.08)", border: "rgba(168,85,247,0.22)", accent: true,  label: e.daysFromNow === 0 ? "HOJE" : e.daysFromNow === 1 ? "AMANHÃ" : `${e.daysFromNow}d` };
-    if (e.isToday)          return { color: "#10b981", bg: "rgba(16,185,129,0.09)", border: "rgba(16,185,129,0.25)", accent: true,  label: "HOJE" };
-    if (e.isTomorrow)       return { color: "#f59e0b", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.25)", accent: true,  label: "AMANHÃ" };
-    if (e.daysFromNow <= 3) return { color: "#f97316", bg: "rgba(249,115,22,0.07)", border: "rgba(249,115,22,0.2)",  accent: true,  label: `${e.daysFromNow} DIAS` };
-    if (e.isThisWeek)       return { color: "#60a5fa", bg: "rgba(96,165,250,0.06)", border: "rgba(96,165,250,0.16)", accent: false, label: `${e.daysFromNow}d` };
-    return { color: "var(--text-muted)", bg: "rgba(255,255,255,0.025)", border: "rgba(255,255,255,0.07)", accent: false, label: `${e.daysFromNow}d` };
-  })();
-  const ts = tipoStyle(e.tipo);
-
-  return (
-    <div
-      onClick={onEdit ? () => onEdit(e) : undefined}
-      style={{
-        display: "flex", alignItems: "center", gap: 14,
-        padding: "13px 16px", borderRadius: 14,
-        background: u.bg, border: `1px solid ${u.border}`,
-        borderLeft: u.accent ? `3px solid ${u.color}` : `1px solid ${u.border}`,
-        cursor: onEdit ? "pointer" : "default",
-        transition: "opacity 0.15s",
-      }}
-      onMouseEnter={onEdit ? ev => ev.currentTarget.style.opacity = "0.8" : undefined}
-      onMouseLeave={onEdit ? ev => ev.currentTarget.style.opacity = "1" : undefined}
-    >
-      {/* Data */}
-      <div style={{ textAlign: "center", minWidth: 38, flexShrink: 0 }}>
-        <div style={{ fontSize: 8, fontWeight: 800, color: u.color, letterSpacing: "0.07em", lineHeight: 1, marginBottom: 3, textTransform: "uppercase" }}>
-          {u.label}
-        </div>
-        <div style={{ fontSize: 24, fontWeight: 900, color: u.color, lineHeight: 1, letterSpacing: "-0.02em" }}>
-          {e.dateLabel.split("/")[0]}
-        </div>
-        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", lineHeight: 1, marginTop: 1 }}>
-          /{e.dateLabel.split("/")[1]}
-        </div>
-      </div>
-      <div style={{ width: 1, height: 32, background: u.border, flexShrink: 0 }} />
-      {/* Conteúdo */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {e.activity}
-          </span>
-          {e.tipo && (
-            <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: ts.bg, color: ts.color, border: `1px solid ${ts.border}`, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>
-              {e.tipo}
-            </span>
-          )}
-        </div>
-        <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "capitalize" }}>
-          {e.weekday}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Página principal ────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 export default function EventosPage() {
-  const [events,        setEvents]        = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [showPast,      setShowPast]      = useState(false);
-  const [modal,         setModal]         = useState(null); // { date: Date, editMode?: bool, sheetRow?: number } | null
-  const [form,          setForm]          = useState({ evento: "", tipo: "" });
-  const [saving,        setSaving]        = useState(false);
-  const [excludedDates, setExcludedDates] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem("excludedHolidayDates") || "[]")); }
-    catch { return new Set(); }
-  });
+  const [events,  setEvents]  = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal,   setModal]   = useState(null);
+  const [form,    setForm]    = useState({ evento:"", tipo:"", horario:"", data:"" });
+  const [saving,  setSaving]  = useState(false);
+  const [toast,   setToast]   = useState(null);
+  const [tab,     setTab]     = useState("agenda"); // "agenda" | "feriados"
 
-  function excludeDate(iso) {
-    setExcludedDates(prev => {
-      const next = new Set(prev);
-      next.add(iso);
-      localStorage.setItem("excludedHolidayDates", JSON.stringify([...next]));
-      return next;
-    });
-  }
+  function showToast(msg) { setToast(msg); setTimeout(()=>setToast(null), 2500); }
 
-  const reload = () => {
+  const reload = useCallback(() => {
     setLoading(true);
-    fetch("/api/routine?agenda=1", { cache: "no-store" })
-      .then(r => r.json())
-      .then(d => { if (d.ok) setEvents(d.events); })
-      .finally(() => setLoading(false));
-  };
+    fetch("/api/routine?agenda=1", { cache:"no-store" })
+      .then(r=>r.json())
+      .then(d=>{ if(d.ok) setEvents(d.events); })
+      .finally(()=>setLoading(false));
+  }, []);
 
-  useEffect(() => { reload(); }, []);
+  useEffect(()=>{ reload(); }, [reload]);
 
+  // ── Modal ──────────────────────────────────────────────────────────────────
   function openAdd(date) {
-    setForm({ evento: "", tipo: "" });
-    setModal({ date, editMode: false });
+    const iso = date ? toISO(date) : toISO(new Date());
+    const [y,m,d] = iso.split("-");
+    setForm({ evento:"", tipo:"", horario:"", data:`${y}-${m}-${d}` });
+    setModal({ editMode:false });
   }
-
-  function openEdit(evt, date) {
-    setForm({ evento: evt.activity ?? "", tipo: evt.tipo ?? "" });
-    setModal({ date, editMode: true, sheetRow: evt.sheetRow });
+  function openEdit(evt) {
+    setForm({ evento: evt.activity, tipo: evt.tipo??"", horario: evt.horario??"", data: evt.date });
+    setModal({ editMode:true, sheetRow: evt.sheetRow });
   }
 
   async function handleSave() {
-    if (!form.evento.trim()) return;
+    if (!form.evento.trim() || !form.data) return;
     setSaving(true);
     try {
-      const d = modal.date;
-      const dd   = String(d.getDate()).padStart(2,"0");
-      const mm   = String(d.getMonth()+1).padStart(2,"0");
-      const yyyy = d.getFullYear();
-      const dataStr = `${dd}/${mm}/${yyyy}`;
-
-      if (modal.editMode && modal.sheetRow) {
-        await fetch("/api/routine/events", {
-          method: "PUT", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sheetRow: modal.sheetRow, data: dataStr, evento: form.evento, tipo: form.tipo }),
-        });
+      const [y,m,d] = form.data.split("-");
+      const dataStr = `${d}/${m}/${y}`;
+      const body = { data: dataStr, evento: form.evento.trim(), tipo: form.tipo, horario: form.horario };
+      if (modal.editMode) {
+        await fetch("/api/routine/events", { method:"PUT",  headers:{"Content-Type":"application/json"}, body: JSON.stringify({...body, sheetRow: modal.sheetRow}) });
       } else {
-        await fetch("/api/routine/events", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: dataStr, evento: form.evento, tipo: form.tipo }),
-        });
+        await fetch("/api/routine/events", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
       }
+      showToast(modal.editMode ? "✓ Evento atualizado" : "✓ Evento adicionado");
       setModal(null);
       reload();
     } finally { setSaving(false); }
   }
 
-  async function handleDelete(sheetRow) {
-    await fetch("/api/routine/events", {
-      method: "DELETE", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sheetRow }),
-    });
+  async function handleDelete(sheetRow, name) {
+    await fetch("/api/routine/events", { method:"DELETE", headers:{"Content-Type":"application/json"}, body: JSON.stringify({sheetRow}) });
+    showToast(`🗑 ${name} removido`);
     reload();
   }
 
-  const inputSt = { width: "100%", padding: "9px 12px", borderRadius: 10, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#f0f0f8", fontSize: 14, fontFamily: "inherit", outline: "none" };
-
-  const today   = new Date(); today.setHours(0,0,0,0);
+  // ── Dados derivados ────────────────────────────────────────────────────────
+  const today = new Date(); today.setHours(0,0,0,0);
   const todayISO = toISO(today);
 
-  const past     = events.filter(e => e.isPast);
-  const upcoming = events.filter(e => !e.isPast);
+  // Feriados dos próximos 2 anos
+  const holidayMap = { ...getHolidays(today.getFullYear()), ...getHolidays(today.getFullYear()+1) };
 
-  // Mapa de data → eventos
-  const eventMap = {};
-  for (const e of upcoming) {
-    if (!eventMap[e.date]) eventMap[e.date] = [];
-    eventMap[e.date].push(e);
+  // Map de ISO → eventos do usuário
+  const eventsByDate = {};
+  for (const e of events) {
+    if (!eventsByDate[e.date]) eventsByDate[e.date] = [];
+    eventsByDate[e.date].push(e);
   }
 
-  // Próximos 3 FDS
-  const nextFri = getNextFriday(today);
-
-  // Feriados SP — cobre os anos dos 3 FDS + adjacentes (Qui/Seg)
-  const _ys = new Set();
-  for (let i = 0; i < 3; i++) {
-    const f = new Date(nextFri); f.setDate(nextFri.getDate() + i * 7);
-    _ys.add(f.getFullYear());
-    const m = new Date(f); m.setDate(f.getDate() + 10);
-    _ys.add(m.getFullYear());
-  }
-  const spHolidays = new Set([..._ys].flatMap(y => [...getSpHolidays(y)]));
-
-  const weekends = [0, 1, 2].map(i => {
-    const fri  = new Date(nextFri);
-    fri.setDate(nextFri.getDate() + i * 7);
-    const core = fdsRange(fri); // [sex, sáb, dom]
-    const sun  = core[2];
-
-    // Pontão: inclui Quinta e/ou Segunda se feriado; e Quarta se Quinta é feriado
-    const thu = new Date(fri); thu.setDate(fri.getDate() - 1);
-    const wed = new Date(fri); wed.setDate(fri.getDate() - 2);
-    const mon = new Date(sun); mon.setDate(sun.getDate() + 1);
-    const thuIsHol = spHolidays.has(toISO(thu));
-    const days = [
-      ...(thuIsHol ? [wed, thu] : []),  // Qua (dia anterior) + Qui (feriado)
-      ...core,
-      ...(spHolidays.has(toISO(mon)) ? [mon] : []),
-    ];
-
-    const rangeLabel = `${fri.getDate()} — ${sun.getDate()} ${MES_ABR[sun.getMonth()]}`;
-    const isCurrent  = days.some(d => toISO(d) === todayISO);
-    const title = i === 0
-      ? (isCurrent ? "Este Final de Semana" : "Próximo Final de Semana")
-      : `FDS ${fri.getDate()}–${sun.getDate()} · ${MES_ABR[sun.getMonth()]}`;
-    return { days, rangeLabel, isCurrent, title };
-  });
-
-  // IDs de todos os dias dos 3 FDS (+ pontões) para excluir da lista
-  const fdsISOSet = new Set(weekends.flatMap(w => w.days.map(toISO)));
-
-  // Feriados do ano que NÃO estão nos FDS já exibidos — com pontes
-  const holidaySections = (() => {
-    const sections = [];
-    const yearsNeeded = new Set([today.getFullYear(), today.getFullYear() + 1]);
-    const allHolidays = new Set([...yearsNeeded].flatMap(y => [...getSpHolidays(y)]));
-    for (const hISO of [...allHolidays].sort()) {
-      // Fix timezone: parsear como data local para evitar shift UTC-3
-      const [hy, hm, hd] = hISO.split('-').map(Number);
-      const hDate = new Date(hy, hm - 1, hd);
-      const daysAway = Math.round((hDate - today) / 86400000);
-      if (daysAway < 0) continue;          // só futuros
-      if (fdsISOSet.has(hISO)) continue;   // já coberto por FDS
-      const dow = hDate.getDay();
-      if (dow === 0 || dow === 6) continue; // FDS puro já coberto
-
-      const days = [];
-
-      if (dow === 1) {
-        // Segunda-feira: inclui Sáb + Dom anteriores (fim de semana estendido)
-        const sat     = new Date(hDate); sat.setDate(hDate.getDate() - 2);
-        const sunPrev = new Date(hDate); sunPrev.setDate(hDate.getDate() - 1);
-        if (!fdsISOSet.has(toISO(sat)))     days.push(sat);
-        if (!fdsISOSet.has(toISO(sunPrev))) days.push(sunPrev);
-      } else if (dow === 2) {
-        // Terça-feira: Sex+Sáb+Dom+Seg como feriado prolongado (só se Seg não for feriado)
-        const mon = new Date(hDate); mon.setDate(hDate.getDate() - 2);
-        if (!allHolidays.has(toISO(mon))) {
-          const fri = new Date(mon); fri.setDate(mon.getDate() - 3);
-          const sat = new Date(mon); sat.setDate(mon.getDate() - 2);
-          const sun = new Date(mon); sun.setDate(mon.getDate() - 1);
-          if (!fdsISOSet.has(toISO(fri))) days.push(fri);
-          if (!fdsISOSet.has(toISO(sat))) days.push(sat);
-          if (!fdsISOSet.has(toISO(sun))) days.push(sun);
-          days.push(mon);
-        }
-      } else {
-        // Demais: dia anterior (exceto se domingo)
-        const prev = new Date(hDate); prev.setDate(hDate.getDate() - 1);
-        if (prev.getDay() !== 0) days.push(prev);
-      }
-
-      days.push(hDate);
-
-      if (dow === 4) {
-        // Quinta-feira: Sex como ponte posterior (só se Sex não for também feriado)
-        const fri = new Date(hDate); fri.setDate(hDate.getDate() + 1);
-        if (!allHolidays.has(toISO(fri))) days.push(fri);
-      }
-
-      sections.push({
-        days,
-        holidayISO: hISO,
-        title: `🎉 Feriado · ${hDate.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}`,
-        daysAway,
-      });
+  // ── Agenda: semanas ────────────────────────────────────────────────────────
+  const weeks = [];
+  const weekStart = startOfWeek(today);
+  for (let w = 0; w < 12; w++) {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(weekStart, w * 7 + i);
+      const iso = toISO(d);
+      days.push({ date: d, iso, holiday: holidayMap[iso] ?? null, events: eventsByDate[iso] ?? [] });
     }
-    return sections;
-  })();
-
-  // Adiciona dias dos feriados midweek ao set para não duplicar na lista
-  for (const s of holidaySections) s.days.forEach(d => fdsISOSet.add(toISO(d)));
-
-  // Eventos restantes (excluindo os 3 FDS)
-  const rest = upcoming.filter(e => !fdsISOSet.has(e.date));
-
-  // Agrupa restantes por semana (Sex do fds mais próximo anterior)
-  function fdsSemana(dateISO) {
-    const d = new Date(dateISO);
-    const dow = d.getDay();
-    const offset = dow === 6 ? -1 : dow === 0 ? -2 : dow === 5 ? 0 : -(dow + 2);
-    const fri = new Date(d); fri.setDate(d.getDate() + offset);
-    return toISO(fri);
+    // só inclui semanas com conteúdo a partir da semana 2
+    const hasContent = days.some(d => d.holiday || d.events.length > 0 || d.iso >= todayISO);
+    if (w === 0 || hasContent) weeks.push({ label: weekLabel(days[0].date, days[6].date), days });
   }
 
-  const byWeekend = {};
-  for (const e of rest) {
-    const key = fdsSemana(e.date);
-    if (!byWeekend[key]) byWeekend[key] = { key, events: [] };
-    byWeekend[key].events.push(e);
+  function weekLabel(mon, sun) {
+    if (mon.getMonth() === sun.getMonth())
+      return `${mon.getDate()}–${sun.getDate()} ${MES_ABR[mon.getMonth()]}`;
+    return `${mon.getDate()} ${MES_ABR[mon.getMonth()]} – ${sun.getDate()} ${MES_ABR[sun.getMonth()]}`;
   }
-  const weekendGroups = Object.values(byWeekend).sort((a, b) => a.key.localeCompare(b.key));
+
+  // ── Feriados futuros para aba ─────────────────────────────────────────────
+  const futureHolidays = Object.entries(holidayMap)
+    .filter(([iso]) => iso >= todayISO)
+    .sort(([a],[b]) => a.localeCompare(b))
+    .map(([iso, name]) => {
+      const [y,m,d] = iso.split("-").map(Number);
+      const date = new Date(y,m-1,d);
+      const diff = Math.round((date-today)/86400000);
+      return { iso, name, date, diff };
+    });
+
+  // ── Estilos ───────────────────────────────────────────────────────────────
+  const inpSt = {
+    width:"100%", padding:"9px 12px", borderRadius:10,
+    background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)",
+    color:"#f0f0f8", fontSize:14, fontFamily:"inherit", outline:"none",
+  };
 
   return (
     <div className={styles.container}>
       <ModuleHeader title="Eventos" />
       <Navigation />
 
-      {/* Modal adicionar evento */}
-      {modal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: 24, width: "100%", maxWidth: 360 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "capitalize" }}>
-              {modal.date.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
-            </div>
-            <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 20 }}>{modal.editMode ? "Editar Evento" : "Novo Evento"}</div>
+      {/* Toast */}
+      {toast && (
+        <div style={{ position:"fixed", bottom:90, left:"50%", transform:"translateX(-50%)",
+          background:"rgba(17,24,39,0.97)", border:"1px solid rgba(255,255,255,0.1)",
+          color:"#f0f0f8", padding:"10px 20px", borderRadius:12,
+          fontSize:13, fontWeight:600, zIndex:999, whiteSpace:"nowrap" }}>
+          {toast}
+        </div>
+      )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Modal */}
+      {modal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:500,
+          display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+          onClick={()=>setModal(null)}>
+          <div style={{ background:"#111827", border:"1px solid rgba(255,255,255,0.12)",
+            borderRadius:20, padding:24, width:"100%", maxWidth:380 }}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{ fontSize:18, fontWeight:800, marginBottom:20 }}>
+              {modal.editMode ? "Editar Evento" : "Novo Evento"}
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              {/* Data */}
               <div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>EVENTO</div>
-                <input
-                  autoFocus value={form.evento}
-                  onChange={e => setForm(p => ({ ...p, evento: e.target.value.toUpperCase() }))}
-                  onKeyDown={e => e.key === "Enter" && handleSave()}
-                  placeholder="EX: ALMOÇO EM FAMÍLIA"
-                  style={inputSt}
-                />
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginBottom:5 }}>DATA</div>
+                <input type="date" value={form.data}
+                  onChange={e=>setForm(p=>({...p, data:e.target.value}))}
+                  style={{ ...inpSt, colorScheme:"dark" }} />
               </div>
+
+              {/* Evento */}
               <div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 8 }}>TIPO</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginBottom:5 }}>EVENTO</div>
+                <input autoFocus value={form.evento}
+                  onChange={e=>setForm(p=>({...p, evento:e.target.value}))}
+                  onKeyDown={e=>e.key==="Enter" && handleSave()}
+                  placeholder="Ex: Consulta médica, Almoço família…"
+                  style={inpSt} />
+              </div>
+
+              {/* Horário */}
+              <div>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginBottom:5 }}>HORÁRIO (opcional)</div>
+                <input type="time" value={form.horario}
+                  onChange={e=>setForm(p=>({...p, horario:e.target.value}))}
+                  style={{ ...inpSt, colorScheme:"dark" }} />
+              </div>
+
+              {/* Tipo */}
+              <div>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginBottom:8 }}>TIPO</div>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                   {TIPO_OPTIONS.map(t => {
-                    const col = TIPO_COLORS[t] ?? "rgba(255,255,255,0.4)";
+                    const col = tipoColor(t);
                     const sel = form.tipo === t;
                     return (
-                      <button key={t} onClick={() => setForm(p => ({ ...p, tipo: sel ? "" : t }))}
-                        style={{ padding: "5px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", textTransform: "capitalize",
-                          background: sel ? col + "22" : "rgba(255,255,255,0.04)",
+                      <button key={t} type="button"
+                        onClick={()=>setForm(p=>({...p, tipo: sel ? "" : t}))}
+                        style={{ padding:"5px 12px", borderRadius:99, fontSize:12, fontWeight:700,
+                          fontFamily:"inherit", cursor:"pointer", textTransform:"capitalize",
+                          background: sel ? col+"22" : "rgba(255,255,255,0.04)",
                           color:      sel ? col : "rgba(255,255,255,0.4)",
-                          border:     `1px solid ${sel ? col + "55" : "rgba(255,255,255,0.08)"}`,
-                        }}>
+                          border:    `1px solid ${sel ? col+"55" : "rgba(255,255,255,0.08)"}` }}>
                         {t}
                       </button>
                     );
                   })}
                 </div>
               </div>
-            </div>
 
-            <div style={{ display: "flex", gap: 8, marginTop: 22 }}>
-              <button onClick={() => setModal(null)} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                Cancelar
-              </button>
-              <button onClick={handleSave} disabled={!form.evento.trim() || saving}
-                style={{ flex: 2, padding: "11px 0", borderRadius: 10, border: "none",
-                  background: (form.evento.trim() && !saving) ? "linear-gradient(135deg,#f59e0b,#d97706)" : "rgba(255,255,255,0.06)",
-                  color: "#fff", fontSize: 13, fontWeight: 700, cursor: (form.evento.trim() && !saving) ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
-                {saving ? "Salvando…" : modal.editMode ? "Salvar Alterações" : "Salvar"}
-              </button>
+              {/* Botões */}
+              <div style={{ display:"flex", gap:10, marginTop:6 }}>
+                {modal.editMode && (
+                  <button onClick={()=>{ handleDelete(modal.sheetRow, form.evento); setModal(null); }}
+                    style={{ padding:"11px 16px", borderRadius:10, fontSize:13, fontWeight:600,
+                      fontFamily:"inherit", cursor:"pointer", border:"1px solid rgba(239,68,68,0.3)",
+                      background:"rgba(239,68,68,0.08)", color:"#ef4444" }}>
+                    Excluir
+                  </button>
+                )}
+                <button onClick={()=>setModal(null)}
+                  style={{ flex:1, padding:12, borderRadius:10, fontSize:13, fontWeight:600,
+                    fontFamily:"inherit", cursor:"pointer",
+                    background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", color:"rgba(255,255,255,0.4)" }}>
+                  Cancelar
+                </button>
+                <button onClick={handleSave} disabled={saving || !form.evento.trim() || !form.data}
+                  style={{ flex:2, padding:12, borderRadius:10, fontSize:13, fontWeight:700,
+                    fontFamily:"inherit", cursor:"pointer", border:"none", color:"#fff",
+                    background:"linear-gradient(135deg,#10b981,#059669)",
+                    opacity:(saving||!form.evento.trim()||!form.data)?0.5:1 }}>
+                  {saving ? "Salvando…" : modal.editMode ? "Salvar" : "Adicionar"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      <header className={styles.header}>
+      {/* Header */}
+      <header style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
+        padding:"12px 0 16px" }}>
         <div>
-          <h1>Eventos</h1>
-          <p>{today.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</p>
+          <h1 style={{ fontSize:22, fontWeight:900, margin:0 }}>Eventos</h1>
+          <p style={{ fontSize:12, color:"var(--text-muted)", margin:"3px 0 0" }}>
+            {today.toLocaleDateString("pt-BR",{weekday:"long", day:"numeric", month:"long"})}
+          </p>
         </div>
-        <button onClick={() => openAdd(today)}
-          className={styles.eventAddBtn}
-          style={{ padding: "8px 16px", borderRadius: 99, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)", color: "#f59e0b", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-          + Evento
+        <button onClick={()=>openAdd(null)}
+          style={{ padding:"9px 18px", borderRadius:12, fontSize:13, fontWeight:700,
+            fontFamily:"inherit", cursor:"pointer", border:"none", color:"#fff",
+            background:"linear-gradient(135deg,#10b981,#059669)" }}>
+          + Novo Evento
         </button>
       </header>
 
-      {loading && <div className={styles.loading}>Carregando eventos...</div>}
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:3, marginBottom:20, padding:"3px",
+        background:"rgba(255,255,255,0.04)", borderRadius:10,
+        border:"1px solid rgba(255,255,255,0.07)", width:"fit-content" }}>
+        {[{k:"agenda",l:"📅 Agenda"},{k:"feriados",l:"🎉 Feriados"}].map(t=>(
+          <button key={t.k} onClick={()=>setTab(t.k)}
+            style={{ padding:"7px 18px", borderRadius:8, fontSize:13, fontWeight:600,
+              fontFamily:"inherit", cursor:"pointer",
+              background: tab===t.k ? "rgba(255,255,255,0.09)" : "transparent",
+              color:      tab===t.k ? "#fff" : "rgba(255,255,255,0.35)",
+              border:"none", transition:"all 0.2s" }}>
+            {t.l}
+          </button>
+        ))}
+      </div>
 
-      {!loading && (
-        <div style={{ paddingBottom: 80 }}>
+      {loading && <p style={{ textAlign:"center", padding:"48px 0", color:"var(--text-muted)", fontSize:14 }}>Carregando…</p>}
 
-          {/* ── Próximos 3 FDS + Feriados midweek em ordem cronológica ── */}
-          {[
-            ...weekends.map(w => ({ ...w, type: "fds", sortKey: toISO(w.days[0]) })),
-            ...holidaySections.map(h => ({ ...h, type: "feriado", sortKey: h.holidayISO })),
-          ]
-            .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
-            .map(({ days, rangeLabel, title, type }, wi) => {
-              const visibleDays = type === "feriado"
-                ? days.filter(d => !excludedDates.has(toISO(d)))
-                : days;
-              if (visibleDays.length === 0) return null;
-              return (
-                <div key={wi} style={{ marginBottom: 28 }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 14 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)" }}>
-                      {title}
-                    </span>
-                    {wi === 0 && (
-                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontFamily: "var(--font-mono)" }}>
-                        {rangeLabel}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: `repeat(${visibleDays.length},1fr)`, gap: 10 }}>
-                    {visibleDays.map((d, i) => (
-                      <DayCard
-                        key={i}
-                        date={d}
-                        evts={eventMap[toISO(d)] ?? []}
-                        isToday={toISO(d) === todayISO}
-                        isHoliday={spHolidays.has(toISO(d))}
-                        onAdd={openAdd}
-                        onDelete={handleDelete}
-                        onEdit={openEdit}
-                        onExclude={type === "feriado" ? excludeDate : undefined}
-                      />
-                    ))}
-                  </div>
+      {/* ── Agenda ── */}
+      {!loading && tab === "agenda" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          {weeks.map((week, wi) => (
+            <WeekSection key={wi} week={week} today={todayISO}
+              onAdd={d=>openAdd(d)} onEdit={openEdit} />
+          ))}
+        </div>
+      )}
+
+      {/* ── Feriados ── */}
+      {!loading && tab === "feriados" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {futureHolidays.map(h => (
+            <div key={h.iso} style={{
+              display:"flex", alignItems:"center", gap:14,
+              padding:"13px 16px", borderRadius:14,
+              background:"rgba(168,85,247,0.06)",
+              border:`1px solid rgba(168,85,247,${h.diff<=7?"0.35":"0.18"})`,
+              borderLeft:`3px solid ${h.diff===0?"#06b6d4":h.diff<=7?"#f59e0b":"#a855f7"}`,
+            }}>
+              <div style={{ textAlign:"center", minWidth:40, flexShrink:0 }}>
+                <div style={{ fontSize:9, fontWeight:800, color:"#a855f7", letterSpacing:"0.06em", textTransform:"uppercase" }}>
+                  {h.diff===0 ? "HOJE" : h.diff===1 ? "AMANHÃ" : `${h.diff}d`}
                 </div>
-              );
-            })}
-
-          {/* ── Divider ── */}
-          {weekendGroups.length > 0 && (
-            <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 24 }} />
-          )}
-
-          {/* ── Grupos por FDS ── */}
-          {weekendGroups.map(({ key, events: grpEvents }) => {
-            const friDate = new Date(key);
-            const sunDate = new Date(key); sunDate.setDate(friDate.getDate() + 2);
-            const monthLabel = friDate.getMonth() === sunDate.getMonth()
-              ? `${MES_FULL[friDate.getMonth()]}`
-              : `${MES_ABR[friDate.getMonth()]}/${MES_ABR[sunDate.getMonth()]}`;
-            const label = `FDS ${friDate.getDate()}–${sunDate.getDate()} · ${monthLabel}`;
-
-            return (
-              <div key={key} style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(255,255,255,0.28)", marginBottom: 10, paddingLeft: 2 }}>
-                  {label}
+                <div style={{ fontSize:26, fontWeight:900, color:"#a855f7", lineHeight:1 }}>
+                  {h.date.getDate()}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  {grpEvents.map((e, i) => (
-                    <EventCard
-                      key={i}
-                      e={e}
-                      onEdit={e.sheetRow ? () => { const d = new Date(e.date); d.setHours(0,0,0,0); openEdit(e, d); } : undefined}
-                    />
-                  ))}
+                <div style={{ fontSize:10, color:"rgba(255,255,255,0.3)" }}>
+                  {MES_ABR[h.date.getMonth()]}
                 </div>
               </div>
-            );
-          })}
-
-          {upcoming.length === 0 && (
-            <div className={styles.empty}>
-              <p>Nenhum evento futuro.</p>
-              <p style={{ fontSize: 12, marginTop: 6, opacity: 0.5 }}>
-                Adicione eventos na aba <strong>App_Eventos</strong> da planilha.
-              </p>
+              <div style={{ width:1, height:32, background:"rgba(168,85,247,0.2)" }} />
+              <div>
+                <div style={{ fontSize:14, fontWeight:700, color:"#f0f0f8" }}>{h.name}</div>
+                <div style={{ fontSize:11, color:"var(--text-muted)", marginTop:2, textTransform:"capitalize" }}>
+                  {h.date.toLocaleDateString("pt-BR",{weekday:"long"})} · {h.date.toLocaleDateString("pt-BR",{day:"numeric",month:"long",year:"numeric"})}
+                </div>
+              </div>
             </div>
-          )}
-
-          {/* ── Passados ── */}
-          {past.length > 0 && (() => {
-            // Agrupa por mês (mais recente primeiro)
-            const sorted = [...past].reverse();
-            const byMonth = [];
-            for (const e of sorted) {
-              const [d, m, y] = e.dateLabel.split("/").map(Number);
-              const fullY = y < 100 ? 2000 + y : y;
-              const key = `${fullY}-${String(m).padStart(2,"0")}`;
-              const label = `${MES_FULL[m - 1]} ${fullY}`;
-              let grp = byMonth.find(g => g.key === key);
-              if (!grp) { grp = { key, label, events: [] }; byMonth.push(grp); }
-              grp.events.push(e);
-            }
-
-            return (
-              <div style={{ marginTop: 24, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16 }}>
-                <button
-                  onClick={() => setShowPast(p => !p)}
-                  style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: "0 0 14px", display: "flex", alignItems: "center", gap: 6 }}
-                >
-                  <span style={{ fontSize: 10 }}>{showPast ? "▲" : "▼"}</span>
-                  {past.length} evento{past.length !== 1 ? "s" : ""} passado{past.length !== 1 ? "s" : ""}
-                </button>
-
-                {showPast && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                    {byMonth.map(({ key, label, events: grpEvts }) => (
-                      <div key={key}>
-                        {/* Cabeçalho do mês */}
-                        <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.2)", marginBottom: 8, paddingLeft: 2 }}>
-                          {label}
-                        </div>
-
-                        {/* Linhas de eventos */}
-                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                          {grpEvts.map((e, i) => {
-                            const [day, mon] = e.dateLabel.split("/");
-                            const ts = tipoStyle(e.tipo);
-                            const tipoColor = e.tipo ? (TIPO_COLORS[e.tipo.toLowerCase()] ?? "rgba(255,255,255,0.25)") : "rgba(255,255,255,0.15)";
-                            return (
-                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 10, transition: "background 0.15s" }}
-                                onMouseEnter={el => el.currentTarget.style.background = "rgba(255,255,255,0.03)"}
-                                onMouseLeave={el => el.currentTarget.style.background = "transparent"}
-                              >
-                                {/* Data */}
-                                <div style={{ display: "flex", alignItems: "baseline", gap: 4, minWidth: 46, flexShrink: 0 }}>
-                                  <span style={{ fontSize: 16, fontWeight: 800, color: "rgba(255,255,255,0.25)", lineHeight: 1 }}>{day}</span>
-                                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.18)", fontWeight: 600 }}>/{mon}</span>
-                                </div>
-
-                                {/* Dia da semana */}
-                                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.18)", minWidth: 24, flexShrink: 0, textTransform: "uppercase", fontWeight: 700 }}>
-                                  {e.weekday ? e.weekday.slice(0, 3) : ""}
-                                </span>
-
-                                {/* Dot colorido do tipo */}
-                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: tipoColor, flexShrink: 0, opacity: 0.7 }} />
-
-                                {/* Nome do evento */}
-                                <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.45)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
-                                  {e.activity}
-                                </span>
-
-                                {/* Badge do tipo */}
-                                {e.tipo && (
-                                  <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 99, color: tipoColor, background: tipoColor + "18", border: `1px solid ${tipoColor}30`, textTransform: "capitalize", flexShrink: 0 }}>
-                                    {e.tipo}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
+          ))}
         </div>
       )}
     </div>
+  );
+}
+
+// ── Componente de semana ─────────────────────────────────────────────────────
+function WeekSection({ week, today, onAdd, onEdit }) {
+  // Mostra a semana apenas se tiver algo relevante (eventos, feriados, ou for a semana atual/próxima contendo hoje)
+  return (
+    <div>
+      {/* Header da semana */}
+      <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.08em",
+        color:"var(--text-muted)", marginBottom:6, paddingLeft:4 }}>
+        {week.label}
+      </div>
+
+      {/* Dias */}
+      <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+        {week.days.map(({ date, iso, holiday, events }) => {
+          const isToday   = iso === today;
+          const isPast    = iso < today;
+          const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+          const hasContent= holiday || events.length > 0;
+          const isActive  = isToday || hasContent;
+
+          // Cor dominante do dia
+          const accentColor = isToday ? "#06b6d4"
+            : holiday ? "#a855f7"
+            : events.length > 0 ? tipoColor(events[0].tipo)
+            : isWeekend ? "rgba(255,255,255,0.18)"
+            : "rgba(255,255,255,0.07)";
+
+          return (
+            <div key={iso} style={{
+              display:"flex", alignItems:"center", gap:12,
+              padding:"8px 12px", borderRadius:12,
+              background: isToday
+                ? "rgba(6,182,212,0.06)"
+                : holiday
+                  ? "rgba(168,85,247,0.05)"
+                  : isWeekend && !isPast
+                    ? "rgba(255,255,255,0.02)"
+                    : "transparent",
+              border:`1px solid ${isToday ? "rgba(6,182,212,0.25)" : hasContent ? accentColor+"28" : "rgba(255,255,255,0.04)"}`,
+              borderLeft:`3px solid ${isActive ? accentColor : "rgba(255,255,255,0.05)"}`,
+              opacity: isPast && !isToday ? 0.4 : 1,
+              transition:"opacity 0.15s",
+            }}>
+              {/* Dia da semana + número */}
+              <div style={{ width:44, flexShrink:0, textAlign:"center" }}>
+                <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase",
+                  color: isToday ? "#06b6d4" : holiday ? "#a855f7" : isWeekend ? "rgba(255,255,255,0.4)" : "var(--text-muted)" }}>
+                  {isToday ? "HOJE" : DAY_ABR[date.getDay()]}
+                </div>
+                <div style={{ fontSize:20, fontWeight:900, lineHeight:1, marginTop:2,
+                  color: isToday ? "#06b6d4" : holiday ? "#a855f7" : isWeekend ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.35)" }}>
+                  {date.getDate()}
+                </div>
+              </div>
+
+              {/* Conteúdo */}
+              <div style={{ flex:1, minWidth:0, display:"flex", flexWrap:"wrap", gap:5, alignItems:"center" }}>
+                {/* Feriado badge */}
+                {holiday && (
+                  <span style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:99,
+                    background:"rgba(168,85,247,0.15)", color:"#c084fc",
+                    border:"1px solid rgba(168,85,247,0.3)", whiteSpace:"nowrap" }}>
+                    🎉 {holiday}
+                  </span>
+                )}
+                {/* Eventos */}
+                {events.map(e => (
+                  <EventChip key={e.sheetRow} event={e} onClick={()=>onEdit(e)} />
+                ))}
+              </div>
+
+              {/* Botão adicionar */}
+              {!isPast && (
+                <button onClick={()=>onAdd(date)}
+                  style={{ flexShrink:0, width:26, height:26, borderRadius:8,
+                    border:"1px dashed rgba(255,255,255,0.15)", background:"transparent",
+                    color:"rgba(255,255,255,0.2)", fontSize:16, lineHeight:1,
+                    cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+                    transition:"all 0.15s" }}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(16,185,129,0.5)";e.currentTarget.style.color="#10b981";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.15)";e.currentTarget.style.color="rgba(255,255,255,0.2)";}}>
+                  +
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Chip de evento ───────────────────────────────────────────────────────────
+function EventChip({ event, onClick }) {
+  const col = tipoColor(event.tipo);
+  const hora = event.horario ? fmtHora(event.horario) : null;
+  return (
+    <button onClick={onClick}
+      style={{ display:"flex", alignItems:"center", gap:5,
+        padding:"3px 10px 3px 8px", borderRadius:99, cursor:"pointer",
+        background: col+"18", border:`1px solid ${col}40`,
+        fontFamily:"inherit", maxWidth:240 }}>
+      {hora && (
+        <span style={{ fontSize:10, fontWeight:800, color:col, letterSpacing:"0.03em", flexShrink:0 }}>
+          {hora}
+        </span>
+      )}
+      <span style={{ fontSize:12, fontWeight:700, color:"#f0f0f8",
+        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+        {event.activity}
+      </span>
+      {event.tipo && (
+        <span style={{ fontSize:9, fontWeight:700, color:col, textTransform:"capitalize", flexShrink:0 }}>
+          · {event.tipo}
+        </span>
+      )}
+    </button>
   );
 }

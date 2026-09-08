@@ -8,17 +8,17 @@ const SHEET = "App_Eventos";
 // POST — adiciona evento
 export async function POST(req) {
   try {
-    const { data, evento, tipo } = await req.json();
+    const { data, evento, tipo, horario } = await req.json();
     if (!data || !evento?.trim()) {
       return Response.json({ ok: false, error: "data e evento são obrigatórios" }, { status: 400 });
     }
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId:    ID,
-      range:            `'${SHEET}'!A:C`,
+      range:            `'${SHEET}'!A:D`,
       valueInputOption: "RAW",
       insertDataOption: "INSERT_ROWS",
-      requestBody:      { values: [[data, evento.trim(), tipo ?? ""]] },
+      requestBody:      { values: [[data, evento.trim(), tipo ?? "", horario ?? ""]] },
     });
     return Response.json({ ok: true });
   } catch (e) {
@@ -29,16 +29,16 @@ export async function POST(req) {
 // PUT — atualiza evento existente na linha sheetRow
 export async function PUT(req) {
   try {
-    const { sheetRow, data, evento, tipo } = await req.json();
+    const { sheetRow, data, evento, tipo, horario } = await req.json();
     if (!sheetRow || !data || !evento?.trim()) {
       return Response.json({ ok: false, error: "sheetRow, data e evento são obrigatórios" }, { status: 400 });
     }
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.update({
       spreadsheetId:    ID,
-      range:            `'${SHEET}'!A${sheetRow}:C${sheetRow}`,
+      range:            `'${SHEET}'!A${sheetRow}:D${sheetRow}`,
       valueInputOption: "RAW",
-      requestBody:      { values: [[data, evento.trim(), tipo ?? ""]] },
+      requestBody:      { values: [[data, evento.trim(), tipo ?? "", horario ?? ""]] },
     });
     return Response.json({ ok: true });
   } catch (e) {
