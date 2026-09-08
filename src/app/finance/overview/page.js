@@ -626,7 +626,10 @@ export default function OverviewPage() {
                         <span style={{ fontSize: 22, fontWeight: 900, color: dayColor, lineHeight: 1 }}>{daysLeft}</span>
                         <span style={{ fontSize: 10, color: "var(--text-muted)" }}>de {totalDays} dias</span>
                       </div>
-                      <div style={{ height: 7, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
+                      <div style={{ textAlign: "center", fontSize: 9, marginBottom: 6 }}>
+                        <span style={{ fontWeight: 700, color: barColor }}>{pctElapsed}%</span>
+                      </div>
+                      <div style={{ height: 10, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${pctElapsed}%`, background: barColor, borderRadius: 99, transition: "width 0.8s ease" }} />
                       </div>
                     </div>
