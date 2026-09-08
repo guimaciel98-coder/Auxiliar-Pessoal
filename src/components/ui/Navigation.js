@@ -48,7 +48,6 @@ const NAV_FULL = [
     children: [
       { label: "Minha Rotina", path: "/routine",         icon: "📅", exact: true },
       { label: "Eventos",      path: "/routine/events",  icon: "🗓" },
-      { label: "Férias",       path: "/routine/ferias",  icon: "🏖" },
     ],
   },
   {
