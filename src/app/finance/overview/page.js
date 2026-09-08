@@ -623,8 +623,9 @@ export default function OverviewPage() {
                         {melhorDia ? `Ciclo até dia ${melhorDia - 1}` : "Dias Restantes"}
                       </div>
                       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 5, marginBottom: 10 }}>
+                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Faltam</span>
                         <span style={{ fontSize: 22, fontWeight: 900, color: dayColor, lineHeight: 1 }}>{daysLeft}</span>
-                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>de {totalDays} dias</span>
+                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>dias</span>
                       </div>
                       <div style={{ textAlign: "center", fontSize: 9, marginBottom: 6 }}>
                         <span style={{ fontWeight: 700, color: barColor }}>{pctElapsed}%</span>
