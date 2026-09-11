@@ -231,18 +231,20 @@ export default function OverviewPage() {
     ?? (() => { const a = historico.filter(m => m.atingido); return a.length ? a[a.length-1].valor : 0; })();
   const mesesAtingidos    = historico.filter(m => m.atingido).length;
 
-  // ── Donut por grupo (Casa / Pessoal / Outros / Parcelas) ──────────────────
-  const DONUT_COLORS = { Casa: "#3b82f6", Pessoal: "#10b981", Outros: "#f59e0b", Parcelas: "#8b5cf6" };
+  // ── Donut por grupo (Casa Nova / Casa / Pessoal / Outros / Parcelas) ────────
+  const DONUT_COLORS = { "Casa Nova": "#f59e0b", Casa: "#3b82f6", Pessoal: "#10b981", Outros: "#9ca3af", Parcelas: "#8b5cf6" };
 
   const donutData = useMemo(() => {
-    const groups = { Casa: 0, Pessoal: 0, Outros: 0, Parcelas: 0 };
+    const groups = { "Casa Nova": 0, Casa: 0, Pessoal: 0, Outros: 0, Parcelas: 0 };
 
     // Fixos pelo valor real (todos, pagos ou não), excluindo parcelas antigas ("Até")
     for (const item of data?.gastos?.fixos?.items ?? []) {
       if (!item.real || item.item.includes("Até")) continue;
-      if      (item.grupo === "Casa")    groups.Casa    += item.real;
-      else if (item.grupo === "Pessoal") groups.Pessoal += item.real;
-      else                               groups.Outros  += item.real;
+      const g = (item.grupo ?? "").toLowerCase();
+      if      (g === "casa nova") groups["Casa Nova"] += item.real;
+      else if (g === "casa")      groups.Casa         += item.real;
+      else if (g === "pessoal")   groups.Pessoal      += item.real;
+      else                        groups.Outros        += item.real;
     }
 
     // Variáveis: usa o real do ciclo atual — cada item vai para o grupo correto
