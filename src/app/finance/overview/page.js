@@ -84,10 +84,10 @@ function parsePrazo(prazo) {
  */
 function buildProjection(acumulado, poupancaRealBase, commitments, incomeCommitments = [], firstMonthValue = null) {
   const now   = new Date();
-  // Começa do próximo mês — o mês atual ainda está em andamento
-  let   month = now.getMonth() + 2;
+  // Começa do mês atual — ele ainda não fechou no histórico, então a projeção
+  // precisa cobri-lo (senão fica um buraco entre o último mês fechado e o próximo)
+  let   month = now.getMonth() + 1;
   let   year  = now.getFullYear();
-  if (month > 12) { month = 1; year++; }
   let   running = acumulado;
   const result  = [];
   let   isFirst = true;
@@ -111,7 +111,7 @@ function buildProjection(acumulado, poupancaRealBase, commitments, incomeCommitm
     }, 0);
 
     if (isFirst && firstMonthValue !== null) {
-      // Próximo mês usa a Poupança Real do mês atual (o que realmente aconteceu)
+      // Mês atual usa a Poupança Real (o que realmente aconteceu até agora)
       running += firstMonthValue;
     } else {
       running += poupancaRealBase + freed - lostIncome;
