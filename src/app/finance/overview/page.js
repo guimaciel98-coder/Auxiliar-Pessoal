@@ -608,13 +608,14 @@ export default function OverviewPage() {
                     const startMs   = startDate.getTime();
                     const endMs     = endDate.getTime();
 
-                    daysLeft   = Math.max(0, Math.round((endMs - todayMs) / 86400000));
+                    // +1 porque o último dia do ciclo também conta (dia 22 com fim no 23 = 2 dias)
+                    daysLeft   = Math.max(0, Math.round((endMs - todayMs) / 86400000) + 1);
                     totalDays  = Math.round((endMs - startMs) / 86400000);
                     pctElapsed = totalDays > 0 ? Math.min(100, Math.round(((todayMs - startMs) / (endMs - startMs)) * 100)) : 0;
                   } else {
                     // Fallback: mês calendário
                     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                    daysLeft   = daysInMonth - today;
+                    daysLeft   = daysInMonth - today + 1; // inclui o último dia do mês
                     totalDays  = daysInMonth;
                     pctElapsed = Math.round((today / daysInMonth) * 100);
                   }
