@@ -110,28 +110,25 @@ export async function GET() {
         // Usa refM/refY (mês de referência) — não o relógio do sistema.
         // - Auto + J=FALSE: exclui o mês de referência (ainda não confirmado)
         // - Auto + J=TRUE : inclui o mês de referência (fechamento confirmou)
-        // - Manual        : inclui o mês de referência sempre
+        // - Manual + J=FALSE: exclui o mês de referência (só conta quando o usuário marca)
+        // - Manual + J=TRUE : inclui o mês de referência (usuário confirmou o pagamento)
         const di = parseDataMesAno(dataInicio);
         const _ms = di?.m ?? 0;
         const _ys = di?.y ?? 0;
+        const pagoMes = String(pagoCol ?? "FALSE").toUpperCase() === "TRUE";
         let nPagas;
         if (_ms && _ys) {
-          if (isAuto) {
-            if (_ys === refY && _ms === refM) {
-              // Criada no mês de referência: 1º pagamento contabilizado
-              nPagas = Math.min(nTotal, 1);
-            } else if (String(pagoCol ?? "FALSE").toUpperCase() === "TRUE") {
-              // Fechamento confirmou (J=TRUE): inclui mês de referência
-              nPagas = Math.min(nTotal, Math.max(0, (refY - _ys) * 12 + (refM - _ms) + 1));
-            } else {
-              // Mês de referência ainda em aberto: conta só até o anterior
-              const prevM = refM === 1 ? 12 : refM - 1;
-              const prevY = refM === 1 ? refY - 1 : refY;
-              nPagas = Math.min(nTotal, Math.max(0, (prevY - _ys) * 12 + (prevM - _ms) + 1));
-            }
-          } else {
-            // Manual: inclui mês de referência sempre
+          if (isAuto && _ys === refY && _ms === refM) {
+            // Auto criada no mês de referência: 1º pagamento contabilizado
+            nPagas = Math.min(nTotal, 1);
+          } else if (pagoMes) {
+            // Confirmado (J=TRUE): inclui mês de referência
             nPagas = Math.min(nTotal, Math.max(0, (refY - _ys) * 12 + (refM - _ms) + 1));
+          } else {
+            // Mês de referência ainda em aberto: conta só até o anterior
+            const prevM = refM === 1 ? 12 : refM - 1;
+            const prevY = refM === 1 ? refY - 1 : refY;
+            nPagas = Math.min(nTotal, Math.max(0, (prevY - _ys) * 12 + (prevM - _ms) + 1));
           }
         } else {
           nPagas = Math.min(nTotal, Math.max(0, parseInt(parcelasPagas ?? "0") || 0));
@@ -150,7 +147,7 @@ export async function GET() {
           totalPago:         vMensal * nPagas,
           restante:          vMensal * (nTotal - nPagas),
           auto:              isAuto,
-          pago:              String(pagoCol ?? "FALSE").toUpperCase() === "TRUE",
+          pago:              pagoMes,
         };
       })
       .filter(Boolean);

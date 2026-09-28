@@ -998,6 +998,8 @@ export default function ExpensesPage() {
               const isConf = parcConfirm === item.sheetRow;
               const isRem  = parcRemoving.has(item.sheetRow);
               const isPaying = parcPaying.has(item.sheetRow);
+              // Quitada (todas as parcelas pagas) ou paga no mês → mostra ✓, igual aos Fixos
+              const isDone = item.pago || item.parcelasRestantes === 0;
               return (
                 <div style={{
                   padding: "13px 16px", borderRadius: 14,
@@ -1010,20 +1012,20 @@ export default function ExpensesPage() {
                   {!item.auto && (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0, marginTop: 1 }}>
                       <div
-                        onClick={() => !isPaying && !item.pago && handleParcPay(item)}
+                        onClick={() => !isPaying && !isDone && handleParcPay(item)}
                         style={{
                           width: 34, height: 34, borderRadius: "50%",
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: item.pago ? 16 : 15, fontWeight: 900,
-                          background: item.pago ? "rgba(16,185,129,0.12)" : "rgba(139,92,246,0.12)",
-                          color:      item.pago ? "#10b981"                : "#a78bfa",
-                          border:    `1.5px solid ${item.pago ? "rgba(16,185,129,0.3)" : "rgba(139,92,246,0.35)"}`,
-                          cursor: isPaying ? "wait" : item.pago ? "default" : "pointer",
+                          fontSize: isDone ? 16 : 15, fontWeight: 900,
+                          background: isDone ? "rgba(16,185,129,0.12)" : "rgba(139,92,246,0.12)",
+                          color:      isDone ? "#10b981"                : "#a78bfa",
+                          border:    `1.5px solid ${isDone ? "rgba(16,185,129,0.3)" : "rgba(139,92,246,0.35)"}`,
+                          cursor: isPaying ? "wait" : isDone ? "default" : "pointer",
                           opacity: isPaying ? 0.4 : 1,
                           transition: "all 0.2s",
                         }}
                       >
-                        {isPaying ? "…" : item.pago ? "✓" : "○"}
+                        {isPaying ? "…" : isDone ? "✓" : "○"}
                       </div>
                       {item.pago && (
                         <div
