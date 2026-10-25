@@ -31,13 +31,19 @@ function parseNum(raw) {
 }
 function toSheetNum(n) { return Number(n).toFixed(2).replace(".",","); }
 
+// Data/hora atual no fuso de Brasília — o servidor (Vercel) roda em UTC, 3h à frente.
+// Sem isso, um fechamento feito após 21h grava o dia seguinte.
+function agoraBRT() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+}
+
 function proximoMesLabel() {
-  const d   = new Date();
+  const d   = agoraBRT();
   d.setMonth(d.getMonth() + 1);
   return `${MES_PT[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`;
 }
 function mesAtualLabel() {
-  const d = new Date();
+  const d = agoraBRT();
   return `${MES_PT[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`;
 }
 
@@ -138,7 +144,7 @@ export async function POST(req) {
 
     // cycleStartDate = hoje (dia em que o fechamento ocorreu)
     if (!cycleStartDate) {
-      const now = new Date();
+      const now = agoraBRT();
       const dd  = String(now.getDate()).padStart(2, "0");
       const mm  = String(now.getMonth() + 1).padStart(2, "0");
       cycleStartDate = `${dd}/${mm}/${now.getFullYear()}`;
@@ -175,7 +181,7 @@ export async function POST(req) {
     // ── 3. Parcelas: encerradas → desativa (H=FALSE); ativas → reseta Pago(J) ──
     // App_Parcelas: A:Nome B:DataFim C:ValorTotal D:ValorMensal E:TotalParc F:ParcelasPagas G:DataInicio H:Ativo I:Auto J:Pago
     let parcelasAvancadas = 0, parcelasConcluidas = 0;
-    const closingNow = new Date();
+    const closingNow = agoraBRT();
     const closingM   = closingNow.getMonth() + 1;
     const closingY   = closingNow.getFullYear();
     parcelasRows.forEach((row, i) => {
@@ -276,7 +282,7 @@ export async function POST(req) {
     const saldoReal          = temBaseline ? (poupLiquida - poupancaAnterior) : 0;
     // Diferença = saldo calculado − saldo real (gap sem explicação)
     const diferenca          = temBaseline ? (saldoMes - saldoReal) : 0;
-    const dataHoje           = new Date().toLocaleDateString("pt-BR");
+    const dataHoje           = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
     const histRow            = [[mesAtual, dataHoje, toSheetNum(totalGanhosConf), toSheetNum(totalFixosReal), toSheetNum(totalVariaveisReal), toSheetNum(poupLiquida), toSheetNum(saldoMes), toSheetNum(totalParcelasReal), toSheetNum(saldoReal), toSheetNum(diferenca)]];
 
     try {
@@ -323,7 +329,7 @@ export async function POST(req) {
       cfgCurrent.forEach(r => { if (r[0]) cfgMap[String(r[0]).trim().toLowerCase()] = r[1] ?? ""; });
 
       // mes_referencia = mês seguinte ao fechado (usado por installments GET)
-      const _d = new Date();
+      const _d = agoraBRT();
       _d.setMonth(_d.getMonth() + 1);
       cfgMap["mes_referencia"] = `${_d.getMonth() + 1}/${_d.getFullYear()}`;
 
