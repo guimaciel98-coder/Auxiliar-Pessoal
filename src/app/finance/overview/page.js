@@ -70,7 +70,7 @@ function parsePrazo(prazo) {
 }
 
 /**
- * buildProjection — projeta poupança mês a mês até PROJ_FIM (jul/27).
+ * buildProjection — projeta poupança mês a mês até PROJ_FIM (dez/27).
  *
  * Fórmula por mês:
  *   mensal = poupancaRealBase + freed - lostIncome
@@ -83,7 +83,7 @@ function parsePrazo(prazo) {
  * conforme cada empréstimo encerra, seu valor é subtraído (sobra menos).
  */
 // Último mês coberto pela projeção de poupança
-const PROJ_FIM = { mes: 7, ano: 2027 };
+const PROJ_FIM = { mes: 12, ano: 2027 };
 
 function buildProjection(acumulado, poupancaRealBase, commitments, incomeCommitments = [], firstMonthValue = null) {
   const now   = new Date();
