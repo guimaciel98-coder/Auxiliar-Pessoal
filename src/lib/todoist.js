@@ -92,21 +92,28 @@ export async function fetchTasksByFilter(filterStr) {
   return tdFetchAll("/tasks", { filter: filterStr });
 }
 
-// ─── Tarefas concluídas num intervalo (since inclusivo, until exclusivo) ──────
-// Endpoint responde { items, next_cursor } — diferente do { results } dos demais.
-export async function fetchCompletedBetween(sinceISO, untilISO) {
-  const items = [];
+// ─── Conclusões desde um instante (histórico de atividades) ───────────────────
+// Usa /activities e não /tasks/completed: este último NÃO lista conclusões de
+// tarefas recorrentes (a tarefa só avança a data, nunca fica "concluída").
+// Eventos vêm do mais recente para o mais antigo; para ao passar de `sinceMs`.
+export async function fetchCompletionEventsSince(sinceMs) {
+  const events = [];
   let cursor = null;
   let page = 0;
   do {
-    const p = new URLSearchParams({ since: sinceISO, until: untilISO, limit: "200" });
+    const p = new URLSearchParams({ object_type: "item", event_type: "completed", limit: "100" });
     if (cursor) p.set("cursor", cursor);
-    const data = await tdFetch(`/tasks/completed/by_completion_date?${p}`);
-    items.push(...(data.items ?? data.results ?? []));
+    const data = await tdFetch(`/activities?${p}`);
+    const batch = data.results ?? [];
+    for (const e of batch) {
+      if (new Date(e.event_date).getTime() >= sinceMs) events.push(e);
+    }
+    const oldest = batch[batch.length - 1];
+    if (!oldest || new Date(oldest.event_date).getTime() < sinceMs) break;
     cursor = data.next_cursor ?? null;
     page++;
   } while (cursor && page < 10);
-  return items;
+  return events;
 }
 
 // ─── Seções de um projeto ─────────────────────────────────────────────────────

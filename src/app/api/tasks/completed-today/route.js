@@ -1,4 +1,4 @@
-import { fetchCompletedBetween } from "@/lib/todoist";
+import { fetchCompletionEventsSince } from "@/lib/todoist";
 import { PROJ } from "@/config/constants";
 
 export const dynamic = "force-dynamic";
@@ -10,23 +10,31 @@ const KNOWN_PROJECT_IDS = new Set(
 
 /**
  * GET /api/tasks/completed-today
- * Tarefas concluídas hoje (dia BRT), direto do Todoist — fonte real,
- * independente do navegador/dispositivo em que foram marcadas.
- * Response: { ok, ids: string[], items: [{ id, name, completed_at }] }
+ * Tarefas concluídas hoje (dia BRT), direto do histórico do Todoist — fonte real,
+ * independente do navegador/dispositivo em que foram marcadas, e incluindo
+ * as recorrentes.
+ * Response: { ok, ids: string[], items: [{ id, name, completed_at, recurring }] }
  */
 export async function GET() {
   try {
     const nowBRT     = new Date(Date.now() - 3 * 3600 * 1000);
-    const todayStart = new Date(Date.UTC(nowBRT.getUTCFullYear(), nowBRT.getUTCMonth(), nowBRT.getUTCDate(), 3, 0, 0));
-    const until      = new Date(Date.now() + 60 * 1000);
+    const todayStart = Date.UTC(nowBRT.getUTCFullYear(), nowBRT.getUTCMonth(), nowBRT.getUTCDate(), 3, 0, 0);
 
-    const raw = await fetchCompletedBetween(todayStart.toISOString(), until.toISOString());
-    const items = raw
-      .filter(t => KNOWN_PROJECT_IDS.has(t.project_id) && !t.is_deleted)
-      .map(t => ({ id: String(t.id), name: String(t.content ?? "").replace(/\*\*/g, ""), completed_at: t.completed_at }));
-
-    const ids = [...new Set(items.map(i => i.id))];
-    return Response.json({ ok: true, ids, items }, NO_CACHE);
+    const events = await fetchCompletionEventsSince(todayStart);
+    const byId = new Map();
+    for (const e of events) {
+      if (!KNOWN_PROJECT_IDS.has(e.parent_project_id)) continue;
+      const id = String(e.object_id);
+      if (byId.has(id)) continue;
+      byId.set(id, {
+        id,
+        name:         String(e.extra_data?.content ?? "").replace(/\*\*/g, ""),
+        completed_at: e.event_date,
+        recurring:    !!e.extra_data?.is_recurring,
+      });
+    }
+    const items = [...byId.values()];
+    return Response.json({ ok: true, ids: items.map(i => i.id), items }, NO_CACHE);
   } catch (e) {
     console.error("[GET /api/tasks/completed-today]", e.message);
     return Response.json({ ok: false, error: e.message }, { status: 500, ...NO_CACHE });
