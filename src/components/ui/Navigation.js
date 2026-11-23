@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./Navigation.module.css";
+import NavIcon from "./NavIcon";
 
 const FINANCE_ONLY = process.env.NEXT_PUBLIC_FINANCE_ONLY === "true";
 
@@ -10,55 +11,55 @@ const NAV_FULL = [
   {
     label: "Hub",
     path: "/",
-    icon: "⊞",
+    icon: "grid",
     exact: true,
   },
   {
     label: "Tarefas",
     path: "/daily",
-    icon: "✓",
-    accent: "#818cf8",
+    icon: "check",
+    accent: "#a78bfa",
     sectionLabel: "Módulos",
     prefixes: ["/daily", "/tomorrow", "/board", "/calendar", "/recurrences"],
     children: [
-      { label: "Hoje",     path: "/daily",       icon: "🔥", exact: true },
-      { label: "Projetos", path: "/board",       icon: "🗂️" },
-      { label: "Repetir",  path: "/recurrences", icon: "🔄" },
+      { label: "Hoje",     path: "/daily",       icon: "flame", exact: true },
+      { label: "Projetos", path: "/board",       icon: "kanban" },
+      { label: "Repetir",  path: "/recurrences", icon: "repeat" },
     ],
   },
   {
     label: "Financeiro",
     path: "/finance/overview",
-    icon: "R$",
-    accent: "#fbbf24",
+    icon: "wallet",
+    accent: "#34d399",
     prefixes: ["/finance"],
     children: [
-      { label: "Visão Geral", path: "/finance/overview",  icon: "📊", exact: true },
-      { label: "Gastos",      path: "/finance/expenses",     icon: "💸" },
-      { label: "Ganhos",      path: "/finance/income",       icon: "💰" },
-      { label: "Lançar",      path: "/finance/launch",       icon: "📝" },
+      { label: "Visão Geral", path: "/finance/overview",  icon: "pie", exact: true },
+      { label: "Gastos",      path: "/finance/expenses",     icon: "arrowDown" },
+      { label: "Ganhos",      path: "/finance/income",       icon: "arrowUp" },
+      { label: "Lançar",      path: "/finance/launch",       icon: "plus" },
     ],
   },
   {
     label: "Rotina",
     path: "/routine",
-    icon: "⏱",
+    icon: "clock",
     accent: "#38bdf8",
     prefixes: ["/routine"],
     children: [
-      { label: "Minha Rotina", path: "/routine",         icon: "📅", exact: true },
-      { label: "Eventos",      path: "/routine/events",  icon: "🗓" },
+      { label: "Minha Rotina", path: "/routine",         icon: "calendar", exact: true },
+      { label: "Eventos",      path: "/routine/events",  icon: "star" },
     ],
   },
   {
     label: "Saúde",
     path: "/health",
-    icon: "♡",
-    accent: "#f87171",
+    icon: "heart",
+    accent: "#fb7185",
     prefixes: ["/health"],
     children: [
-      { label: "Atividade", path: "/health",         icon: "⌚", exact: true },
-      { label: "Importar",  path: "/health/import",  icon: "↑" },
+      { label: "Atividade", path: "/health",         icon: "pulse", exact: true },
+      { label: "Importar",  path: "/health/import",  icon: "upload" },
     ],
   },
 ];
@@ -91,6 +92,9 @@ export default function Navigation() {
   const isRoutineSection = ROUTINE_PREFIXES.some(p => pathname.startsWith(p));
 
   // Mobile: mostra sub-itens do contexto ativo, senão itens globais
+  // Cor do módulo atual (para os sub-itens na barra do celular)
+  const sectionAccent = NAV_FULL.find(i => i.prefixes?.some(p => pathname.startsWith(p)))?.accent;
+
   const mobileItems = FINANCE_ONLY
     ? MOBILE_FINANCE
     : isTaskSection
@@ -109,7 +113,7 @@ export default function Navigation() {
         <span className={styles.brandMark}>G</span>
         <div className={styles.brandText}>
           <span className={styles.brandName}>Daily</span>
-          <span className={styles.brandSub}>workspace</span>
+          <span className={styles.brandSub}>Guilherme</span>
         </div>
       </Link>
 
@@ -131,7 +135,7 @@ export default function Navigation() {
                 href={item.path}
                 className={`${styles.item} ${active ? styles.active : ""}`}
               >
-                <span className={styles.icon}>{item.icon}</span>
+                <span className={styles.icon}><NavIcon name={item.icon} /></span>
                 <span className={styles.label}>{item.label}</span>
                 {item.children && (
                   <span className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`}>
@@ -155,7 +159,7 @@ export default function Navigation() {
                         href={child.path}
                         className={`${styles.subItem} ${childActive ? styles.subItemActive : ""}`}
                       >
-                        <span className={styles.subIcon}>{child.icon}</span>
+                        <span className={styles.subIcon}><NavIcon name={child.icon} size={15} /></span>
                         <span className={styles.subLabel}>{child.label}</span>
                       </Link>
                     );
@@ -180,8 +184,9 @@ export default function Navigation() {
               key={item.path}
               href={item.path}
               className={`${styles.item} ${active ? styles.active : ""}`}
+              style={{ "--section-accent": item.accent ?? sectionAccent ?? "#e5e7eb" }}
             >
-              <span className={styles.icon}>{item.icon}</span>
+              <span className={styles.icon}><NavIcon name={item.icon} /></span>
               <span className={styles.label}>{item.label}</span>
             </Link>
           );
