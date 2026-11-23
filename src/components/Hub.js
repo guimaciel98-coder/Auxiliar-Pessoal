@@ -101,7 +101,9 @@ function Sparkline({ data, color, height = 56 }) {
 }
 
 // ── Linha do tempo do dia (blocos da rotina + marcador de agora) ─────────────
-function DayTimeline({ blocks, nowMin, current }) {
+function DayTimeline({ blocks: allBlocks, nowMin, current }) {
+  // "Dormir" fica fora: a barra mostra só o dia acordado
+  const blocks = (allBlocks ?? []).filter(b => !/dormir/i.test(b.activity ?? ""));
   if (!blocks?.length) return <div className={styles.sparkEmpty}>sem blocos hoje</div>;
   const start = Math.min(...blocks.map(b => b.minutes));
   const end   = Math.max(...blocks.map(b => b.minutes + (b.duration ?? 60)));
