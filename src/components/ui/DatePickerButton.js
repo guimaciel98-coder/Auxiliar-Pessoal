@@ -26,7 +26,7 @@ export default function DatePickerButton({ onSelect }) {
           }}
           className={styles.confirmBtn}
         >
-          ok
+          Mover
         </button>
       )}
     </div>

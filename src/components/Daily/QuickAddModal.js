@@ -6,11 +6,6 @@ import { validateRecurrence } from "@/lib/recurrenceValidation";
 
 const VCA_MAIN_ID = PROJ.vca.id;
 
-const REC_INPUT_STYLE = {
-  empty:   {},
-  valid:   { borderColor: "rgba(52,211,153,0.6)", boxShadow: "0 0 0 2px rgba(52,211,153,0.15)" },
-  unknown: { borderColor: "rgba(245,158,11,0.6)",  boxShadow: "0 0 0 2px rgba(245,158,11,0.12)"  },
-};
 const VCA_AGENCIES = [
   { id: PROJ.vca.extraIds[0], label: "Ocupe"          },
   { id: PROJ.vca.extraIds[1], label: "Carol Macarone" },
@@ -23,12 +18,6 @@ const MODES = [
   { key: "pdv",  label: "Cliente PDV" },
   { key: "vca",  label: "Marca VCA" },
 ];
-
-const MODAL_TITLE = {
-  task: "Nova Tarefa Rápida",
-  pdv:  "Novo Cliente PDV",
-  vca:  "Nova Marca VCA",
-};
 
 export default function QuickAddModal({ onClose, onSuccess, initialProjectId, initialVcaProjectId, initialSubClientId, clients: clientsProp }) {
   const [mode, setMode]       = useState("task");
@@ -167,40 +156,48 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
     vca:  loading ? "Salvando..." : "Adicionar Marca",
   };
 
-  // ── Estilos inline para os tabs ───────────────────────────────────────────
-  function tabStyle(key) {
-    const active = mode === key;
-    return {
-      padding: "4px 11px",
-      borderRadius: 99,
-      fontSize: 11,
-      fontWeight: 600,
-      fontFamily: "inherit",
-      cursor: "pointer",
-      transition: "all 0.18s",
-      border: active ? "1px solid rgba(0,229,160,0.3)" : "1px solid rgba(255,255,255,0.08)",
-      background: active ? "rgba(0,229,160,0.1)" : "rgba(255,255,255,0.04)",
-      color: active ? "var(--accent-primary)" : "rgba(255,255,255,0.35)",
-    };
-  }
+  // ── Atalhos de data (BRT) ───────────────────────────────────────────────
+  const isoBRT = (offsetDays) => {
+    const b = new Date(Date.now() - 3 * 3600 * 1000 + offsetDays * 86400000);
+    return `${b.getUTCFullYear()}-${String(b.getUTCMonth() + 1).padStart(2, "0")}-${String(b.getUTCDate()).padStart(2, "0")}`;
+  };
+  const todayDow = new Date(Date.now() - 3 * 3600 * 1000).getUTCDay();
+  const DATE_QUICK = [
+    { label: "Hoje",          value: isoBRT(0) },
+    { label: "Amanhã",        value: isoBRT(1) },
+    { label: "Próx. segunda", value: isoBRT(((8 - todayDow) % 7) || 7) },
+  ];
+  const REC_QUICK = ["todo dia", "todo dia útil", "toda semana", "todo mês"];
+  const PROJECTS = [
+    { value: "pessoal", label: "Pessoal",        color: PROJ.pessoal.cor },
+    { value: "vca",     label: "VCA Brasil",     color: PROJ.vca.cor },
+    { value: "pdv",     label: "Ponto de Vista", color: PROJ.pdv.cor },
+  ];
+  const PRIORITIES = [
+    { value: "",   label: "Nenhuma", color: "rgba(255,255,255,0.35)" },
+    { value: "p1", label: "P1",      color: "#ff5a5f" },
+    { value: "p2", label: "P2",      color: "#fb923c" },
+    { value: "p3", label: "P3",      color: "#fbbf24" },
+    { value: "p4", label: "P4",      color: "#94a3b8" },
+  ];
+  const recState = validateRecurrence(taskData.recurrence);
 
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
 
-        {/* ── Mode tabs ── */}
-        <div style={{
-          display: "flex", gap: 5, marginBottom: 16,
-          paddingBottom: 13, borderBottom: "1px solid rgba(255,255,255,0.07)",
-        }}>
-          {MODES.map(m => (
-            <button key={m.key} type="button" onClick={() => switchMode(m.key)} style={tabStyle(m.key)}>
-              {m.label}
-            </button>
-          ))}
+        {/* ── Topo: tipo de cadastro + fechar ── */}
+        <div className={styles.topRow}>
+          <div className={styles.segment}>
+            {MODES.map(m => (
+              <button key={m.key} type="button" onClick={() => switchMode(m.key)}
+                className={`${styles.segBtn} ${mode === m.key ? styles.segActive : ""}`}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={onClose} className={styles.closeBtn} title="Fechar (Esc)">✕</button>
         </div>
-
-        <h2 className={styles.title}>{MODAL_TITLE[mode]}</h2>
 
         {/* ── Área animada com fade ao trocar de modo ── */}
         <div style={{ transition: "opacity 0.15s ease", opacity: fading ? 0 : 1 }}>
@@ -208,95 +205,61 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
           {/* ════ Formulário: Tarefa ════ */}
           {mode === "task" && (
             <form onSubmit={handleTaskSubmit}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>NOME DA TAREFA</label>
+              {/* Nome grande + descrição logo abaixo (estilo Todoist) */}
+              <div className={styles.titleBlock}>
                 <input
                   autoFocus
                   type="text"
                   value={taskData.title}
                   onChange={e => setTaskData(p => ({ ...p, title: e.target.value }))}
-                  className={styles.input}
-                  placeholder="Ex: Pagar boleto"
+                  className={styles.bigInput}
+                  placeholder="O que precisa ser feito?"
                   required
+                />
+                <textarea
+                  value={taskData.description}
+                  onChange={e => setTaskData(p => ({ ...p, description: e.target.value }))}
+                  className={styles.descInput}
+                  placeholder="Descrição (opcional)"
+                  rows={2}
                 />
               </div>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>PROJETO / LISTA</label>
-                <select
-                  value={taskData.project}
-                  onChange={e => setTaskData(p => ({ ...p, project: e.target.value, vcaProjectId: "", subClient: "" }))}
-                  className={styles.select}
-                >
-                  <option value="pessoal">Pessoal</option>
-                  <option value="vca">VCA Brasil</option>
-                  <option value="pdv">Ponto de Vista</option>
-                </select>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>PRIORIDADE</label>
-                <div className={styles.priorityPicker}>
-                  {[
-                    { value: '',   label: "Sem prioridade", cls: styles.priorityNone },
-                    { value: "p1", label: "P1 — Urgente",   cls: styles.priorityP1 },
-                    { value: "p2", label: "P2 — Alta",      cls: styles.priorityP2 },
-                    { value: "p3", label: "P3 — Normal",    cls: styles.priorityP3 },
-                    { value: "p4", label: "P4 — Baixa",     cls: styles.priorityP4 },
-                  ].map(opt => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setTaskData(p => ({ ...p, priority: opt.value }))}
-                      className={`${styles.priorityOption} ${opt.cls} ${taskData.priority === opt.value ? styles.selected : ""}`}
-                    >
-                      {opt.label}
+              {/* Projeto */}
+              <div className={styles.field}>
+                <span className={styles.label}>Projeto</span>
+                <div className={styles.chipRow}>
+                  {PROJECTS.map(p => (
+                    <button key={p.value} type="button"
+                      onClick={() => setTaskData(d => ({ ...d, project: p.value, vcaProjectId: "", subClient: "" }))}
+                      className={`${styles.chip} ${taskData.project === p.value ? styles.chipActive : ""}`}
+                      style={{ "--c": p.color }}>
+                      <span className={styles.dot} />{p.label}
                     </button>
                   ))}
                 </div>
               </div>
 
+              {/* VCA: Gestão Interna ou agência */}
               {taskData.project === "vca" && (
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>PROJETO VCA</label>
-                  <div>
-                    <div style={{ marginBottom: 8 }}>
-                      <button
-                        type="button"
-                        onClick={() => setTaskData(p => ({ ...p, vcaProjectId: VCA_MAIN_ID, subClient: "" }))}
-                        style={{
-                          padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700,
-                          fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s",
-                          border: taskData.vcaProjectId === VCA_MAIN_ID ? "1px solid rgba(91,159,214,0.45)" : "1px solid rgba(255,255,255,0.1)",
-                          background: taskData.vcaProjectId === VCA_MAIN_ID ? "rgba(91,159,214,0.15)" : "rgba(255,255,255,0.04)",
-                          color: taskData.vcaProjectId === VCA_MAIN_ID ? "#5b9fd6" : "rgba(255,255,255,0.45)",
-                        }}
-                      >Gestão Interna</button>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Agências</span>
-                      {VCA_AGENCIES.map(a => (
-                        <button
-                          key={a.id}
-                          type="button"
-                          onClick={() => setTaskData(p => ({ ...p, vcaProjectId: a.id, subClient: "" }))}
-                          style={{
-                            padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600,
-                            fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s",
-                            border: taskData.vcaProjectId === a.id ? "1px solid rgba(91,159,214,0.4)" : "1px solid rgba(255,255,255,0.08)",
-                            background: taskData.vcaProjectId === a.id ? "rgba(91,159,214,0.12)" : "rgba(255,255,255,0.03)",
-                            color: taskData.vcaProjectId === a.id ? "#93c5fd" : "rgba(255,255,255,0.4)",
-                          }}
-                        >{a.label}</button>
-                      ))}
-                    </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Projeto VCA</span>
+                  <div className={styles.chipRow}>
+                    {[{ id: VCA_MAIN_ID, label: "Gestão Interna" }, ...VCA_AGENCIES].map(a => (
+                      <button key={a.id} type="button"
+                        onClick={() => setTaskData(p => ({ ...p, vcaProjectId: a.id, subClient: "" }))}
+                        className={`${styles.chip} ${taskData.vcaProjectId === a.id ? styles.chipActive : ""}`}
+                        style={{ "--c": PROJ.vca.cor }}>
+                        {a.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
 
               {taskData.project === "vca" && taskData.vcaProjectId && (
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>MARCA / SEÇÃO</label>
+                <div className={styles.field}>
+                  <span className={styles.label}>Marca / seção</span>
                   <select
                     value={taskData.subClient}
                     onChange={e => setTaskData(p => ({ ...p, subClient: e.target.value }))}
@@ -311,8 +274,8 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
               )}
 
               {taskData.project === "pdv" && (
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>CLIENTE (PDV)</label>
+                <div className={styles.field}>
+                  <span className={styles.label}>Cliente</span>
                   <select
                     value={taskData.subClient}
                     onChange={e => setTaskData(p => ({ ...p, subClient: e.target.value }))}
@@ -324,63 +287,76 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
                 </div>
               )}
 
-              <div className={styles.formGroup} style={{ display: "flex", gap: "12px" }}>
-                <div style={{ flex: 1 }}>
-                  <label className={styles.label}>DATA DE VENCIMENTO</label>
-                  <input
-                    type="date"
-                    value={taskData.dueDate}
-                    onChange={e => setTaskData(p => ({ ...p, dueDate: e.target.value }))}
-                    className={styles.input}
-                    required
-                  />
+              {/* Quando: atalhos + data + horário */}
+              <div className={styles.field}>
+                <span className={styles.label}>Quando</span>
+                <div className={styles.chipRow}>
+                  {DATE_QUICK.map(d => (
+                    <button key={d.label} type="button"
+                      onClick={() => setTaskData(p => ({ ...p, dueDate: d.value }))}
+                      className={`${styles.chip} ${taskData.dueDate === d.value ? styles.chipActive : ""}`}
+                      style={{ "--c": "#a78bfa" }}>
+                      {d.label}
+                    </button>
+                  ))}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label className={styles.label}>HORÁRIO (Opcional)</label>
-                  <input
-                    type="time"
-                    value={taskData.time}
-                    onChange={e => setTaskData(p => ({ ...p, time: e.target.value }))}
-                    className={styles.input}
-                  />
+                <div className={styles.dateRow}>
+                  <label className={styles.inlineInput}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+                    <input type="date" value={taskData.dueDate}
+                      onChange={e => setTaskData(p => ({ ...p, dueDate: e.target.value }))} required />
+                  </label>
+                  <label className={styles.inlineInput}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    <input type="time" value={taskData.time}
+                      onChange={e => setTaskData(p => ({ ...p, time: e.target.value }))} />
+                    {taskData.time && (
+                      <button type="button" className={styles.clearBtn} title="Sem horário"
+                        onClick={(e) => { e.preventDefault(); setTaskData(p => ({ ...p, time: "" })); }}>✕</button>
+                    )}
+                  </label>
                 </div>
               </div>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>RECORRÊNCIA (Opcional)</label>
+              {/* Prioridade */}
+              <div className={styles.field}>
+                <span className={styles.label}>Prioridade</span>
+                <div className={styles.chipRow}>
+                  {PRIORITIES.map(o => (
+                    <button key={o.value || "none"} type="button"
+                      onClick={() => setTaskData(p => ({ ...p, priority: o.value }))}
+                      className={`${styles.chip} ${taskData.priority === o.value ? styles.chipActive : ""}`}
+                      style={{ "--c": o.color }}>
+                      <span className={styles.dot} />{o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Repetir */}
+              <div className={styles.field}>
+                <span className={styles.label}>Repetir</span>
+                <div className={styles.chipRow}>
+                  {REC_QUICK.map(r => (
+                    <button key={r} type="button"
+                      onClick={() => setTaskData(p => ({ ...p, recurrence: p.recurrence === r ? "" : r }))}
+                      className={`${styles.chip} ${taskData.recurrence === r ? styles.chipActive : ""}`}
+                      style={{ "--c": "#38bdf8" }}>
+                      {r}
+                    </button>
+                  ))}
+                </div>
                 <input
                   type="text"
                   value={taskData.recurrence}
                   onChange={e => setTaskData(p => ({ ...p, recurrence: e.target.value }))}
-                  className={styles.input}
-                  placeholder="Ex: toda semana, todo mês, todo primeiro dia útil..."
-                  style={REC_INPUT_STYLE[validateRecurrence(taskData.recurrence)]}
+                  className={`${styles.input} ${recState === "valid" ? styles.inputOk : recState === "unknown" ? styles.inputWarn : ""}`}
+                  placeholder="ou escreva: toda segunda, a cada 2 semanas…"
                 />
-                {validateRecurrence(taskData.recurrence) === "unknown" && (
-                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#f59e0b" }}>
-                    ⚠ Padrão não reconhecido — o Todoist pode ignorar a recorrência
-                  </p>
-                )}
-                {validateRecurrence(taskData.recurrence) === "valid" && (
-                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#34d399" }}>
-                    ✓ Padrão reconhecido
-                  </p>
-                )}
+                {recState === "unknown" && <p className={styles.hintWarn}>Padrão não reconhecido: o Todoist pode ignorar a recorrência</p>}
               </div>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>DESCRIÇÃO (Opcional)</label>
-                <textarea
-                  value={taskData.description}
-                  onChange={e => setTaskData(p => ({ ...p, description: e.target.value }))}
-                  className={styles.input}
-                  placeholder="Detalhes, links, contexto..."
-                  rows={3}
-                  style={{ resize: "vertical", minHeight: 72, lineHeight: 1.5 }}
-                />
-              </div>
-
-              {error && <p style={{ color: "#f87171", fontSize: 13, marginTop: 8, textAlign: "center" }}>{error}</p>}
+              {error && <p className={styles.error}>{error}</p>}
 
               <div className={styles.footer}>
                 <button type="button" onClick={onClose} className={styles.btnCancel}>Cancelar</button>
@@ -394,70 +370,48 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
           {/* ════ Formulário: Cliente PDV ════ */}
           {mode === "pdv" && (
             <form onSubmit={handlePdvSubmit}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>NOME DO CLIENTE</label>
+              <div className={styles.titleBlock}>
                 <input
                   autoFocus
                   type="text"
                   value={pdvData.name}
                   onChange={e => setPdvData(p => ({ ...p, name: e.target.value }))}
-                  className={styles.input}
-                  placeholder="Ex: Farmácia Central"
+                  className={styles.bigInput}
+                  placeholder="Nome do cliente"
                   required
                 />
               </div>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>CANAL</label>
-                <div style={{ display: "flex", gap: 6 }}>
+              <div className={styles.field}>
+                <span className={styles.label}>Canal</span>
+                <div className={styles.chipRow}>
                   {[
                     { value: "meta",   label: "Meta" },
                     { value: "google", label: "Google" },
                     { value: "ambos",  label: "Ambos" },
                   ].map(opt => (
-                    <button
-                      key={opt.value}
-                      type="button"
+                    <button key={opt.value} type="button"
                       onClick={() => setPdvData(p => ({ ...p, canal: opt.value }))}
-                      style={{
-                        flex: 1,
-                        padding: "9px 0",
-                        borderRadius: 8,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        fontFamily: "inherit",
-                        cursor: "pointer",
-                        transition: "all 0.15s",
-                        border: pdvData.canal === opt.value
-                          ? "1px solid rgba(59,130,246,0.45)"
-                          : "1px solid rgba(255,255,255,0.08)",
-                        background: pdvData.canal === opt.value
-                          ? "rgba(59,130,246,0.14)"
-                          : "rgba(255,255,255,0.03)",
-                        color: pdvData.canal === opt.value
-                          ? "#3b82f6"
-                          : "rgba(255,255,255,0.35)",
-                      }}
-                    >
+                      className={`${styles.chip} ${pdvData.canal === opt.value ? styles.chipActive : ""}`}
+                      style={{ "--c": PROJ.pdv.cor }}>
                       {opt.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>OBSERVAÇÕES</label>
+              <div className={styles.field}>
+                <span className={styles.label}>Observações</span>
                 <textarea
                   value={pdvData.observacoes}
                   onChange={e => setPdvData(p => ({ ...p, observacoes: e.target.value }))}
                   className={styles.input}
                   placeholder="Informações adicionais..."
                   rows={3}
-                  style={{ resize: "vertical", minHeight: 72 }}
                 />
               </div>
 
-              {error && <p style={{ color: "#f87171", fontSize: 13, marginTop: 8, textAlign: "center" }}>{error}</p>}
+              {error && <p className={styles.error}>{error}</p>}
 
               <div className={styles.footer}>
                 <button type="button" onClick={onClose} className={styles.btnCancel}>Cancelar</button>
@@ -471,21 +425,20 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
           {/* ════ Formulário: Marca VCA ════ */}
           {mode === "vca" && (
             <form onSubmit={handleVcaSubmit}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>NOME DA MARCA</label>
+              <div className={styles.titleBlock}>
                 <input
                   autoFocus
                   type="text"
                   value={vcaData.name}
                   onChange={e => setVcaData(p => ({ ...p, name: e.target.value }))}
-                  className={styles.input}
-                  placeholder="Ex: Hospital São Lucas"
+                  className={styles.bigInput}
+                  placeholder="Nome da marca"
                   required
                 />
               </div>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>VERTICAL</label>
+              <div className={styles.field}>
+                <span className={styles.label}>Vertical</span>
                 <input
                   type="text"
                   value={vcaData.vertical}
@@ -495,19 +448,18 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
                 />
               </div>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>OBSERVAÇÕES</label>
+              <div className={styles.field}>
+                <span className={styles.label}>Observações</span>
                 <textarea
                   value={vcaData.observacoes}
                   onChange={e => setVcaData(p => ({ ...p, observacoes: e.target.value }))}
                   className={styles.input}
                   placeholder="Informações adicionais..."
                   rows={3}
-                  style={{ resize: "vertical", minHeight: 72 }}
                 />
               </div>
 
-              {error && <p style={{ color: "#f87171", fontSize: 13, marginTop: 8, textAlign: "center" }}>{error}</p>}
+              {error && <p className={styles.error}>{error}</p>}
 
               <div className={styles.footer}>
                 <button type="button" onClick={onClose} className={styles.btnCancel}>Cancelar</button>

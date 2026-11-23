@@ -230,11 +230,35 @@ export function useTasks(mode = "today") {
     }
   }
 
+  // Reabre uma tarefa concluída (usado na lista "Feitas"). Só para tarefas não recorrentes:
+  // nas recorrentes o Todoist já avançou a data e reabrir não voltaria ao estado anterior.
+  const [reopening, setReopening] = useState(new Set());
+  async function reopenCompleted(taskId, taskName) {
+    setReopening(prev => new Set(prev).add(taskId));
+    try {
+      const res = await fetch("/api/tasks/reopen", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId }),
+      });
+      if (!res.ok) throw new Error("Erro ao reabrir");
+      removeHidden(taskId);
+      showToast(`↺ ${taskName && taskName.length > 28 ? taskName.slice(0, 28) + "…" : taskName ?? "Tarefa"} reaberta`);
+      load();
+      return true;
+    } catch (e) {
+      console.error("[reopenCompleted]", e.message);
+      showToast("⚠ Erro ao desfazer");
+      return false;
+    } finally {
+      setReopening(prev => { const n = new Set(prev); n.delete(taskId); return n; });
+    }
+  }
+
   return {
     data, loading, syncing, clockNow,
     load, sync, showToast,
-    completed, completing, fading, rescheduling,
-    rescheduleTask, completeTask,
+    completed, completing, fading, rescheduling, reopening,
+    rescheduleTask, completeTask, reopenCompleted,
     toast,
   };
 }

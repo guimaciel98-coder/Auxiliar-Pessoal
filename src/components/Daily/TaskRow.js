@@ -4,6 +4,12 @@ import DatePickerButton from "../ui/DatePickerButton";
 import styles from "./TaskRow.module.css";
 
 const PRIO_RING = { p1: "#ff5a5f", p2: "#fb923c", p3: "#fbbf24" };
+const DOW = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+// "ter 24" a partir de um instante (dia em BRT)
+function fmtDay(ms) {
+  const d = new Date(Number(ms) - 3 * 3600 * 1000);
+  return `${DOW[d.getUTCDay()]} ${d.getUTCDate()}`;
+}
 
 export default function TaskRow({ 
   t, 
@@ -153,29 +159,34 @@ export default function TaskRow({
       
       {isOpen && (
         <div className={styles.reschedulePanel}>
-          {t._recurrence && t._recurrence !== "none" && (
-            <button
-              onClick={() => { setRescheduleOpen(null); completeTask(t.id, t.name); }}
-              className={styles.rescheduleChip}
-              style={{ background: "rgba(99,102,241,0.25)", borderColor: "rgba(99,102,241,0.5)" }}
-            >
-              próxima
-            </button>
-          )}
-          {rescheduleOptions.map(opt => (
-            <button
-              key={opt.label}
-              onClick={() => rescheduleTask(t.id, opt.ms, t.timed, t._repeat_forever, t._recurrence, opt.toastLabel)}
-              className={styles.rescheduleChip}
-            >
-              {opt.label}
-            </button>
-          ))}
-          <DatePickerButton onSelect={dateStr => {
-            const [y,m,d] = dateStr.split("-").map(Number);
-            const label = `${String(d).padStart(2,"0")}/${String(m).padStart(2,"0")}`;
-            rescheduleTask(t.id, Date.UTC(y, m-1, d, 3, 0, 0) + timeOffset, t.timed, t._repeat_forever, t._recurrence, label);
-          }} />
+          <span className={styles.panelLabel}>Mover para</span>
+          <div className={styles.panelChips}>
+            {t._recurrence && t._recurrence !== "none" && (
+              <button
+                onClick={() => { setRescheduleOpen(null); completeTask(t.id, t.name); }}
+                className={`${styles.rescheduleChip} ${styles.chipNext}`}
+                title="Conclui esta e o Todoist agenda a próxima repetição"
+              >
+                <span className={styles.chipMain}>Próxima ocorrência</span>
+                <span className={styles.chipSub}>recorrente</span>
+              </button>
+            )}
+            {rescheduleOptions.map(opt => (
+              <button
+                key={opt.label}
+                onClick={() => rescheduleTask(t.id, opt.ms, t.timed, t._repeat_forever, t._recurrence, opt.toastLabel)}
+                className={styles.rescheduleChip}
+              >
+                <span className={styles.chipMain}>{opt.label === "semana" ? "Em 1 semana" : opt.label.charAt(0).toUpperCase() + opt.label.slice(1)}</span>
+                <span className={styles.chipSub}>{fmtDay(opt.ms)}</span>
+              </button>
+            ))}
+            <DatePickerButton onSelect={dateStr => {
+              const [y,m,d] = dateStr.split("-").map(Number);
+              const label = `${String(d).padStart(2,"0")}/${String(m).padStart(2,"0")}`;
+              rescheduleTask(t.id, Date.UTC(y, m-1, d, 3, 0, 0) + timeOffset, t.timed, t._repeat_forever, t._recurrence, label);
+            }} />
+          </div>
         </div>
       )}
     </div>

@@ -18,8 +18,8 @@ export default function DailyOrchestrator({ mode = "today" }) {
   const {
     data, loading, syncing, clockNow,
     load, sync,
-    completed, completing, fading, rescheduling,
-    rescheduleTask, completeTask,
+    completed, completing, fading, rescheduling, reopening,
+    rescheduleTask, completeTask, reopenCompleted,
     toast, showToast,
   } = useTasks(mode);
 
@@ -99,7 +99,8 @@ export default function DailyOrchestrator({ mode = "today" }) {
   const doneList = [...doneIds].map(id => {
     const api = doneApiItems.find(i => i.id === id);
     const loc = apiAllTasks.find(t => String(t.id) === id);
-    return { id, name: api?.name ?? loc?.name ?? "Tarefa concluída", at: api?.completed_at ?? null };
+    const recurring = api ? !!api.recurring : !!(loc?._recurrence && loc._recurrence !== "none");
+    return { id, name: api?.name ?? loc?.name ?? "Tarefa concluída", at: api?.completed_at ?? null, recurring };
   }).sort((x, y) => String(y.at ?? "").localeCompare(String(x.at ?? "")));
   const overdueCount   = overdueTasks.length;
   const timedCount     = all.filter(t => t.timed).length;
@@ -210,6 +211,23 @@ export default function DailyOrchestrator({ mode = "today" }) {
                   </span>
                   <span className={styles.doneName}>{d.name}</span>
                   {d.at && <span className={styles.doneTime}>{new Date(d.at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>}
+                  {d.recurring ? (
+                    <span className={styles.doneRecurring} title="Recorrente: o Todoist já agendou a próxima — não dá para desfazer por aqui">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>
+                    </span>
+                  ) : (
+                    <button
+                      className={styles.undoBtn}
+                      disabled={reopening.has(d.id)}
+                      onClick={async () => {
+                        const ok = await reopenCompleted(d.id, d.name);
+                        if (ok) setDoneApiItems(prev => prev.filter(i => i.id !== d.id));
+                      }}
+                      title="Desfazer: voltar a tarefa para pendente"
+                    >
+                      {reopening.has(d.id) ? "…" : "Desfazer"}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
