@@ -32,10 +32,34 @@ function fmtMonthYear(mmyyyy) {
 }
 const inputStyle = {
   width: "100%", background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10,
-  padding: "10px 12px", color: "#f0f0f8", fontSize: 14, outline: "none",
-  fontFamily: "inherit",
+  border: "1px solid rgba(255,255,255,0.09)", borderRadius: 12,
+  padding: "11px 14px", color: "#f4f5f7", fontSize: 14, outline: "none",
+  fontFamily: "inherit", colorScheme: "dark",
 };
+
+// Grupo em botões com bolinha de cor (no lugar da lista suspensa)
+const GRUPOS = ["Casa", "Casa Nova", "Pessoal", "Outros"];
+function GrupoChips({ value, onChange }) {
+  return (
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      {GRUPOS.map(g => {
+        const on = value === g;
+        const c  = grpColor(g);
+        return (
+          <button key={g} type="button" onClick={() => onChange(g)} style={{
+            display: "inline-flex", alignItems: "center", gap: 7, height: 34, padding: "0 13px", borderRadius: 99,
+            fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", transition: "all .15s",
+            color: on ? "#fff" : "rgba(255,255,255,0.65)",
+            background: on ? `${c}2e` : "rgba(255,255,255,0.04)",
+            border: `1px solid ${on ? `${c}8c` : "rgba(255,255,255,0.08)"}`,
+          }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: c, boxShadow: `0 0 8px ${c}` }} />{g}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 function norm(s) {
   return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 }
@@ -98,25 +122,21 @@ function renderDonutLabel({ cx, cy, midAngle, outerRadius, percent, name }) {
 
 function AutoToggle({ value, onChange }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)", border: `1px solid ${value ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.07)"}` }}>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: value ? "#93c5fd" : "var(--text-primary)" }}>Pagamento automático</div>
-        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>Debitado automaticamente da conta</div>
-      </div>
-      <button
-        type="button"
-        onClick={() => onChange(!value)}
-        style={{
-          padding: "5px 14px", borderRadius: 99, fontSize: 12, fontWeight: 700,
-          border: value ? "1px solid rgba(96,165,250,0.45)" : "1px solid rgba(255,255,255,0.12)",
-          background: value ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.05)",
-          color: value ? "#60a5fa" : "rgba(255,255,255,0.35)",
-          cursor: "pointer", transition: "all 0.2s", fontFamily: "inherit",
-        }}
-      >
-        {value ? "⚡ Automático" : "Manual"}
-      </button>
-    </div>
+    <button type="button" onClick={() => onChange(!value)} style={{
+      display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
+      padding: "12px 14px", borderRadius: 14, fontFamily: "inherit", cursor: "pointer", transition: "all .2s",
+      background: value ? "rgba(56,189,248,0.10)" : "rgba(255,255,255,0.03)",
+      border: `1px solid ${value ? "rgba(56,189,248,0.4)" : "rgba(255,255,255,0.08)"}`,
+    }}>
+      <span style={{ flex: 1 }}>
+        <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#fff" }}>⚡ Pagamento automático</span>
+        <span style={{ display: "block", fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>Debitado sozinho, sem precisar marcar todo mês</span>
+      </span>
+      {/* Interruptor */}
+      <span style={{ width: 42, height: 24, borderRadius: 99, padding: 3, flexShrink: 0, background: value ? "#38bdf8" : "rgba(255,255,255,0.15)", transition: "all .2s" }}>
+        <span style={{ display: "block", width: 18, height: 18, borderRadius: "50%", background: "#fff", transform: value ? "translateX(18px)" : "none", transition: "transform .2s" }} />
+      </span>
+    </button>
   );
 }
 
@@ -866,12 +886,9 @@ export default function ExpensesPage() {
       {/* Modal de edição */}
       {editModal && (() => {
         const { type } = editModal;
-        const lbl = { fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 };
-        const btnCancel = { flex: 1, padding: 12, borderRadius: 10, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", fontFamily: "inherit", cursor: "pointer" };
-        const btnSave   = { flex: 2, padding: 12, borderRadius: 10, fontSize: 13, fontWeight: 700, color: "#fff", border: "none", fontFamily: "inherit", cursor: editSaving ? "wait" : "pointer", opacity: editSaving ? 0.6 : 1,
-          background: type === "variavel" ? "linear-gradient(135deg,#f59e0b,#d97706)"
-                    : type === "fixo"     ? "linear-gradient(135deg,#3b82f6,#2563eb)"
-                    :                       "linear-gradient(135deg,#8b5cf6,#6d28d9)" };
+        const lbl = { fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", display: "block", marginBottom: 8 };
+        const btnCancel = { height: 42, padding: "0 18px", borderRadius: 99, fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.6)", background: "transparent", border: "none", fontFamily: "inherit", cursor: "pointer" };
+        const btnSave   = { height: 42, padding: "0 24px", borderRadius: 99, fontSize: 14, fontWeight: 700, color: "#0b0b10", background: "#fff", border: "none", fontFamily: "inherit", cursor: editSaving ? "wait" : "pointer", opacity: editSaving ? 0.6 : 1, boxShadow: "0 6px 24px rgba(255,255,255,0.12)" };
         const typeLabel = type === "variavel" ? "Gasto Variável" : type === "fixo" ? "Gasto Fixo" : "Parcela";
 
         // Cálculo de previsão de parcela no modal
@@ -887,14 +904,13 @@ export default function ExpensesPage() {
           : null;
 
         return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600 }}
-            onClick={() => setEditModal(null)}>
-            <div style={{ background: "rgba(17,24,39,0.98)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: "28px 24px", width: "90%", maxWidth: 460, boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}
-              onClick={e => e.stopPropagation()}>
-              <div style={{ marginBottom: 20 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 3 }}>Editar {typeLabel}</h3>
-                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>Altere os campos e salve.</p>
+          <div className={ex.overlay} onClick={() => setEditModal(null)}>
+            <div className={ex.modal} onClick={e => e.stopPropagation()}>
+              <div className={ex.modalTop}>
+                <h3 className={ex.modalTitle}>Editar {typeLabel.toLowerCase()}</h3>
+                <button type="button" className={ex.closeBtn} onClick={() => setEditModal(null)} title="Fechar">✕</button>
               </div>
+              <p className={ex.modalSub}>Altere o que precisar e salve.</p>
 
               <form onSubmit={saveEdit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
@@ -904,9 +920,7 @@ export default function ExpensesPage() {
                     <input autoFocus required type="text" value={editForm.nome} onChange={e => setEditForm(f => ({ ...f, nome: e.target.value }))} style={inputStyle} />
                   </div>
                   <div><label style={lbl}>Grupo</label>
-                    <select value={editForm.grupo} onChange={e => setEditForm(f => ({ ...f, grupo: e.target.value }))} style={inputStyle}>
-                      <option>Casa</option><option>Casa Nova</option><option>Pessoal</option><option>Outros</option>
-                    </select>
+                    <GrupoChips value={editForm.grupo} onChange={g => setEditForm(f => ({ ...f, grupo: g }))} />
                   </div>
                   <div><label style={lbl}>Previsão Mensal (R$)</label>
                     <input required type="number" step="0.01" min="0" value={editForm.previsao} onChange={e => setEditForm(f => ({ ...f, previsao: e.target.value }))} style={inputStyle} />
@@ -919,9 +933,7 @@ export default function ExpensesPage() {
                     <input autoFocus required type="text" value={editForm.nome} onChange={e => setEditForm(f => ({ ...f, nome: e.target.value }))} style={inputStyle} />
                   </div>
                   <div><label style={lbl}>Grupo</label>
-                    <select value={editForm.grupo} onChange={e => setEditForm(f => ({ ...f, grupo: e.target.value }))} style={inputStyle}>
-                      <option>Casa</option><option>Casa Nova</option><option>Pessoal</option><option>Outros</option>
-                    </select>
+                    <GrupoChips value={editForm.grupo} onChange={g => setEditForm(f => ({ ...f, grupo: g }))} />
                   </div>
                   <div style={{ display: "flex", gap: 12 }}>
                     <div style={{ flex: 1 }}><label style={lbl}>Valor Real (R$)</label>
@@ -951,7 +963,7 @@ export default function ExpensesPage() {
                     </div>
                   </div>
                   {parcPrev && parcMensal && (
-                    <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)", fontSize: 13, color: "#a78bfa", fontWeight: 600 }}>
+                    <div className={ex.preview}>
                       → {parcPrev}x de {fmt(parcMensal)}/mês
                     </div>
                   )}
@@ -963,7 +975,7 @@ export default function ExpensesPage() {
                   )}
                 </>)}
 
-                <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+                <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end", paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                   <button type="button" onClick={() => setEditModal(null)} style={btnCancel}>Cancelar</button>
                   <button type="submit" disabled={editSaving} style={btnSave}>{editSaving ? "Salvando…" : "Salvar"}</button>
                 </div>
@@ -975,18 +987,13 @@ export default function ExpensesPage() {
 
       {/* Modal unificado de criação */}
       {createModal && (() => {
-        const lbl = { fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 };
-        const btnCancel = { flex: 1, padding: 12, borderRadius: 10, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", fontFamily: "inherit", cursor: "pointer" };
-        const btnSubmit = { flex: 2, padding: 12, borderRadius: 10, fontSize: 13, fontWeight: 700, color: "#fff", border: "none", fontFamily: "inherit", cursor: "pointer", background: "linear-gradient(135deg,#10b981,#059669)" };
+        const lbl = { fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", display: "block", marginBottom: 8 };
+        const btnCancel = { height: 42, padding: "0 18px", borderRadius: 99, fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.6)", background: "transparent", border: "none", fontFamily: "inherit", cursor: "pointer" };
+        const btnSubmit = { height: 42, padding: "0 24px", borderRadius: 99, fontSize: 14, fontWeight: 700, color: "#0b0b10", border: "none", fontFamily: "inherit", cursor: "pointer", background: "#fff", boxShadow: "0 6px 24px rgba(255,255,255,0.12)" };
         const grupoSelect = (
           <div>
             <label style={lbl}>Grupo</label>
-            <select value={createForm.grupo} onChange={e => setCreateForm(f => ({ ...f, grupo: e.target.value }))} style={inputStyle}>
-              <option value="Casa">Casa</option>
-              <option value="Casa Nova">Casa Nova</option>
-              <option value="Pessoal">Pessoal</option>
-              <option value="Outros">Outros</option>
-            </select>
+            <GrupoChips value={createForm.grupo} onChange={g => setCreateForm(f => ({ ...f, grupo: g }))} />
           </div>
         );
         const previsaoInput = (label) => (
@@ -1020,16 +1027,17 @@ export default function ExpensesPage() {
           ? Math.round((parseFloat(parcForm.valorTotal) / parcPrevModal) * 100) / 100
           : null;
         return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 500 }}
-            onClick={() => setCreateModal(false)}>
-            <div style={{ background: "rgba(17,24,39,0.98)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: "32px 28px", width: "90%", maxWidth: 520, boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}
-              onClick={e => e.stopPropagation()}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Novo Registro</h3>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 20 }}>Adicione um novo item às suas despesas.</p>
+          <div className={ex.overlay} onClick={() => setCreateModal(false)}>
+            <div className={ex.modal} onClick={e => e.stopPropagation()}>
+              <div className={ex.modalTop}>
+                <h3 className={ex.modalTitle}>Novo registro</h3>
+                <button type="button" className={ex.closeBtn} onClick={() => setCreateModal(false)} title="Fechar">✕</button>
+              </div>
+              <p className={ex.modalSub}>Adicione um novo item às suas despesas.</p>
               {/* Tabs */}
-              <div style={{ display: "flex", gap: 3, marginBottom: 24, padding: "3px", background: "rgba(255,255,255,0.04)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.07)" }}>
-                {[{ k: "variavel", l: "Gasto Variável" }, { k: "fixo", l: "Gasto Fixo" }, { k: "parcela", l: "Parcela" }].map(t => (
-                  <button key={t.k} type="button" onClick={() => setCreateTab(t.k)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: createTab === t.k ? "rgba(255,255,255,0.09)" : "transparent", color: createTab === t.k ? "#fff" : "rgba(255,255,255,0.35)", border: "none", cursor: "pointer", transition: "all 0.2s" }}>
+              <div className={ex.segment}>
+                {[{ k: "variavel", l: "Gasto variável" }, { k: "fixo", l: "Gasto fixo" }, { k: "parcela", l: "Parcela" }].map(t => (
+                  <button key={t.k} type="button" onClick={() => setCreateTab(t.k)} className={`${ex.segBtn} ${createTab === t.k ? ex.segActive : ""}`}>
                     {t.l}
                   </button>
                 ))}
@@ -1041,7 +1049,7 @@ export default function ExpensesPage() {
                   <div><label style={lbl}>Nome da Categoria</label><input autoFocus required type="text" value={createForm.nome} onChange={e => setCreateForm(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Academia, Streaming…" style={inputStyle} /></div>
                   {grupoSelect}
                   {previsaoInput("Previsão Mensal (R$)")}
-                  <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end", paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                     <button type="button" onClick={() => setCreateModal(false)} style={btnCancel}>Cancelar</button>
                     <button type="submit" disabled={createSaving || !createForm.nome} style={{ ...btnSubmit, opacity: (createSaving || !createForm.nome) ? 0.5 : 1 }}>{createSaving ? "Salvando..." : "Adicionar Variável"}</button>
                   </div>
@@ -1055,9 +1063,9 @@ export default function ExpensesPage() {
                   {grupoSelect}
                   {previsaoInput("Valor (R$)")}
                   <AutoToggle value={createForm.auto} onChange={v => setCreateForm(f => ({ ...f, auto: v }))} />
-                  <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end", paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                     <button type="button" onClick={() => setCreateModal(false)} style={btnCancel}>Cancelar</button>
-                    <button type="submit" disabled={createSaving || !createForm.nome} style={{ ...btnSubmit, background: "linear-gradient(135deg,#3b82f6,#2563eb)", opacity: (createSaving || !createForm.nome) ? 0.5 : 1 }}>{createSaving ? "Salvando..." : "Adicionar Fixo"}</button>
+                    <button type="submit" disabled={createSaving || !createForm.nome} style={{ ...btnSubmit, opacity: (createSaving || !createForm.nome) ? 0.5 : 1 }}>{createSaving ? "Salvando..." : "Adicionar Fixo"}</button>
                   </div>
                 </form>
               )}
@@ -1072,14 +1080,14 @@ export default function ExpensesPage() {
                     <div style={{ flex: 1 }}><label style={lbl}>Fim</label><input required type="month" value={parcForm.dataFim} onChange={e => setParcForm(p => ({ ...p, dataFim: e.target.value }))} style={inputStyle} /></div>
                   </div>
                   {parcPrevModal && parcMensalPrevModal && (
-                    <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)", fontSize: 13, color: "#3b82f6", fontWeight: 600 }}>
+                    <div className={ex.preview}>
                       → {parcPrevModal}x de {fmt(parcMensalPrevModal)}/mês
                     </div>
                   )}
                   <AutoToggle value={parcForm.auto} onChange={v => setParcForm(p => ({ ...p, auto: v }))} />
-                  <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end", paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                     <button type="button" onClick={() => setCreateModal(false)} style={btnCancel}>Cancelar</button>
-                    <button type="submit" disabled={parcSaving || !parcForm.nome || !parcForm.valorTotal || !parcPrevModal} style={{ ...btnSubmit, background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", opacity: (parcSaving || !parcForm.nome || !parcForm.valorTotal || !parcPrevModal) ? 0.5 : 1 }}>{parcSaving ? "Salvando..." : "Adicionar Parcela"}</button>
+                    <button type="submit" disabled={parcSaving || !parcForm.nome || !parcForm.valorTotal || !parcPrevModal} style={{ ...btnSubmit, opacity: (parcSaving || !parcForm.nome || !parcForm.valorTotal || !parcPrevModal) ? 0.5 : 1 }}>{parcSaving ? "Salvando..." : "Adicionar Parcela"}</button>
                   </div>
                 </form>
               )}
