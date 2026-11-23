@@ -7,11 +7,19 @@ import { validateRecurrence } from "@/lib/recurrenceValidation";
 const VCA_MAIN_ID = PROJ.vca.id;
 
 const VCA_AGENCIES = [
-  { id: PROJ.vca.extraIds[0], label: "Ocupe"          },
-  { id: PROJ.vca.extraIds[1], label: "Carol Macarone" },
-  { id: PROJ.vca.extraIds[2], label: "Santé"          },
-  { id: PROJ.vca.extraIds[3], label: "Hive"           },
+  { id: PROJ.vca.extraIds[0], label: "Ocupe" },
 ];
+
+// "SÃO FRANCISCO DE ASSIS" → "São Francisco de Assis"
+const SMALL_WORDS = new Set(["de", "da", "do", "das", "dos", "e"]);
+const ACRONYMS    = new Set(["SOS"]);
+function niceName(s = "") {
+  return s.split(" ").map((orig, i) => {
+    if (/[^A-Za-zÀ-ÿ]/.test(orig) || ACRONYMS.has(orig)) return orig; // siglas como "R&K" e "SOS" ficam como estão
+    const w = orig.toLowerCase();
+    return i > 0 && SMALL_WORDS.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(" ");
+}
 
 const MODES = [
   { key: "task", label: "Tarefa" },
@@ -259,31 +267,34 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
 
               {taskData.project === "vca" && taskData.vcaProjectId && (
                 <div className={styles.field}>
-                  <span className={styles.label}>Marca / seção</span>
-                  <select
-                    value={taskData.subClient}
-                    onChange={e => setTaskData(p => ({ ...p, subClient: e.target.value }))}
-                    className={styles.select}
-                  >
-                    <option value="">Sem seção específica</option>
-                    {vcaBrands
-                      .filter(b => b.source_project_id === taskData.vcaProjectId)
-                      .map(b => <option key={b.id} value={b.cf_value}>{b.name}</option>)}
-                  </select>
+                  <span className={styles.label}>Marca</span>
+                  <div className={styles.chipRow}>
+                    {[{ id: "none", cf_value: "", name: "Nenhuma" },
+                      ...vcaBrands.filter(b => b.source_project_id === taskData.vcaProjectId)].map(b => (
+                      <button key={b.id} type="button"
+                        onClick={() => setTaskData(p => ({ ...p, subClient: b.cf_value }))}
+                        className={`${styles.chip} ${taskData.subClient === b.cf_value ? styles.chipActive : ""}`}
+                        style={{ "--c": PROJ.vca.cor }}>
+                        {b.id === "none" ? b.name : niceName(b.name)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {taskData.project === "pdv" && (
                 <div className={styles.field}>
                   <span className={styles.label}>Cliente</span>
-                  <select
-                    value={taskData.subClient}
-                    onChange={e => setTaskData(p => ({ ...p, subClient: e.target.value }))}
-                    className={styles.select}
-                  >
-                    <option value="">Selecione um cliente...</option>
-                    {pdvClients.map(c => <option key={c.id} value={c.cf_value}>{c.name}</option>)}
-                  </select>
+                  <div className={styles.chipRow}>
+                    {[{ id: "none", cf_value: "", name: "Nenhum" }, ...pdvClients].map(c => (
+                      <button key={c.id} type="button"
+                        onClick={() => setTaskData(p => ({ ...p, subClient: c.cf_value }))}
+                        className={`${styles.chip} ${taskData.subClient === c.cf_value ? styles.chipActive : ""}`}
+                        style={{ "--c": PROJ.pdv.cor }}>
+                        {c.id === "none" ? c.name : niceName(c.name)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 

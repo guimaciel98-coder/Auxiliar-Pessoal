@@ -9,10 +9,7 @@ export const PROJ = {
   vca: {
     id:       "6Xvp8v5F2PGPq2g2",
     extraIds: [
-      "6fCfcJvXv6MjF6Pq", // OCUPE
-      "6ghvwpM3C9m8377R", // CAROL MACARONE
-      "6ghvxWFMgh5X3hHV", // SANTÉ
-      "6ghvxjQVHRmHW4wc", // HIVE
+      "6fCfcJvXv6MjF6Pq", // OCUPE  (Carol Macarone, Santé e Hive foram encerradas em nov/26)
     ],
     cor:      "#5b9fd6",
     label:    "VCA BRASIL",
@@ -46,17 +43,6 @@ export const VCA_SECTIONS = {
   "6fCgCHjGHrq376xH": "BALNEÁRIO CAMBORIÚ",
   "6fCgCG9j79R5Q3Jq": "VET QUALITY",
   "6fCgCFQr4v7q4mWH": "ARIZA",
-  // Seções CAROL MACARONE
-  "6ghvwpQxJPhvpvp2": "GERAL",
-  "6ghvxqvj2RwChr82": "DR HATO",
-  "6ghvxrGMjR6QfFCR": "R&K",
-  // Seções SANTÉ
-  "6ghvxWCpvpmJ6x53": "GERAL",
-  "6ghvxWFQ5f6fMQpV": "PET SUPPORT",
-  "6ghvxWFqHp9wgwgV": "ONCO SUPPORT",
-  // Seções HIVE
-  "6ghvxjQQmcgPpX56": "GERAL",
-  "6ghvxjXg43j7Pqm6": "SÃO FRANCISCO DE ASSIS",
 };
 
 // ─── Seções PDV (clientes) ────────────────────────────────────────────────────

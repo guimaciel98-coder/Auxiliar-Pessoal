@@ -6,9 +6,6 @@ import styles from "./TaskLists.module.css";
 const VCA_AGENCY_ORDER = [
   { id: "6Xvp8v5F2PGPq2g2", label: "Gestão Interna",  color: "#5b9fd6" },
   { id: "6fCfcJvXv6MjF6Pq", label: "Ocupe",           color: "#06b6d4" },
-  { id: "6ghvwpM3C9m8377R", label: "Carol Macarone",  color: "#ec4899" },
-  { id: "6ghvxWFMgh5X3hHV", label: "Santé",           color: "#10b981" },
-  { id: "6ghvxjQVHRmHW4wc", label: "Hive",            color: "#f59e0b" },
 ];
 const VCA_AGENCY_IDS = new Set(VCA_AGENCY_ORDER.map(a => a.id));
 

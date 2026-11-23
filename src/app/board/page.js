@@ -20,9 +20,6 @@ const VCA_MAIN_ID = "6Xvp8v5F2PGPq2g2";
 
 const VCA_AGENCIES = [
   { key: "ocupe", label: "Ocupe",          projectId: "6fCfcJvXv6MjF6Pq", color: "#06b6d4" },
-  { key: "carol", label: "Carol Macarone", projectId: "6ghvwpM3C9m8377R", color: "#ec4899" },
-  { key: "sante", label: "Santé",          projectId: "6ghvxWFMgh5X3hHV", color: "#10b981" },
-  { key: "hive",  label: "Hive",           projectId: "6ghvxjQVHRmHW4wc", color: "#f59e0b" },
 ];
 
 const MONTHS   = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
