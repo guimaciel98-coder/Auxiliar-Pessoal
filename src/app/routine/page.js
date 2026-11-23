@@ -379,6 +379,9 @@ function TabSemana({ onSelectDay }) {
   if (!week) return null;
 
   const allBlocks = [0,1,2,3,4,5,6].flatMap(d => week[d] ?? []);
+  // Ordem fixa das categorias = a mesma do total da semana (maior → menor), em todos os dias
+  const weekOrder = catTotals(allBlocks).segs.sort((a, b) => b.mins - a.mins).map(x => x.cat);
+  const byWeek    = (a, b) => weekOrder.indexOf(a.cat) - weekOrder.indexOf(b.cat);
 
   return (
     <div className={rt.weekCol}>
@@ -388,9 +391,9 @@ function TabSemana({ onSelectDay }) {
           {DAYS_SHORT.map((_, idx) => {
             const isT    = idx === todayIdx;
             const blocks = week[idx] ?? [];
-            const { segs } = catTotals(blocks);
+            const segs   = catTotals(blocks).segs.sort(byWeek);
             // Todas as categorias com 30 min ou mais (antes cortava em 5 e o PDV sumia)
-            const chips  = segs.filter(s => s.mins >= 30).sort((a, b) => b.mins - a.mins);
+            const chips  = segs.filter(s => s.mins >= 30);
 
             // Bloco atual e % feito (só hoje)
             let nowBlock = null, donePct = 0;
