@@ -68,6 +68,14 @@ const NAV = FINANCE_ONLY
   ? NAV_FULL.filter(i => i.label === "Financeiro")
   : NAV_FULL;
 
+// "seg, 23 nov"
+function todayLabel() {
+  const d   = new Date();
+  const wd  = d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "");
+  const mon = d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+  return `${wd.charAt(0).toUpperCase()}${wd.slice(1)}, ${d.getDate()} ${mon}`;
+}
+
 function isItemActive(item, pathname) {
   if (item.exact) return pathname === item.path;
   if (item.prefixes) return item.prefixes.some(p => pathname.startsWith(p));
@@ -113,11 +121,9 @@ export default function Navigation() {
         <span className={styles.brandMark}>G</span>
         <div className={styles.brandText}>
           <span className={styles.brandName}>Daily</span>
-          <span className={styles.brandSub}>Guilherme</span>
+          <span className={styles.brandSub} suppressHydrationWarning>{todayLabel()}</span>
         </div>
       </Link>
-
-      <div className={styles.divider} />
 
       {/* ── Sidebar desktop: accordion ───────────────────────────────────── */}
       <div className={`${styles.items} ${styles.desktopItems}`}>
