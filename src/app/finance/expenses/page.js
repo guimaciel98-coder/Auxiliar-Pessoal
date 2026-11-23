@@ -533,15 +533,18 @@ export default function ExpensesPage() {
                         const diff       = Math.abs(item.real - item.previsao);
                         const barColor   = budgetBarColor(pct);
                         return (
-                          <div key={item.item} className={ex.listRow}>
-                            <div className={ex.listName}>
-                              <span>{item.item}</span>
-                              <small style={{ color: overBudget ? "#fb7185" : "#34d399" }}>{overBudget ? `↑ ${fmt(diff)} acima` : `${fmt(diff)} livre`}</small>
+                          <div key={item.item} className={ex.uRow} style={{ "--c": barColor }}>
+                            <span className={ex.uLead}><i className={ex.uDot} /></span>
+                            <div className={ex.uName}>
+                              <span className={ex.rowName}>{item.item}</span>
+                              <span className={ex.uSub} style={{ color: overBudget ? "#fb7185" : "#34d399" }}>{overBudget ? `↑ ${fmt(diff)} acima` : `${fmt(diff)} livre`}</span>
                             </div>
                             <div className={ex.bar}><span style={{ width: `${Math.min(pct, 100)}%`, background: barColor }} /></div>
-                            <span className={ex.listVals}>{fmt(item.real)} <span>/ {fmt(item.previsao)}</span></span>
-                            <span className={ex.listPct} style={{ color: barColor }}>{pct}%</span>
-                            <button onClick={() => openEdit("variavel", item)} title="Editar" className={ex.iconBtn}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+                            <span className={ex.uAux} style={{ color: barColor }}>{pct}%</span>
+                            <span className={ex.uVal}><b>{fmt(item.real)}</b><small>de {fmt(item.previsao)}</small></span>
+                            <div className={ex.uActs}>
+                              <button onClick={() => openEdit("variavel", item)} title="Editar" className={ex.iconBtn}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+                            </div>
                           </div>
                         );
                       })}
@@ -633,13 +636,15 @@ export default function ExpensesPage() {
                             const isToggling = toggling.has(item.item);
                             const isConf     = fixoConfirm === item.item;
                             return (
-                              <div key={item.item} className={`${ex.row} ${ctrl ? ex.rowDone : ""}`} style={{ "--c": prazo ? "#fbbf24" : gc }}>
-                                <button
-                                  onClick={() => toggleCtrl(item.item, ctrl)}
-                                  className={`${ex.check} ${ctrl ? ex.checkOn : ""} ${isToggling ? ex.checkBusy : ""}`}
-                                  title={ctrl ? "Desmarcar pagamento" : "Marcar como pago"}
-                                ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
-                                <div className={ex.rowBody}>
+                              <div key={item.item} className={`${ex.uRow} ${ctrl ? ex.rowDone : ""}`} style={{ "--c": prazo ? "#fbbf24" : gc }}>
+                                <span className={ex.uLead}>
+                                  <button
+                                    onClick={() => toggleCtrl(item.item, ctrl)}
+                                    className={`${ex.check} ${ctrl ? ex.checkOn : ""} ${isToggling ? ex.checkBusy : ""}`}
+                                    title={ctrl ? "Desmarcar pagamento" : "Marcar como pago"}
+                                  ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+                                </span>
+                                <div className={`${ex.uName} ${ex.uWide}`}>
                                   <div className={ex.rowLine}>
                                     <span className={`${ex.rowName} ${ctrl ? ex.struck : ""}`}>{nomeLimpo}</span>
                                     {isAuto && (
@@ -649,10 +654,11 @@ export default function ExpensesPage() {
                                       </button>
                                     )}
                                   </div>
-                                  {prazo && <span className={ex.prazo}>⏱ {prazo}</span>}
+                                  {prazo && <span className={ex.uSub} style={{ color: "#fbbf24" }}>⏱ {prazo}</span>}
                                 </div>
-                                <span className={ex.rowValue}>{fmt(item.real)}</span>
-                                <div className={ex.rowActions}>
+                                <span className={ex.uAux} />
+                                <span className={ex.uVal}><b>{fmt(item.real)}</b></span>
+                                <div className={ex.uActs}>
                                   <button onClick={() => openEdit("fixo", item)} title="Editar" className={ex.iconBtn}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
                                   {isConf ? (
                                     <button onClick={() => handleFixoRemove(item)} disabled={fixoRemoving.has(item.item)} className={ex.confirmBtn}
@@ -763,31 +769,33 @@ export default function ExpensesPage() {
               // Quitada (todas as parcelas pagas) ou paga no mês → mostra ✓, igual aos Fixos
               const isDone   = item.pago || item.parcelasRestantes === 0;
               return (
-                <div className={`${ex.row} ${isDone ? ex.rowDone : ""}`} style={{ "--c": item.auto ? "#34d399" : "#a78bfa" }}>
-                  {!item.auto && (
-                    <div className={ex.checkCol}>
-                      <button
-                        onClick={() => !isPaying && !isDone && handleParcPay(item)}
-                        className={`${ex.check} ${isDone ? ex.checkOn : ""} ${isPaying ? ex.checkBusy : ""}`}
-                        title={isDone ? "Paga" : "Marcar parcela do mês como paga"}
-                      ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
-                      {item.pago && <span className={ex.undo} title="Desfazer pagamento" onClick={() => !isPaying && handleParcReset(item)}>↺</span>}
-                    </div>
-                  )}
-                  <div className={ex.rowBody}>
+                <div className={`${ex.uRow} ${isDone ? ex.rowDone : ""}`} style={{ "--c": item.auto ? "#34d399" : "#a78bfa" }}>
+                  <span className={ex.uLead}>
+                    {item.auto ? <i className={ex.uDot} /> : (
+                      <span className={ex.checkCol}>
+                        <button
+                          onClick={() => !isPaying && !isDone && handleParcPay(item)}
+                          className={`${ex.check} ${isDone ? ex.checkOn : ""} ${isPaying ? ex.checkBusy : ""}`}
+                          title={isDone ? "Paga" : "Marcar parcela do mês como paga"}
+                        ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+                        {item.pago && <span className={ex.undo} title="Desfazer pagamento" onClick={() => !isPaying && handleParcReset(item)}>↺</span>}
+                      </span>
+                    )}
+                  </span>
+                  <div className={ex.uName}>
                     <div className={ex.rowLine}>
                       <span className={`${ex.rowName} ${isDone ? ex.struck : ""}`}>{item.nome}</span>
                       {item.auto && <span className={`${ex.badgeAuto} ${isDone ? ex.badgeAutoOn : ""}`}>⚡ {isDone ? "pago auto" : "auto"}</span>}
                     </div>
-                    <div className={ex.bar}><span style={{ width: `${pct}%`, background: cor }} /></div>
-                    <div className={ex.rowMeta}>
-                      <span className={ex.countPill} style={{ "--c": cor }}>{item.parcelasPagas}/{item.totalParcelas}</span>
-                      {item.dataFim && <span>encerra {fmtMonthYear(item.dataFim)}</span>}
-                      {item.restante > 0 && <span className={ex.restante}>faltam {fmt(item.restante)}</span>}
-                    </div>
+                    <span className={ex.uSub}>
+                      {item.dataFim ? `encerra ${fmtMonthYear(item.dataFim)}` : ""}
+                      {item.restante > 0 && <em className={ex.restante}>{item.dataFim ? " · " : ""}faltam {fmt(item.restante)}</em>}
+                    </span>
                   </div>
-                  <span className={ex.rowValue}>{fmt(item.valorMensal)}<small>/mês</small></span>
-                  <div className={ex.rowActions}>
+                  <div className={ex.bar}><span style={{ width: `${pct}%`, background: cor }} /></div>
+                  <span className={ex.uAux} style={{ color: cor }}>{item.parcelasPagas}/{item.totalParcelas}</span>
+                  <span className={ex.uVal}><b>{fmt(item.valorMensal)}</b><small>por mês</small></span>
+                  <div className={ex.uActs}>
                     <button onClick={() => openEdit("parcela", item)} title="Editar" className={ex.iconBtn}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
                     {isConf ? (
                       <button onClick={() => handleParcRemove(item)} disabled={isRem} className={ex.confirmBtn}
@@ -855,24 +863,18 @@ export default function ExpensesPage() {
 
                   {/* Distribuição mensal */}
                   <div className={ex.panel}>
-                    <div className={ex.panelTitle}>Mensal x restante</div>
-                    <ResponsiveContainer width="100%" height={240}>
-                      <BarChart
-                        data={parcItems.map(i => ({ name: i.nome, Mensal: i.valorMensal, Restante: i.restante }))}
-                        margin={{ top: 8, right: 4, left: 4, bottom: 52 }}
-                        barGap={3}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                        <XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600 }} tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} />
-                        <YAxis hide />
-                        <Tooltip contentStyle={TOOLTIP_BOX} formatter={(v, name) => [fmt(v), name]} itemStyle={{ color: "#e5e7eb" }} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
-                        <Bar dataKey="Mensal"   fill="#a78bfa"              radius={[6,6,0,0]} />
-                        <Bar dataKey="Restante" fill="rgba(251,113,133,0.5)" radius={[6,6,0,0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <div className={ex.legendRow}>
-                      <span><i style={{ background: "#a78bfa" }} />Mensal</span>
-                      <span><i style={{ background: "rgba(251,113,133,0.6)" }} />Restante</span>
+                    <div className={ex.panelTitle}>Quitação por compra</div>
+                    <div className={ex.payList}>
+                      {[...parcItems].sort((a, b) => (b.parcelasPagas / (b.totalParcelas || 1)) - (a.parcelasPagas / (a.totalParcelas || 1))).map(i => {
+                        const pc  = i.totalParcelas > 0 ? Math.round((i.parcelasPagas / i.totalParcelas) * 100) : 0;
+                        const cor = pc >= 80 ? "#34d399" : pc >= 50 ? "#38bdf8" : "#fbbf24";
+                        return (
+                          <div key={i.sheetRow} className={ex.payRow}>
+                            <div className={ex.payTop}><span>{i.nome}</span><b style={{ color: cor }}>{pc}%</b></div>
+                            <div className={ex.bar}><span style={{ width: `${pc}%`, background: cor }} /></div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
