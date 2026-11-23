@@ -7,7 +7,7 @@ import ModuleHeader from "@/components/ui/ModuleHeader";
 export default function TomorrowPage() {
   return (
     <>
-      <ModuleHeader title="Tarefas" backTo="/" />
+      <ModuleHeader title="Tarefas" backTo="/" hideOnDesktop />
       <DailyOrchestrator mode="tomorrow" />
       <Navigation />
     </>

@@ -3,6 +3,8 @@ import { HEAT_COLOR, MONTHS } from "../../config/constants";
 import DatePickerButton from "../ui/DatePickerButton";
 import styles from "./TaskRow.module.css";
 
+const PRIO_RING = { p1: "#ff5a5f", p2: "#fb923c", p3: "#fbbf24" };
+
 export default function TaskRow({ 
   t, 
   od, 
@@ -80,8 +82,19 @@ export default function TaskRow({
     >
       <div 
         className={rowClass}
-        style={taskBorderLeft ? { borderLeft: taskBorderLeft } : {}}
+        style={taskBorderLeft ? { "--heat": HEAT_COLOR[heat] } : {}}
       >
+        <button
+          onClick={() => completeTask(t.id, t.name)}
+          disabled={busy || fadingOut}
+          className={styles.checkBtn}
+          style={{ "--prio": PRIO_RING[t.prio] ?? "rgba(255,255,255,0.28)" }}
+          title="Concluir tarefa"
+        >
+          {completing.has(t.id) ? <span className={styles.checkDots}>…</span> : (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+          )}
+        </button>
         <div
           onClick={() => onEdit && onEdit(t)}
           className={styles.taskLink}
@@ -131,17 +144,11 @@ export default function TaskRow({
           className={`${styles.actionBtn} ${isOpen ? styles.rescheduleOpenBtn : styles.rescheduleBtn}`}
           title="Reagendar"
         >
-          {rescheduling.has(t.id) ? "…" : "→"}
+          {rescheduling.has(t.id) ? "…" : (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M10 15.5h5M13 13l2.5 2.5L13 18"/></svg>
+          )}
         </button>
         
-        <button
-          onClick={() => completeTask(t.id, t.name)}
-          disabled={busy || fadingOut}
-          className={`${styles.actionBtn} ${styles.completeBtn}`}
-          title="Concluir tarefa"
-        >
-          {completing.has(t.id) ? "…" : "✓"}
-        </button>
       </div>
       
       {isOpen && (

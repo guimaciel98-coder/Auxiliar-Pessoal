@@ -4,9 +4,12 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background:
+    radial-gradient(50% 35% at 85% 0%, rgba(167,139,250,0.10), transparent 70%),
+    #07080c;
 }
 
-/* ── Layout 2 colunas (desktop) ─────────────────────────────────────────── */
+/* ── Layout 2 colunas (computador) ──────────────────────────────────────── */
 .body {
   display: grid;
   grid-template-columns: 1fr 300px;
@@ -14,66 +17,60 @@
   flex: 1;
   align-items: start;
 }
-
-.mainCol {
-  padding: 24px 28px 80px 28px;
-  min-width: 0;
-}
-
+.mainCol { padding: 6px 28px 80px 28px; min-width: 0; }
 .sideCol {
-  padding: 24px 24px 80px 0;
+  padding: 6px 28px 80px 0;
   position: sticky;
-  top: 56px; /* altura do ModuleHeader */
-  max-height: calc(100vh - 56px);
+  top: 16px;
+  max-height: calc(100vh - 32px);
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: flex; flex-direction: column; gap: 14px;
   scrollbar-width: none;
 }
 .sideCol::-webkit-scrollbar { display: none; }
 
-/* ── Painel lateral de métricas ─────────────────────────────────────────── */
+/* ── Painel lateral ─────────────────────────────────────────────────────── */
 .sidePanel {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 22px;
   overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
 }
 .sidePanelTitle {
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.08em; color: var(--text-muted);
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.45);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 16px 18px 6px;
 }
 
-/* ── Métricas no painel lateral ─────────────────────────────────────────── */
-.metricsList {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
+/* ── Projetos (número grande + barra) ───────────────────────────────────── */
+.metricsList { display: flex; flex-direction: column; padding: 6px 8px 10px; gap: 2px; }
 .metricItem {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  cursor: pointer;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 10px; border-radius: 14px;
+  text-align: left; width: 100%;
   transition: background 0.15s;
 }
-.metricItem:last-child { border-bottom: none; }
-.metricItem:hover { background: rgba(255,255,255,0.07); }
-.metricItemActive { background: rgba(0,229,160,0.06) !important; }
-.metricLabel {
-  font-size: 12px; font-weight: 600;
-  color: var(--text-secondary);
+.metricItem:hover { background: rgba(255,255,255,0.05); }
+.metricItemActive { background: color-mix(in srgb, var(--dot-color) 12%, transparent) !important; }
+.metricTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.metricLabel { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7); }
+.metricDot { width: 8px; height: 8px; border-radius: 50%; background: var(--dot-color); box-shadow: 0 0 8px var(--dot-color); }
+.metricItemActive .metricLabel { color: #fff; }
+.metricCount { font-size: 24px; font-weight: 800; letter-spacing: -0.04em; color: #fff; font-variant-numeric: tabular-nums; line-height: 1; }
+.metricBar { display: block; height: 4px; border-radius: 99px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.metricBar span { display: block; height: 100%; border-radius: 99px; background: var(--dot-color); transition: width .8s cubic-bezier(.16,1,.3,1); }
+
+/* ── Resumo em números ──────────────────────────────────────────────────── */
+.statGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.statBox {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 16px 16px 14px; border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.08);
 }
-.metricItemActive .metricLabel { color: var(--accent-primary); }
-.metricCount {
-  font-size: 18px; font-weight: 800;
-  font-family: var(--font-mono);
-  color: rgba(255,255,255,0.3);
-}
-.metricItemActive .metricCount { color: var(--accent-primary); }
+.statNum { font-size: 32px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.statLbl { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.45); }
 
 /* ── Métricas inline: ocultas no desktop (ficam no sideCol), visíveis mobile ── */
 .metricsInline { display: none; }
@@ -112,7 +109,11 @@
   align-items: center; gap: 8px;
   padding: 48px 24px; text-align: center;
 }
-.emptyIcon { font-size: 36px; line-height: 1; margin-bottom: 4px; }
+.emptyIcon {
+  width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 26px; color: #34d399; background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.3);
+  margin-bottom: 6px;
+}
 .emptyState p { font-size: 15px; font-weight: 700; color: var(--text-secondary); }
 .emptyHint { font-size: 12px; color: var(--text-muted); }
 
@@ -127,7 +128,7 @@
 @media (max-width: 768px) {
   .wrap { margin-left: 0; }
   .body { grid-template-columns: 1fr; }
-  .mainCol { padding: 14px 14px 100px; }
+  .mainCol { padding: 4px 14px 110px; }
   .sideCol { display: none; } /* métricas ficam inline no mobile via Metrics.js */
 }
 
@@ -136,21 +137,6 @@
   /* Padding lateral mínimo 16px (era 14px) + safe-area lateral */
   .mainCol {
     padding: 14px max(16px, env(safe-area-inset-left, 16px)) 100px max(16px, env(safe-area-inset-right, 16px));
-  }
-}
-
-/* Links Hoje/Amanhã: classe para touch target 44px no mobile */
-.navDayLink {
-  /* Desktop: sem estilo próprio, mantém inline style do JSX */
-}
-@media (max-width: 768px) {
-  .navDayLink {
-    min-height: 44px;
-    display: inline-flex !important;
-    align-items: center;
-    font-size: 12px !important;
-    padding-top: 11px !important;
-    padding-bottom: 11px !important;
   }
 }
 

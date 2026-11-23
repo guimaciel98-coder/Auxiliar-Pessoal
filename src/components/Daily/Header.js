@@ -1,10 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import confetti from "canvas-confetti";
+import Ring from "../ui/Ring";
 import styles from "./Header.module.css";
 import QuickAddModal from "./QuickAddModal";
 
 export default function Header({
+  mode = "today",
   day, dateLabel,
   filter, setFilter,
   search, setSearch,
@@ -30,84 +33,84 @@ export default function Header({
   return (
     <div className={styles.header}>
 
-      {/* Data + progresso + botão nova */}
-      <div className={styles.topBar}>
-        <div className={styles.topLeft}>
-          <span className={styles.dayText}>{day}</span>
-          <span className={styles.sep}>·</span>
-          <span className={styles.dateText}>{dateLabel}</span>
-          {totalCount > 0 && (
-            <span className={styles.progressInline}>{completedCount}/{totalCount}</span>
-          )}
+      {/* ── Topo: título + data | anel de progresso + nova tarefa ── */}
+      <div className={styles.hero}>
+        <div className={styles.heroLeft}>
+          <span className={styles.eyebrow}>{day} · {dateLabel}</span>
+          <h1 className={styles.title}>{mode === "tomorrow" ? "Amanhã" : "Hoje"}</h1>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className={styles.btnNova}>
-          + Nova
-        </button>
+
+        <div className={styles.heroRight}>
+          {totalCount > 0 && (
+            <div className={styles.progressBlock}>
+              <Ring pct={progressPercent} color={progressPercent === 100 ? "#34d399" : "#a78bfa"} size={68} stroke={7}>
+                <span className={styles.ringPct}>{progressPercent}%</span>
+              </Ring>
+              <div className={styles.progressNums}>
+                <span className={styles.bigNum}>{completedCount}<span className={styles.bigOf}>/{totalCount}</span></span>
+                <span className={styles.bigLbl}>feitas</span>
+              </div>
+            </div>
+          )}
+          <button onClick={() => setIsModalOpen(true)} className={styles.btnNova}>
+            <span className={styles.btnPlus}>+</span> Nova tarefa
+          </button>
+        </div>
       </div>
 
-      {/* Barra de progresso fina */}
-      {totalCount > 0 && (
-        <div className={styles.progressBar}>
-          <div className={styles.progressFill} style={{ width: `${progressPercent}%` }} />
-        </div>
-      )}
-
-      {/* Filtros rápidos + busca */}
+      {/* ── Abas Hoje/Amanhã + filtros + busca/sincronizar ── */}
       <div className={styles.filterRow}>
-        <div className={styles.chips}>
-          {[
-            { key: "all",    label: "Todas" },
-            { key: "urgent", label: "Urgentes" },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              className={`${styles.chip} ${filter === key ? styles.chipActive : ""}`}
-              onClick={() => setFilter(key)}
-            >
-              {label}
-            </button>
-          ))}
+        <div className={styles.leftGroup}>
+          <div className={styles.segment}>
+            <Link href="/daily"    className={`${styles.segBtn} ${mode === "today"    ? styles.segActive : ""}`}>Hoje</Link>
+            <Link href="/tomorrow" className={`${styles.segBtn} ${mode === "tomorrow" ? styles.segActive : ""}`}>Amanhã</Link>
+          </div>
+          <div className={styles.chips}>
+            {[
+              { key: "all",    label: "Todas" },
+              { key: "urgent", label: "Urgentes" },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                className={`${styles.chip} ${filter === key ? styles.chipActive : ""}`}
+                onClick={() => setFilter(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+
+        <div className={styles.tools}>
           {searchOpen ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <div className={styles.searchBox}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+              </svg>
               <input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar tarefa..."
                 autoFocus
-                style={{
-                  width: 140, padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.15)",
-                  background: "rgba(255,255,255,0.06)", color: "#f0f0f8", fontSize: 12,
-                  fontFamily: "inherit", outline: "none",
-                }}
+                className={styles.searchInput}
               />
-              <button
-                onClick={() => { setSearchOpen(false); setSearch(""); }}
-                style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", fontSize: 14, cursor: "pointer", padding: "2px 4px", lineHeight: 1 }}
-              >
-                ✕
-              </button>
+              <button onClick={() => { setSearchOpen(false); setSearch(""); }} className={styles.searchClose} title="Fechar busca">✕</button>
             </div>
           ) : (
-            <button
-              onClick={() => setSearchOpen(true)}
-              style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", cursor: "pointer", padding: "4px", lineHeight: 1, display: "flex", alignItems: "center" }}
-              title="Buscar"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <button onClick={() => setSearchOpen(true)} className={styles.iconBtn} title="Buscar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
               </svg>
             </button>
           )}
-          <button onClick={() => onRefresh()} disabled={syncing} className={styles.refreshBtn} title="Sincronizar">
+          <button onClick={() => onRefresh()} disabled={syncing} className={styles.iconBtn} title="Sincronizar">
             <svg
-              width="13" height="13" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              width="15" height="15" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
               className={syncing ? styles.spinning : ""}
             >
-              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-10.05l5.67-5.67"/>
+              <path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>
             </svg>
           </button>
         </div>

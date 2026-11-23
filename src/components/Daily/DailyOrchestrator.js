@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { PROJ, MONTHS, DAYS } from "../../config/constants";
 import { classify } from "../../utils/helpers";
 import { useTasks } from "../../hooks/useTasks";
@@ -29,10 +28,21 @@ export default function DailyOrchestrator({ mode = "today" }) {
   const [rescheduleOpen, setRescheduleOpen] = useState(null);
   const [editingTask, setEditingTask]  = useState(null);
   const [clients, setClients]         = useState([]);
+  const [doneApiIds, setDoneApiIds]   = useState([]); // concluídas hoje segundo o Todoist (fonte real)
 
   useEffect(() => {
     fetch("/api/clients").then(r => r.json()).then(setClients).catch(console.error);
   }, []);
+
+  // Concluídas hoje direto do Todoist (inclui recorrentes e as feitas em outro aparelho)
+  const loadDoneToday = useCallback(() => {
+    if (mode !== "today") return;
+    fetch("/api/tasks/completed-today")
+      .then(r => r.json())
+      .then(d => { if (d.ok) setDoneApiIds(d.ids); })
+      .catch(() => {});
+  }, [mode]);
+  useEffect(() => { loadDoneToday(); }, [loadDoneToday]);
 
   // Callback para o modal reportar sucesso com mensagem de toast
   const handleEditSuccess = useCallback((message) => {
@@ -81,8 +91,14 @@ export default function DailyOrchestrator({ mode = "today" }) {
     ? all.filter(t => !t.ts || Number(t.ts) >= startOfTodayBRT)
     : all;
 
-  const completedCount = completed.size;
-  const totalCount = all.length + completedCount;
+  // Concluídas = Todoist ∪ marcadas neste navegador, sem as que ainda estão abertas
+  const openIds        = new Set(all.map(t => String(t.id)));
+  const doneIds        = new Set([...doneApiIds, ...[...completed].map(String)].filter(id => !openIds.has(id)));
+  const completedCount = doneIds.size;
+  const totalCount     = all.length + completedCount;
+  const overdueCount   = overdueTasks.length;
+  const timedCount     = all.filter(t => t.timed).length;
+  const urgentCount    = all.filter(t => t.urgent || t.high).length;
 
   const dayOffset = mode === "tomorrow" ? 86400000 : 0;
   const now = new Date(clockNow - 3 * 3600 * 1000 + dayOffset);
@@ -134,6 +150,7 @@ export default function DailyOrchestrator({ mode = "today" }) {
       )}
 
       <Header
+        mode={mode}
         day={day}
         dateLabel={dl}
         filter={filter}
@@ -142,61 +159,31 @@ export default function DailyOrchestrator({ mode = "today" }) {
         setSearch={setSearch}
         completedCount={completedCount}
         totalCount={totalCount}
-        onRefresh={(msg) => { sync(); if (msg) showToast(msg); }}
+        onRefresh={(msg) => { sync(); loadDoneToday(); if (msg) showToast(msg); }}
         syncing={syncing}
         activeProject={activeProject}
         clients={clients}
       />
 
-      {/* Navegação Hoje ↔ Amanhã */}
-      <div style={{ display:"flex", gap:6, padding:"0 16px 8px", marginTop:-4 }}>
-        <Link
-          href="/daily"
-          className={styles.navDayLink}
-          style={{
-            fontSize:11, fontWeight:700, letterSpacing:"0.04em",
-            padding:"4px 10px", borderRadius:6, textDecoration:"none",
-            background: mode === "today" ? "rgba(0,229,160,0.15)" : "rgba(255,255,255,0.04)",
-            color:       mode === "today" ? "#00e5a0"              : "var(--text-muted)",
-            border:`1px solid ${mode === "today" ? "rgba(0,229,160,0.35)" : "rgba(255,255,255,0.08)"}`,
-          }}
-        >
-          Hoje
-        </Link>
-        <Link
-          href="/tomorrow"
-          className={styles.navDayLink}
-          style={{
-            fontSize:11, fontWeight:700, letterSpacing:"0.04em",
-            padding:"4px 10px", borderRadius:6, textDecoration:"none",
-            background: mode === "tomorrow" ? "rgba(0,229,160,0.15)" : "rgba(255,255,255,0.04)",
-            color:       mode === "tomorrow" ? "#00e5a0"              : "var(--text-muted)",
-            border:`1px solid ${mode === "tomorrow" ? "rgba(0,229,160,0.35)" : "rgba(255,255,255,0.08)"}`,
-          }}
-        >
-          Amanhã
-        </Link>
-      </div>
-
       {/* Layout 2 colunas no desktop */}
       <div className={styles.body}>
         {/* Coluna principal: listas de tarefas */}
         <div className={styles.mainCol}>
-          {/* Métricas ficam inline no mobile; no desktop ficam no sideCol */}
+          {/* Projetos ficam inline no celular; no computador ficam na coluna lateral */}
           <div className={styles.metricsInline}>
             <Metrics metrics={metrics} filter={filter} setFilter={setFilter} />
           </div>
 
           {nothingToday && (
             <div className={styles.emptyState}>
-              <span className={styles.emptyIcon}>✅</span>
-              <p>Nenhuma tarefa para hoje!</p>
-              <span className={styles.emptyHint}>Use "+ Nova" para adicionar uma tarefa.</span>
+              <span className={styles.emptyIcon}>✓</span>
+              <p>{mode === "today" ? "Nada pendente pra hoje" : "Nada marcado pra amanhã"}</p>
+              <span className={styles.emptyHint}>Use "Nova tarefa" para adicionar.</span>
             </div>
           )}
 
           {(() => {
-            // Conta tarefas VISÍVEIS (após filtro) para controlar os dividers
+            // Conta tarefas VISÍVEIS (após filtro) para controlar os divisores
             const pessoalVisible = [...overdueTasks, ...currentTasks].filter(t => t.proj === "pessoal").filter(visible).length;
             const vcaVisible     = [...overdueTasks, ...currentTasks].filter(t => t.proj === "vca").filter(visible).length;
             const pdvVisible     = [...overdueTasks, ...currentTasks].filter(t => t.proj === "pdv").filter(visible).length;
@@ -214,60 +201,53 @@ export default function DailyOrchestrator({ mode = "today" }) {
           })()}
         </div>
 
-        {/* Coluna lateral: métricas + resumo (desktop only) */}
+        {/* Coluna lateral (computador) */}
         <div className={styles.sideCol}>
-          {/* Painel de contadores por projeto */}
+          {/* Projetos: número grande + barra proporcional; clicar filtra */}
           <div className={styles.sidePanel}>
             <div className={styles.sidePanelTitle}>Projetos</div>
             <div className={styles.metricsList}>
               {metrics.map(m => (
-                <div
+                <button
                   key={m.key}
                   className={`${styles.metricItem} ${filter === m.key ? styles.metricItemActive : ""}`}
                   onClick={() => setFilter(m.key)}
-                  style={m.cor ? { "--dot-color": m.cor } : {}}
+                  style={{ "--dot-color": m.cor ?? "#a78bfa" }}
                 >
-                  <span className={styles.metricLabel}>
-                    {m.cor && (
-                      <span style={{
-                        display: "inline-block", width: 7, height: 7,
-                        borderRadius: "50%", background: m.cor,
-                        marginRight: 8, verticalAlign: "middle",
-                      }} />
-                    )}
-                    {m.label}
+                  <span className={styles.metricTop}>
+                    <span className={styles.metricLabel}>
+                      {m.cor && <span className={styles.metricDot} />}
+                      {m.label}
+                    </span>
+                    <span className={styles.metricCount}>{m.num}</span>
                   </span>
-                  <span className={styles.metricCount}>{m.num}</span>
-                </div>
+                  {m.key !== "all" && (
+                    <span className={styles.metricBar}>
+                      <span style={{ width: all.length ? `${(m.num / all.length) * 100}%` : "0%" }} />
+                    </span>
+                  )}
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Painel de progresso do dia */}
-          <div className={styles.sidePanel}>
-            <div className={styles.sidePanelTitle}>Progresso</div>
-            <div style={{ padding: "16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
-                <span style={{ fontSize: 28, fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--accent-primary)" }}>
-                  {completedCount}
-                </span>
-                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>/ {totalCount} concluídas</span>
-              </div>
-              <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
-                <div style={{
-                  height: "100%",
-                  width: totalCount > 0 ? `${Math.round((completedCount / totalCount) * 100)}%` : "0%",
-                  background: "linear-gradient(90deg, var(--accent-primary), var(--accent-success))",
-                  borderRadius: 99,
-                  transition: "width 0.8s cubic-bezier(0.34,1.56,0.64,1)",
-                  boxShadow: "0 0 8px rgba(0,229,160,0.4)",
-                }} />
-              </div>
-              {totalCount > 0 && (
-                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8, textAlign: "right" }}>
-                  {Math.round((completedCount / totalCount) * 100)}% do dia
-                </div>
-              )}
+          {/* Resumo em números */}
+          <div className={styles.statGrid}>
+            <div className={styles.statBox}>
+              <span className={styles.statNum} style={{ color: overdueCount ? "#fb7185" : undefined }}>{overdueCount}</span>
+              <span className={styles.statLbl}>atrasadas</span>
+            </div>
+            <div className={styles.statBox}>
+              <span className={styles.statNum} style={{ color: urgentCount ? "#fb923c" : undefined }}>{urgentCount}</span>
+              <span className={styles.statLbl}>urgentes</span>
+            </div>
+            <div className={styles.statBox}>
+              <span className={styles.statNum}>{timedCount}</span>
+              <span className={styles.statLbl}>com horário</span>
+            </div>
+            <div className={styles.statBox}>
+              <span className={styles.statNum} style={{ color: "#34d399" }}>{completedCount}</span>
+              <span className={styles.statLbl}>feitas</span>
             </div>
           </div>
         </div>

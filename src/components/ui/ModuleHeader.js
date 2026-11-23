@@ -2,12 +2,14 @@
 import Link from "next/link";
 import styles from "./ModuleHeader.module.css";
 
-export default function ModuleHeader({ title, backTo = "/", onBack, showConfig = false }) {
+// hideOnDesktop: telas redesenhadas já têm título próprio; no computador o cabeçalho some
+// (no celular continua, por causa do botão de voltar).
+export default function ModuleHeader({ title, backTo = "/", onBack, showConfig = false, hideOnDesktop = false }) {
   const BackEl    = onBack ? "button" : Link;
   const backProps = onBack ? { onClick: onBack } : { href: backTo };
 
   return (
-    <header className={styles.header}>
+    <header className={`${styles.header} ${hideOnDesktop ? styles.hideDesktop : ""}`}>
       {/* Back button: oculto no desktop via CSS, visível no mobile */}
       <BackEl {...backProps} className={styles.backBtn}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
