@@ -29,26 +29,49 @@ function brtTodayKey() {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;
 }
 
-function Kpi({ label, value, unit, color }) {
+// ── Anel de progresso (SVG) ───────────────────────────────────────────────────
+function Ring({ pct, color, size = 88, stroke = 9, children }) {
+  const r     = (size - stroke) / 2;
+  const circ  = 2 * Math.PI * r;
+  const value = pct == null ? 0 : Math.min(100, Math.max(0, pct));
   return (
-    <div className={styles.kpi}>
-      <div className={styles.kpiValue} style={{ color: color ?? "inherit" }}>
-        {value ?? <span className={styles.kpiSkeleton}/>}
-        {value != null && unit && <span className={styles.kpiUnit}>{unit}</span>}
-      </div>
-      <div className={styles.kpiLabel}>{label}</div>
+    <div className={styles.ring} style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} fill="none"
+          stroke={color} strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={circ * (1 - value / 100)}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          className={styles.ringArc}
+          style={{ filter: `drop-shadow(0 0 6px ${color}66)` }}
+        />
+      </svg>
+      <div className={styles.ringCenter}>{children}</div>
     </div>
   );
 }
 
-function ProgressBar({ pct, color, label }) {
+// ── Número com rótulo (mostra esqueleto enquanto carrega) ────────────────────
+function Stat({ label, value, unit, color, big }) {
+  return (
+    <div className={styles.stat}>
+      <div className={big ? styles.statValueBig : styles.statValue} style={{ color: color ?? "inherit" }}>
+        {value ?? <span className={styles.skeleton} />}
+        {value != null && unit && <span className={styles.statUnit}>{unit}</span>}
+      </div>
+      <div className={styles.statLabel}>{label}</div>
+    </div>
+  );
+}
+
+// ── Barra fina ───────────────────────────────────────────────────────────────
+function Bar({ pct, color }) {
   const clamped = Math.min(100, Math.max(0, pct ?? 0));
   return (
-    <div className={styles.progressWrap}>
-      <div className={styles.progressBar}>
-        <div className={styles.progressFill} style={{ width: `${clamped}%`, background: color }}/>
-      </div>
-      <span className={styles.progressLabel}>{label}</span>
+    <div className={styles.bar}>
+      <div className={styles.barFill} style={{ width: `${clamped}%`, background: color }} />
     </div>
   );
 }
@@ -156,162 +179,127 @@ export default function Hub() {
   // Combina abertas + concluídas do localStorage
   const tasksDone  = completedIds?.size ?? null;
   const tasksTotal = openTasks != null && tasksDone != null ? openTasks + tasksDone : null;
+  const tasksPct   = tasksTotal ? Math.round((tasksDone / tasksTotal) * 100) : 0;
+
+  const finColor = finance
+    ? (finance.pctVar > 85 ? "#fb7185" : finance.pctVar > 60 ? "#fbbf24" : "#34d399")
+    : "#34d399";
+  const treinosPct = health ? Math.round((health.monthWks / TREINOS_META) * 100) : null;
 
   return (
     <div className={styles.root}>
-      <div className={styles.glowA} />
-      <div className={styles.glowB} />
-      <div className={styles.glowC} />
+      <div className={styles.aurora} aria-hidden />
+      <div className={styles.grain}  aria-hidden />
 
-      {/* ── Brand bar ── */}
+      {/* ── Barra do topo ── */}
       <header className={styles.topbar}>
         <Link href="/" className={styles.brand}>
           <div className={styles.brandMark}>G</div>
-          <div className={styles.brandText}>
-            <span className={styles.brandName}>Daily</span>
-            <span className={styles.brandSub}>workspace</span>
-          </div>
+          <span className={styles.brandName}>Daily</span>
         </Link>
         <div className={styles.topRight}>
           <span className={styles.clock}>
             {now.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}
           </span>
-          <button className={styles.quickBtn} onClick={() => setModal(true)}>+</button>
+          <button className={styles.quickBtn} onClick={() => setModal(true)}>
+            <span className={styles.quickPlus}>+</span> Nova tarefa
+          </button>
         </div>
       </header>
 
-      {/* ── Greeting ── */}
-      <section className={styles.greeting}>
-        <p className={styles.greetSmall}>{greet(hour)}</p>
+      {/* ── Saudação ── */}
+      <section className={styles.hero}>
+        <p className={styles.greetSmall}>{greet(hour)}, Guilherme</p>
         <h1 className={styles.greetTitle}>
           {DAYS[now.getDay()]}<span className={styles.greetDate}>, {now.getDate()} de {MONTHS[now.getMonth()]}</span>
         </h1>
       </section>
 
-      {/* ── Grid 2×2 — ordem: Tarefas | Financeiro / Rotina | Saúde ── */}
-      <main className={styles.grid}>
-
-        {/* Tarefas */}
-        <Link href="/daily" className={styles.card} style={{ "--accent": "129,140,248" }}>
-          <div className={styles.cardBody}>
-            <div className={styles.cardHead}>
-              <div className={styles.iconWrap} style={{ background:"rgba(129,140,248,0.15)", color:"#818cf8" }}>✓</div>
-              <div>
-                <h2 className={styles.cardTitle}>Tarefas</h2>
-                <p className={styles.cardSub}>Pessoal · VCA Brasil · Ponto de Vista</p>
-              </div>
-            </div>
-            <div className={styles.kpiRow}>
-              <Kpi label="Hoje"       value={tasksTotal} color="#818cf8" />
-              <Kpi label="Concluídas" value={tasksDone}  color="#818cf8" />
-            </div>
-            {tasksTotal != null && (
-              <ProgressBar
-                pct={tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0}
-                color="#818cf8"
-                label={tasksTotal > 0 ? `${tasksDone} de ${tasksTotal}` : "sem tarefas"}
-              />
-            )}
-            <div className={styles.cardFooter}>
-              <span className={styles.ctaLabel}>Acessar painel</span>
-              <span className={styles.ctaArrow} style={{ color:"#818cf8" }}>→</span>
-            </div>
-          </div>
-        </Link>
+      {/* ── Bento: Financeiro (grande) | Tarefas / Rotina | Saúde (largo) ── */}
+      <main className={styles.bento}>
 
         {/* Financeiro */}
-        <Link href="/finance/overview" className={styles.card} style={{ "--accent": "251,191,36" }}>
-          <div className={styles.cardBody}>
-            <div className={styles.cardHead}>
-              <div className={styles.iconWrap} style={{ background:"rgba(251,191,36,0.15)", color:"#fbbf24" }}>R$</div>
-              <div>
-                <h2 className={styles.cardTitle}>Financeiro</h2>
-                <p className={styles.cardSub}>Saldo variável disponível</p>
+        <Link href="/finance/overview" className={`${styles.card} ${styles.cardFinance}`} style={{ "--c": "52,211,153" }}>
+          <div className={styles.cardTop}>
+            <span className={styles.chip}><span className={styles.chipIcon}>R$</span>Financeiro</span>
+            <span className={styles.arrow}>↗</span>
+          </div>
+          <div className={styles.financeBody}>
+            <div>
+              <div className={styles.eyebrow}>Disponível para gastar</div>
+              <div className={styles.heroNumber} style={{ color: finance && finance.saldoVar < 0 ? "#fb7185" : "#f9fafb" }}>
+                {finance ? fmtBRL(finance.saldoVar) : <span className={styles.skeletonBig} />}
+              </div>
+              <div className={styles.muted}>
+                {finance?.pctVar != null
+                  ? <>Gastou <b>{fmtBRL(finance.gastoVar)}</b> de {fmtBRL(finance.budgetVar)} no ciclo</>
+                  : "sem orçamento definido"}
               </div>
             </div>
-            <div className={styles.kpiRow}>
-              <Kpi
-                label="Disponível agora"
-                value={finance ? fmtBRL(finance.saldoVar) : null}
-                color={finance ? (finance.saldoVar >= 0 ? "#fbbf24" : "#f87171") : undefined}
-              />
-            </div>
-            {finance && (
-              <ProgressBar
-                pct={finance.pctVar}
-                color={finance.pctVar > 85 ? "#f87171" : finance.pctVar > 60 ? "#fbbf24" : "#4ade80"}
-                label={finance.pctVar != null
-                  ? `${finance.pctVar}% gasto (${fmtBRL(finance.gastoVar)} de ${fmtBRL(finance.budgetVar)})`
-                  : "sem orçamento definido"}
-              />
-            )}
-            <div className={styles.cardFooter}>
-              <span className={styles.ctaLabel}>Abrir módulo</span>
-              <span className={styles.ctaArrow} style={{ color:"#fbbf24" }}>→</span>
+            <Ring pct={finance?.pctVar} color={finColor} size={132} stroke={12}>
+              <span className={styles.ringPct}>{finance?.pctVar != null ? `${finance.pctVar}%` : "—"}</span>
+              <span className={styles.ringSub}>usado</span>
+            </Ring>
+          </div>
+          <Bar pct={finance?.pctVar} color={finColor} />
+        </Link>
+
+        {/* Tarefas */}
+        <Link href="/daily" className={styles.card} style={{ "--c": "167,139,250" }}>
+          <div className={styles.cardTop}>
+            <span className={styles.chip}><span className={styles.chipIcon}>✓</span>Tarefas</span>
+            <span className={styles.arrow}>↗</span>
+          </div>
+          <div className={styles.rowBody}>
+            <Ring pct={tasksPct} color="#a78bfa">
+              <span className={styles.ringPctSm}>{tasksTotal != null ? `${tasksPct}%` : "—"}</span>
+            </Ring>
+            <div className={styles.stack}>
+              <Stat label="Concluídas" value={tasksTotal != null ? `${tasksDone}/${tasksTotal}` : null} big />
+              <div className={styles.muted}>Pessoal · VCA · Ponto de Vista</div>
             </div>
           </div>
         </Link>
 
         {/* Rotina */}
-        <Link href="/routine" className={styles.card} style={{ "--accent": "56,189,248" }}>
-          <div className={styles.cardBody}>
-            <div className={styles.cardHead}>
-              <div className={styles.iconWrap} style={{ background:"rgba(56,189,248,0.15)", color:"#38bdf8" }}>⏱</div>
-              <div>
-                <h2 className={styles.cardTitle}>Rotina</h2>
-                <p className={styles.cardSub}>
-                  {routine != null ? `${routine.total} blocos hoje` : "Timeline do dia"}
-                </p>
-              </div>
+        <Link href="/routine" className={styles.card} style={{ "--c": "56,189,248" }}>
+          <div className={styles.cardTop}>
+            <span className={styles.chip}><span className={styles.chipIcon}>⏱</span>Rotina</span>
+            <span className={styles.arrow}>↗</span>
+          </div>
+          <div className={styles.stack}>
+            <div className={styles.eyebrow}>
+              {routine?.current ? <><span className={styles.liveDot} />Agora</> : "Agora"}
             </div>
-            <div className={styles.kpiRow}>
-              <Kpi
-                label="Agora"
-                value={routine == null ? null
-                  : routine.current ? routine.current.activity
-                  : "—"}
-                color="#38bdf8"
-              />
+            <div className={styles.nowTitle}>
+              {routine == null ? <span className={styles.skeleton} />
+                : routine.current ? routine.current.activity
+                : "Tempo livre"}
             </div>
-            <ProgressBar
-              pct={routine?.current ? routine.eventPct : null}
-              color="#38bdf8"
-              label={routine == null ? "carregando..."
-                : routine.current ? `${routine.eventPct}% do bloco atual concluído`
-                : "sem bloco em andamento"}
-            />
-            <div className={styles.cardFooter}>
-              <span className={styles.ctaLabel}>Ver rotina</span>
-              <span className={styles.ctaArrow} style={{ color:"#38bdf8" }}>→</span>
+            <Bar pct={routine?.current ? routine.eventPct : 0} color="#38bdf8" />
+            <div className={styles.muted}>
+              {routine == null ? "carregando…"
+                : routine.current ? `${routine.eventPct}% do bloco · ${routine.total} blocos hoje`
+                : `${routine.total} blocos hoje`}
             </div>
           </div>
         </Link>
 
         {/* Saúde */}
-        <Link href="/health" className={styles.card} style={{ "--accent": "248,113,113" }}>
-          <div className={styles.cardBody}>
-            <div className={styles.cardHead}>
-              <div className={styles.iconWrap} style={{ background:"rgba(248,113,113,0.15)", color:"#f87171" }}>❤</div>
-              <div>
-                <h2 className={styles.cardTitle}>Saúde</h2>
-                <p className={styles.cardSub}>Médias do mês atual</p>
-              </div>
-            </div>
-            <div className={styles.kpiRow}>
-              <Kpi label="Passos (méd.)"  value={health ? fmtNum(health.steps)   : null} color="#f87171" />
-              <Kpi label="Sono (méd.)"    value={health ? fmtNum(health.sleep_h, 1) : null} unit="h" color="#f87171" />
-              <Kpi label="BPM repouso"    value={health ? fmtNum(health.bpm)     : null} color="#f87171" />
-            </div>
-            <ProgressBar
-              pct={health ? Math.round((health.monthWks / TREINOS_META) * 100) : null}
-              color="#f87171"
-              label={health
-                ? `${health.monthWks} de ${TREINOS_META} treinos este mês`
-                : "carregando..."}
-            />
-            <div className={styles.cardFooter}>
-              <span className={styles.ctaLabel}>Ver saúde</span>
-              <span className={styles.ctaArrow} style={{ color:"#f87171" }}>→</span>
+        <Link href="/health" className={`${styles.card} ${styles.cardHealth}`} style={{ "--c": "251,113,133" }}>
+          <div className={styles.cardTop}>
+            <span className={styles.chip}><span className={styles.chipIcon}>❤</span>Saúde · média do mês</span>
+            <span className={styles.arrow}>↗</span>
+          </div>
+          <div className={styles.healthBody}>
+            <Stat label="Passos"      value={health ? fmtNum(health.steps) : null} big />
+            <Stat label="Sono"        value={health ? fmtNum(health.sleep_h, 1) : null} unit="h" big />
+            <Stat label="BPM repouso" value={health ? fmtNum(health.bpm) : null} big />
+            <div className={styles.treinos}>
+              <Ring pct={treinosPct} color="#fb7185" size={76} stroke={8}>
+                <span className={styles.ringPctSm}>{health ? health.monthWks : "—"}</span>
+              </Ring>
+              <div className={styles.statLabel}>de {TREINOS_META} treinos</div>
             </div>
           </div>
         </Link>

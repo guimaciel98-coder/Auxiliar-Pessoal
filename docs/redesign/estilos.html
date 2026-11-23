@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Redesign — 3 estilos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0c;color:#eee;font-family:Inter,system-ui,sans-serif;padding:32px 24px 64px}
+  h1.page{font-family:Outfit;font-size:26px;font-weight:800;margin-bottom:6px}
+  p.sub{color:#9a9aa5;margin-bottom:28px;font-size:14px}
+  .option{margin-bottom:56px}
+  .tag{display:inline-flex;gap:10px;align-items:baseline;margin-bottom:6px}
+  .tag b{font-family:Outfit;font-size:20px;font-weight:800}
+  .tag span{font-size:13px;color:#9a9aa5}
+  .desc{font-size:13px;color:#9a9aa5;margin-bottom:14px;max-width:760px}
+  .frame{border-radius:18px;overflow:hidden;border:1px solid #222}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ═══════════ A — AURORA (evolução do atual, mais premium) ═══════════ */
+  .A{background:#07090f;position:relative;padding:28px;font-family:Outfit,sans-serif;overflow:hidden}
+  .A::before{content:"";position:absolute;inset:-40% -10% auto auto;width:620px;height:620px;background:radial-gradient(circle,rgba(0,229,160,.18),transparent 60%);filter:blur(10px)}
+  .A::after{content:"";position:absolute;inset:auto auto -45% -10%;width:620px;height:620px;background:radial-gradient(circle,rgba(124,92,255,.20),transparent 60%)}
+  .A *{position:relative;z-index:1}
+  .A .hello{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#7c8499}
+  .A h2{font-size:34px;font-weight:900;margin:4px 0 22px;background:linear-gradient(90deg,#fff,#9be7d0);-webkit-background-clip:text;color:transparent}
+  .A .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .A .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:20px;backdrop-filter:blur(20px);box-shadow:0 20px 50px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06)}
+  .A .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:18px;margin-bottom:14px}
+  .A .lbl{font-size:12px;color:#8a92a6;letter-spacing:.06em;text-transform:uppercase}
+  .A .val{font-size:32px;font-weight:800;margin-top:4px}
+  .A .bar{height:8px;border-radius:99px;background:rgba(255,255,255,.07);margin-top:14px;overflow:hidden}
+  .A .bar i{display:block;height:100%;border-radius:99px}
+  .A .foot{display:flex;justify-content:space-between;margin-top:12px;font-size:13px;color:#8a92a6}
+
+  /* ═══════════ B — MINIMAL PRO (estilo Linear / Vercel) ═══════════ */
+  .B{background:#09090b;padding:28px;font-family:Inter,sans-serif}
+  .B .top{display:flex;justify-content:space-between;align-items:end;border-bottom:1px solid #1f1f23;padding-bottom:18px;margin-bottom:20px}
+  .B .hello{font-size:13px;color:#71717a}
+  .B h2{font-size:24px;font-weight:600;letter-spacing:-.02em;margin-top:2px}
+  .B .pill{font-size:12px;color:#a1a1aa;border:1px solid #27272a;border-radius:8px;padding:6px 10px}
+  .B .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1px;background:#1f1f23;border:1px solid #1f1f23;border-radius:12px;overflow:hidden}
+  .B .card{background:#0c0c0f;padding:20px}
+  .B .lbl{font-size:12.5px;color:#71717a;display:flex;align-items:center;gap:8px}
+  .B .dot{width:6px;height:6px;border-radius:50%}
+  .B .val{font-size:28px;font-weight:600;letter-spacing:-.03em;margin-top:10px}
+  .B .delta{font-size:12px;margin-top:4px}
+  .B .bar{height:4px;border-radius:2px;background:#1f1f23;margin-top:16px;overflow:hidden}
+  .B .bar i{display:block;height:100%;background:#fafafa}
+  .B .foot{font-size:12px;color:#71717a;margin-top:10px}
+
+  /* ═══════════ C — VIBRANTE (bento colorido, estilo Apple Fitness) ═══════════ */
+  .C{background:#000;padding:28px;font-family:"Space Grotesk",sans-serif}
+  .C .hello{font-size:15px;color:#8e8e93;font-weight:500}
+  .C h2{font-size:38px;font-weight:700;letter-spacing:-.03em;margin:2px 0 20px}
+  .C .grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:150px;gap:14px}
+  .C .card{border-radius:28px;padding:20px;color:#fff;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;position:relative}
+  .C .big{grid-column:span 2;grid-row:span 2}
+  .C .wide{grid-column:span 2}
+  .C .lbl{font-size:14px;font-weight:600;opacity:.85}
+  .C .val{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1}
+  .C .big .val{font-size:64px}
+  .C .small{font-size:13px;opacity:.8}
+  .C .ring{position:absolute;right:-30px;bottom:-30px;width:180px;height:180px;border-radius:50%;border:22px solid rgba(255,255,255,.18)}
+  @media (max-width:760px){.C .grid{grid-template-columns:repeat(2,1fr)}.C .big{grid-column:span 2}}
+</style>
+</head>
+<body>
+  <h1 class="page">Redesign do Daily — escolha um estilo</h1>
+  <p class="sub">Os 3 mostram as mesmas informações (com números de exemplo). O estilo escolhido vira o padrão de todas as telas.</p>
+
+  <!-- A -->
+  <section class="option">
+    <div class="tag"><b>A · Aurora</b><span>evolução do visual atual, mais premium</span></div>
+    <p class="desc">Mantém o fundo escuro e o verde que você já usa, mas com vidro fosco, brilhos suaves no fundo, cantos mais arredondados e números maiores. É a mudança mais "segura": parece o seu app, só que bem mais caprichado.</p>
+    <div class="frame"><div class="A">
+      <div class="hello">Boa noite, Guilherme</div>
+      <h2>Segunda, 23 de novembro</h2>
+      <div class="grid">
+        <div class="card">
+          <div class="ic" style="background:rgba(0,229,160,.15)">💰</div>
+          <div class="lbl">Saldo variável</div>
+          <div class="val num" style="color:#00e5a0">R$ 2.402</div>
+          <div class="bar"><i style="width:62%;background:linear-gradient(90deg,#00e5a0,#7cf5d0)"></i></div>
+          <div class="foot"><span>62% usado</span><span>Faltam 3 dias</span></div>
+        </div>
+        <div class="card">
+          <div class="ic" style="background:rgba(124,92,255,.18)">✓</div>
+          <div class="lbl">Tarefas de hoje</div>
+          <div class="val num">5 <span style="font-size:18px;color:#8a92a6">/ 8</span></div>
+          <div class="bar"><i style="width:62%;background:linear-gradient(90deg,#7c5cff,#b9a6ff)"></i></div>
+          <div class="foot"><span>3 pendentes</span><span>1 atrasada</span></div>
+        </div>
+        <div class="card">
+          <div class="ic" style="background:rgba(56,189,248,.15)">⏱</div>
+          <div class="lbl">Agora na rotina</div>
+          <div class="val" style="font-size:24px">VCA Brasil</div>
+          <div class="bar"><i style="width:78%;background:linear-gradient(90deg,#38bdf8,#a5e4ff)"></i></div>
+          <div class="foot"><span>09:00 – 18:00</span><span>A seguir: Almoço</span></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- B -->
+  <section class="option">
+    <div class="tag"><b>B · Minimal Pro</b><span>limpo e sério, estilo Linear / Vercel</span></div>
+    <p class="desc">Quase tudo em preto, branco e cinza, linhas finas, letras menores e muito espaço. A cor aparece só onde importa (um pontinho, um número vermelho). Visual de ferramenta profissional: elegante e calmo, menos "chamativo".</p>
+    <div class="frame"><div class="B">
+      <div class="top">
+        <div><div class="hello">Boa noite, Guilherme</div><h2>Segunda, 23 de novembro</h2></div>
+        <div class="pill">⌘K &nbsp;Buscar</div>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <div class="lbl"><span class="dot" style="background:#22c55e"></span>Saldo variável</div>
+          <div class="val num">R$ 2.402</div>
+          <div class="delta" style="color:#22c55e">Faltam 3 dias do ciclo</div>
+          <div class="bar"><i style="width:62%"></i></div>
+          <div class="foot">62% do orçamento usado</div>
+        </div>
+        <div class="card">
+          <div class="lbl"><span class="dot" style="background:#a78bfa"></span>Tarefas de hoje</div>
+          <div class="val num">5 / 8</div>
+          <div class="delta" style="color:#f87171">1 atrasada</div>
+          <div class="bar"><i style="width:62%"></i></div>
+          <div class="foot">3 pendentes</div>
+        </div>
+        <div class="card">
+          <div class="lbl"><span class="dot" style="background:#38bdf8"></span>Agora na rotina</div>
+          <div class="val" style="font-size:22px">VCA Brasil</div>
+          <div class="delta" style="color:#71717a">09:00 – 18:00</div>
+          <div class="bar"><i style="width:78%"></i></div>
+          <div class="foot">A seguir: Almoço</div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- C -->
+  <section class="option">
+    <div class="tag"><b>C · Vibrante</b><span>blocos coloridos, estilo Apple Fitness / iOS</span></div>
+    <p class="desc">Cada módulo ganha sua própria cor forte em degradê, em blocos de tamanhos diferentes. Números enormes, bem visual e alegre. É a mudança mais radical: o app fica com cara de app de celular moderno.</p>
+    <div class="frame"><div class="C">
+      <div class="hello">Boa noite, Guilherme</div>
+      <h2>Segunda, 23 de novembro</h2>
+      <div class="grid">
+        <div class="card big" style="background:linear-gradient(145deg,#00c896,#007a66)">
+          <div class="ring"></div>
+          <div class="lbl">Saldo variável</div>
+          <div><div class="val num">R$ 2.402</div><div class="small" style="margin-top:8px">62% usado · faltam 3 dias</div></div>
+        </div>
+        <div class="card wide" style="background:linear-gradient(145deg,#7c5cff,#4b2fd1)">
+          <div class="lbl">Tarefas de hoje</div>
+          <div style="display:flex;justify-content:space-between;align-items:end"><div class="val num">5/8</div><div class="small">1 atrasada</div></div>
+        </div>
+        <div class="card" style="background:linear-gradient(145deg,#0ea5e9,#0369a1)">
+          <div class="lbl">Agora</div>
+          <div><div style="font-size:20px;font-weight:700">VCA Brasil</div><div class="small">até 18:00</div></div>
+        </div>
+        <div class="card" style="background:linear-gradient(145deg,#fb7185,#be123c)">
+          <div class="lbl">Sono</div>
+          <div><div class="val num" style="font-size:32px">7h12</div><div class="small">média do mês</div></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+</body>
+</html>
