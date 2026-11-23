@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import {
   DndContext, DragOverlay, PointerSensor, TouchSensor,
   useSensor, useSensors, pointerWithin,
@@ -15,6 +16,7 @@ import Toast from "@/components/ui/Toast";
 import styles from "./Board.module.css";
 import QuickAddModal from "@/components/Daily/QuickAddModal";
 import TaskEditModal from "@/components/Daily/TaskEditModal";
+import { niceName } from "@/utils/niceName";
 
 const VCA_MAIN_ID = "6Xvp8v5F2PGPq2g2";
 
@@ -71,22 +73,30 @@ function getDayColLabel(dayOffset) {
 
 // Cores das bordas por prioridade — círculo nunca preenchido por padrão
 const PRIO_COLORS = {
-  p1: "#f87171",              // urgente
-  p2: "#fb923c",              // alta
-  p3: "#60a5fa",              // normal
-  p4: "rgba(255,255,255,0.2)", // baixa
+  p1: "#ff5a5f", // urgente
+  p2: "#fb923c", // alta
+  p3: "#fbbf24", // normal
 };
 
 function PriorityCircle({ prio, onClick }) {
-  const color = PRIO_COLORS[prio] || "rgba(255,255,255,0.22)";
+  const color = PRIO_COLORS[prio] || "rgba(255,255,255,0.28)";
   return (
     <button
       className={styles.circle}
       onClick={onClick}
       title="Marcar como concluída"
-      style={{ borderColor: color }}
-    />
+      style={{ "--prio": color }}
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+    </button>
   );
+}
+
+// "ter 24" (dia em BRT) — mostrado embaixo de cada opção de reagendar
+const DOW = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+function fmtDay(ms) {
+  const d = new Date(Number(ms) - 3 * 3600 * 1000);
+  return `${DOW[d.getUTCDay()]} ${d.getUTCDate()}`;
 }
 
 // ─── Card de tarefa ──────────────────────────────────────────────────────────
@@ -152,7 +162,7 @@ function SortableTaskCard({ t, onComplete, onReschedule, onEdit, columnId, showS
               </span>
             )}
             {showSection && t._sub_client_label && (
-              <span className={styles.sectionLabel}>/{t._sub_client_label}</span>
+              <span className={styles.sectionLabel}>{niceName(t._sub_client_label)}</span>
             )}
           </div>
         </div>
@@ -163,7 +173,7 @@ function SortableTaskCard({ t, onComplete, onReschedule, onEdit, columnId, showS
           onClick={() => setRescheduleOpen(o => !o)}
           title="Reagendar"
         >
-          →
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M10 15.5h5M13 13l2.5 2.5L13 18"/></svg>
         </button>
       </div>
 
@@ -172,10 +182,11 @@ function SortableTaskCard({ t, onComplete, onReschedule, onEdit, columnId, showS
           {t._repeat_forever && t._recurrence && t._recurrence !== "none" && (
             <button
               onClick={() => { setRescheduleOpen(false); onComplete(t.id); }}
-              className={styles.cardRescheduleChip}
-              style={{ background: "rgba(99,102,241,0.25)", borderColor: "rgba(99,102,241,0.5)" }}
+              className={`${styles.cardRescheduleChip} ${styles.chipNext}`}
+              title="Conclui esta e o Todoist agenda a próxima repetição"
             >
-              próxima
+              <span className={styles.chipMain}>Próxima</span>
+              <span className={styles.chipSub}>recorrente</span>
             </button>
           )}
           {rescheduleOptions.map(opt => (
@@ -184,7 +195,8 @@ function SortableTaskCard({ t, onComplete, onReschedule, onEdit, columnId, showS
               onClick={() => { setRescheduleOpen(false); onReschedule(t.id, opt.ms, t.due_date_time, opt.toastLabel); }}
               className={styles.cardRescheduleChip}
             >
-              {opt.label}
+              <span className={styles.chipMain}>{opt.label === "semana" ? "1 semana" : opt.label.charAt(0).toUpperCase() + opt.label.slice(1)}</span>
+              <span className={styles.chipSub}>{fmtDay(opt.ms)}</span>
             </button>
           ))}
           <DatePickerButton onSelect={dateStr => {
@@ -203,7 +215,7 @@ function SortableTaskCard({ t, onComplete, onReschedule, onEdit, columnId, showS
 function DragGhostCard({ t }) {
   return (
     <div className={`${styles.card} ${styles.dragGhost}`}>
-      <div className={styles.circle} style={{ borderColor: "rgba(255,255,255,0.2)" }} />
+      <div className={styles.circle} style={{ "--prio": "rgba(255,255,255,0.28)" }} />
       <div className={styles.cardBody}>
         <span className={styles.cardName}>{t?.name || "..."}</span>
       </div>
@@ -505,6 +517,14 @@ export default function ProjectsPage() {
 
   if (loading) return <div className={styles.loading}>Carregando...</div>;
 
+  const todayStartBRT = startOfBRT();
+  const stats = {
+    total:   filteredTasks.length,
+    overdue: filteredTasks.filter(t => t.due_date && Number(t.due_date) < todayStartBRT).length,
+    today:   filteredTasks.filter(t => t.due_date && Number(t.due_date) >= todayStartBRT && Number(t.due_date) < todayStartBRT + 86400000).length,
+    nodate:  filteredTasks.filter(t => !t.due_date).length,
+  };
+
   const dayGroups = getTasksByDay();
   const isDay     = viewMode === "day";
 
@@ -520,18 +540,34 @@ export default function ProjectsPage() {
   return (
     <div className={styles.container}>
         <Toast message={toast?.message} type={toast?.type} />
-        <ModuleHeader title="Projetos" showConfig />
+        <ModuleHeader title="Projetos" showConfig hideOnDesktop />
 
         {/* Tabs de projeto + toggle de visão */}
-        <header className={styles.header}>
+        <header className={styles.header} style={{ "--accent": accent }}>
+          <div className={styles.hero}>
+            <div className={styles.heroLeft}>
+              <span className={styles.eyebrow}>Tarefas</span>
+              <h1 className={styles.title}>Projetos</h1>
+            </div>
+            <div className={styles.heroStats}>
+              <div className={styles.stat}><span className={styles.statNum}>{stats.total}</span><span className={styles.statLbl}>abertas</span></div>
+              <div className={styles.stat}><span className={styles.statNum} style={stats.today ? { color: "#34d399" } : undefined}>{stats.today}</span><span className={styles.statLbl}>hoje</span></div>
+              <div className={styles.stat}><span className={styles.statNum} style={stats.overdue ? { color: "#fb7185" } : undefined}>{stats.overdue}</span><span className={styles.statLbl}>atrasadas</span></div>
+              <div className={styles.stat}><span className={styles.statNum}>{stats.nodate}</span><span className={styles.statLbl}>sem data</span></div>
+              <Link href="/clients" className={styles.configBtn} title="Configurar marcas e clientes">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </Link>
+            </div>
+          </div>
           <div className={styles.topNav}>
             <div className={styles.projectTabs}>
               {["pessoal","vca","pdv"].map(p => (
                 <button key={p}
                   className={`${styles.tabBtn} ${activeProject === p ? styles.tabActive : ""}`}
-                  style={activeProject === p ? { color: PROJ_ACCENT[p], borderColor: PROJ_ACCENT[p] + "55", background: PROJ_ACCENT[p] + "18" } : {}}
+                  style={{ "--tab": PROJ_ACCENT[p] }}
                   onClick={() => { setActiveProject(p); setViewMode("detailed"); setVcaSubFilter("interno"); }}
                 >
+                  <span className={styles.tabDot} />
                   {p === "pessoal" ? "Pessoal" : p === "vca" ? "VCA Brasil" : "Ponto de Vista"}
                 </button>
               ))}
@@ -548,23 +584,19 @@ export default function ProjectsPage() {
 
           {activeProject === "vca" && (
             <div className={styles.subFilterBar}>
-              <div className={styles.subFilterTop}>
-                <button className={`${styles.subBtnMain} ${vcaSubFilter === "interno" ? styles.subBtnMainActive : ""}`} onClick={() => setVcaSubFilter("interno")}>Gestão Interna</button>
-              </div>
-              <div className={styles.subFilterAgencies}>
-                <span className={styles.agenciesLabel}>Agências</span>
-                {VCA_AGENCIES.map(a => (
-                  <button
-                    key={a.key}
-                    className={`${styles.subBtn} ${vcaSubFilter === a.key ? styles.subActive : ""}`}
-                    style={vcaSubFilter === a.key ? { color: a.color, background: `${a.color}1a`, borderColor: `${a.color}55` } : {}}
-                    onClick={() => setVcaSubFilter(a.key)}
-                  >
-                    <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: vcaSubFilter === a.key ? a.color : "rgba(255,255,255,0.2)", marginRight: 5, verticalAlign: "middle", flexShrink: 0 }} />
-                    {a.label}
-                  </button>
-                ))}
-              </div>
+              <button className={`${styles.subBtn} ${vcaSubFilter === "interno" ? styles.subActive : ""}`} style={{ "--sub": "#5b9fd6" }} onClick={() => setVcaSubFilter("interno")}>
+                <span className={styles.subDot} />Gestão Interna
+              </button>
+              {VCA_AGENCIES.map(a => (
+                <button
+                  key={a.key}
+                  className={`${styles.subBtn} ${vcaSubFilter === a.key ? styles.subActive : ""}`}
+                  style={{ "--sub": a.color }}
+                  onClick={() => setVcaSubFilter(a.key)}
+                >
+                  <span className={styles.subDot} />{a.label}
+                </button>
+              ))}
             </div>
           )}
 
@@ -594,7 +626,7 @@ export default function ProjectsPage() {
                       <div className={styles.column}>
                         <div className={styles.colHead}>
                           <span className={styles.colName} style={{ color: accent }} title={client.name}>
-                            {client.name.toUpperCase()}
+                            {niceName(client.name)}
                           </span>
                           <span className={styles.colCount}>{ct.length}</span>
                         </div>
@@ -623,7 +655,7 @@ export default function ProjectsPage() {
                     <div className={styles.column}>
                       <div className={styles.colHead}>
                         <span className={styles.colName} style={{ color: accent }}>
-                          {activeProject === "pessoal" ? "PESSOAL" : "GERAL"}
+                          {activeProject === "pessoal" ? "Pessoal" : "Geral"}
                         </span>
                         <span className={styles.colCount}>{unassignedTasks.length}</span>
                       </div>

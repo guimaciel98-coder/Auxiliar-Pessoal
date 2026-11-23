@@ -3,23 +3,13 @@ import { useState, useEffect } from "react";
 import styles from "./QuickAddModal.module.css";
 import { PROJ } from "@/config/constants";
 import { validateRecurrence } from "@/lib/recurrenceValidation";
+import { niceName } from "@/utils/niceName";
 
 const VCA_MAIN_ID = PROJ.vca.id;
 
 const VCA_AGENCIES = [
   { id: PROJ.vca.extraIds[0], label: "Ocupe" },
 ];
-
-// "SÃO FRANCISCO DE ASSIS" → "São Francisco de Assis"
-const SMALL_WORDS = new Set(["de", "da", "do", "das", "dos", "e"]);
-const ACRONYMS    = new Set(["SOS"]);
-function niceName(s = "") {
-  return s.split(" ").map((orig, i) => {
-    if (/[^A-Za-zÀ-ÿ]/.test(orig) || ACRONYMS.has(orig)) return orig; // siglas como "R&K" e "SOS" ficam como estão
-    const w = orig.toLowerCase();
-    return i > 0 && SMALL_WORDS.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1);
-  }).join(" ");
-}
 
 const MODES = [
   { key: "task", label: "Tarefa" },
