@@ -1,18 +1,40 @@
 "use client";
+// Financeiro > Ganhos — mesmo padrão visual de Gastos (big numbers, listas por grupo, painel lateral).
 import { useState, useCallback } from "react";
 import Navigation from "@/components/ui/Navigation";
 import ModuleHeader from "@/components/ui/ModuleHeader";
-import styles from "../Finance.module.css";
+import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
+import Ring from "@/components/ui/Ring";
+import ex from "../expenses/Expenses.module.css";
 import { useFinance } from "@/hooks/useFinance";
 import { fmtFin } from "@/lib/fmtFin";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 const MES_ABBR_PT = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
 function fmtPrazo(prazo) {
   if (!prazo) return null;
   const [m, y] = String(prazo).split("/").map(Number);
   if (!m || !y) return null;
-  return `Até ${MES_ABBR_PT[m - 1]}/${String(y).slice(2)}`;
+  return `até ${MES_ABBR_PT[m - 1]}/${String(y).slice(2)}`;
 }
+
+// Cores de cada fonte de renda
+const FONTE = {
+  "CLT":         { key: "CLT",         color: "#38bdf8", hint: "salário" },
+  "PDV":         { key: "PDV",         color: "#34d399", hint: "Ponto de Vista" },
+  "Empréstimos": { key: "EMPRESTIMOS", color: "#fbbf24", hint: "a receber de terceiros" },
+};
+const TOOLTIP_BOX = { background: "#15161f", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, fontSize: 12, padding: "8px 12px" };
+
+const lbl = { fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", display: "block", marginBottom: 8 };
+const inputStyle = {
+  width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 12,
+  padding: "11px 14px", color: "#f4f5f7", fontSize: 14, outline: "none", fontFamily: "inherit", colorScheme: "dark", boxSizing: "border-box",
+};
+
+const EDIT_ICON  = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>;
+const TRASH_ICON = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>;
+const CHECK_ICON = <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>;
 
 export default function IncomePage() {
   const { data, loading, error, hideNumbers, refetch } = useFinance();
@@ -20,14 +42,13 @@ export default function IncomePage() {
   const [toggling, setToggling] = useState(new Set());
 
   const [modal, setModal]       = useState(false);
-  const [editingItem, setEditingItem] = useState(null); // { item, grupo } quando editando
+  const [editingItem, setEditingItem] = useState(null); // nome do item quando editando
   const [saving, setSaving]     = useState(false);
   const [toast, setToast]       = useState(null);
   const [form, setForm]         = useState({ grupo: "PDV", item: "", valor: "", confirmado: false, prazo: "" });
 
-  const [menuOpen, setMenuOpen]       = useState(null); // nome do item com menu aberto
-  const [deleting, setDeleting]       = useState(null); // nome do item sendo excluído
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // nome aguardando confirmação
+  const [deleting, setDeleting]           = useState(null); // item sendo excluído
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // item aguardando confirmação
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 2800); }
 
@@ -58,9 +79,8 @@ export default function IncomePage() {
   }
 
   function openEdit(item, grupoLabel) {
-    const grupoMap = { "CLT": "CLT", "PDV": "PDV", "Empréstimos": "EMPRESTIMOS" };
     setEditingItem(item.item);
-    setForm({ grupo: grupoMap[grupoLabel] ?? "PDV", item: item.item, valor: String(item.valor), confirmado: item.confirmado, prazo: item.prazo ?? "" });
+    setForm({ grupo: FONTE[grupoLabel]?.key ?? "PDV", item: item.item, valor: String(item.valor), confirmado: item.confirmado, prazo: item.prazo ?? "" });
     setModal(true);
   }
 
@@ -107,88 +127,98 @@ export default function IncomePage() {
   }, [toggling, refetch]);
 
   const ganhos = data?.ganhos ?? {};
+  const allGroups = [
+    { label: "CLT",         items: ganhos.items?.clt         ?? [], total: ganhos.clt         ?? 0 },
+    { label: "PDV",         items: ganhos.items?.pdv         ?? [], total: ganhos.pdv         ?? 0 },
+    { label: "Empréstimos", items: ganhos.items?.emprestimos ?? [], total: ganhos.emprestimos ?? 0 },
+  ];
+  const incomeGroups = allGroups.filter(g => g.items.length > 0);
+  const grandTotal   = incomeGroups.reduce((s, g) => s + g.total, 0);
 
-  const incomeGroups = [
-    { label: "CLT",          items: ganhos.items?.clt         ?? [], total: ganhos.clt         ?? 0 },
-    { label: "PDV",          items: ganhos.items?.pdv         ?? [], total: ganhos.pdv         ?? 0 },
-    { label: "Empréstimos",  items: ganhos.items?.emprestimos ?? [], total: ganhos.emprestimos ?? 0 },
-  ].filter(g => g.items.length > 0);
-
-  const grandTotal = incomeGroups.reduce((s, g) => s + g.total, 0);
+  const todos      = incomeGroups.flatMap(g => g.items);
+  // Os totais da planilha só somam o que já foi recebido; aqui o previsto soma todos os itens.
+  const recebido   = todos.filter(i => i.confirmado).reduce((s, i) => s + (i.valor || 0), 0);
+  const aReceber   = todos.filter(i => !i.confirmado).reduce((s, i) => s + (i.valor || 0), 0);
+  const previsto   = recebido + aReceber;
+  const pctRec     = previsto > 0 ? Math.round((recebido / previsto) * 100) : 0;
+  const corRec     = pctRec >= 80 ? "#34d399" : pctRec >= 40 ? "#fbbf24" : "#fb7185";
+  const donut      = incomeGroups.map(g => ({ name: g.label, value: g.total })).filter(d => d.value > 0);
 
   return (
-    <div className={styles.container}>
-      <ModuleHeader title="Ganhos" />
+    <div className={ex.page} style={{ background: "radial-gradient(50% 35% at 85% 0%, rgba(52,211,153,0.10), transparent 70%), #07080c" }}>
+      <ModuleHeader title="Ganhos" hideOnDesktop />
       <Navigation />
 
-      {menuOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 40 }} onClick={() => { setMenuOpen(null); setDeleteConfirm(null); }} />
-      )}
+      {toast && <div className={ex.toast}>{toast}</div>}
 
-      {toast && (
-        <div style={{
-          position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)",
-          background: "rgba(17,24,39,0.95)", border: "1px solid rgba(255,255,255,0.1)",
-          color: "#f0f0f8", padding: "10px 20px", borderRadius: 12,
-          fontSize: 13, fontWeight: 600, zIndex: 999, whiteSpace: "nowrap",
-        }}>{toast}</div>
-      )}
-
+      {/* Janela de novo / editar ganho */}
       {modal && (
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 500 }}
-          onClick={() => setModal(false)}
-        >
-          <div
-            style={{ background: "rgba(17,24,39,0.98)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "28px 20px 44px", width: "100%", maxWidth: 500 }}
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>{editingItem ? "Editar Ganho" : "Novo Ganho"}</h3>
-            <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className={ex.overlay} onClick={() => setModal(false)}>
+          <div className={ex.modal} onClick={e => e.stopPropagation()}>
+            <div className={ex.modalTop}>
+              <h3 className={ex.modalTitle}>{editingItem ? "Editar ganho" : "Novo ganho"}</h3>
+              <button type="button" className={ex.closeBtn} onClick={() => setModal(false)} title="Fechar">✕</button>
+            </div>
+            <p className={ex.modalSub}>{editingItem ? "Altere o que precisar e salve." : "Adicione uma nova fonte de renda do mês."}</p>
+            <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>Grupo</label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {[{ key: "CLT", label: "CLT" }, { key: "PDV", label: "PDV" }, { key: "EMPRESTIMOS", label: "Empréstimos" }].map(({ key, label }) => (
-                    <button key={key} type="button" onClick={() => setForm(f => ({ ...f, grupo: key }))}
-                      style={{ flex: 1, padding: "9px 0", borderRadius: 10, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s",
-                        background: form.grupo === key ? "rgba(0,229,160,0.15)" : "rgba(255,255,255,0.04)",
-                        border: `1px solid ${form.grupo === key ? "rgba(0,229,160,0.4)" : "rgba(255,255,255,0.1)"}`,
-                        color: form.grupo === key ? "#00e5a0" : "rgba(255,255,255,0.45)" }}>
-                      {label}
-                    </button>
-                  ))}
+                <label style={lbl}>Fonte</label>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {Object.entries(FONTE).map(([label, f]) => {
+                    const on = form.grupo === f.key;
+                    return (
+                      <button key={f.key} type="button" onClick={() => setForm(x => ({ ...x, grupo: f.key }))} style={{
+                        display: "inline-flex", alignItems: "center", gap: 7, height: 34, padding: "0 13px", borderRadius: 99,
+                        fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", transition: "all .15s",
+                        color: on ? "#fff" : "rgba(255,255,255,0.65)",
+                        background: on ? `${f.color}2e` : "rgba(255,255,255,0.04)",
+                        border: `1px solid ${on ? `${f.color}8c` : "rgba(255,255,255,0.08)"}`,
+                      }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: f.color, boxShadow: `0 0 8px ${f.color}` }} />{label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>Nome</label>
-                <input value={form.item} onChange={e => setForm(f => ({ ...f, item: e.target.value }))} placeholder="Ex: Freela XYZ" required
-                  style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "#f0f0f8", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                <label style={lbl}>Nome</label>
+                <input value={form.item} onChange={e => setForm(f => ({ ...f, item: e.target.value }))} placeholder="Ex: Freela XYZ" required style={inputStyle} />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>Valor (R$)</label>
+                <label style={lbl}>Valor (R$)</label>
                 <input type="number" step="0.01" min="0.01" value={form.valor} onChange={e => setForm(f => ({ ...f, valor: e.target.value }))} placeholder="0,00" required
-                  style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "#f0f0f8", fontSize: 18, fontFamily: "var(--font-mono), monospace", fontWeight: 700, outline: "none", boxSizing: "border-box" }} />
+                  style={{ ...inputStyle, fontSize: 18, fontWeight: 700 }} />
               </div>
               {form.grupo === "EMPRESTIMOS" && (
                 <div>
-                  <label style={{ display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>Prazo final (M/AAAA)</label>
-                  <input value={form.prazo} onChange={e => setForm(f => ({ ...f, prazo: e.target.value }))} placeholder="Ex: 4/2027" required
-                    style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", color: "#f0f0f8", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 6 }}>Mês/ano em que esse recebimento termina e deixa de contar na projeção.</p>
+                  <label style={lbl}>Prazo final (M/AAAA)</label>
+                  <input value={form.prazo} onChange={e => setForm(f => ({ ...f, prazo: e.target.value }))} placeholder="Ex: 4/2027" required style={inputStyle} />
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 6 }}>Mês em que esse recebimento termina e sai da projeção.</p>
                 </div>
               )}
-              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-                <input type="checkbox" checked={form.confirmado} onChange={e => setForm(f => ({ ...f, confirmado: e.target.checked }))} style={{ width: 16, height: 16, accentColor: "#10b981" }} />
-                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>Já recebido</span>
-              </label>
-              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+              {/* Já recebido — interruptor */}
+              <button type="button" onClick={() => setForm(f => ({ ...f, confirmado: !f.confirmado }))} style={{
+                display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
+                padding: "12px 14px", borderRadius: 14, fontFamily: "inherit", cursor: "pointer", transition: "all .2s",
+                background: form.confirmado ? "rgba(52,211,153,0.10)" : "rgba(255,255,255,0.03)",
+                border: `1px solid ${form.confirmado ? "rgba(52,211,153,0.4)" : "rgba(255,255,255,0.08)"}`,
+              }}>
+                <span style={{ flex: 1 }}>
+                  <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#fff" }}>✓ Já recebido</span>
+                  <span style={{ display: "block", fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>O dinheiro já caiu na conta este mês</span>
+                </span>
+                <span style={{ width: 42, height: 24, borderRadius: 99, padding: 3, flexShrink: 0, background: form.confirmado ? "#34d399" : "rgba(255,255,255,0.15)", transition: "all .2s" }}>
+                  <span style={{ display: "block", width: 18, height: 18, borderRadius: "50%", background: "#fff", transform: form.confirmado ? "translateX(18px)" : "none", transition: "transform .2s" }} />
+                </span>
+              </button>
+              <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end", paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                 <button type="button" onClick={() => setModal(false)}
-                  style={{ flex: 1, padding: 12, borderRadius: 10, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", fontFamily: "inherit" }}>
+                  style={{ height: 42, padding: "0 18px", borderRadius: 99, fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.6)", background: "transparent", border: "none", fontFamily: "inherit", cursor: "pointer" }}>
                   Cancelar
                 </button>
                 <button type="submit" disabled={saving || !form.item || !form.valor}
-                  style={{ flex: 2, padding: 12, borderRadius: 10, fontSize: 13, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#10b981,#059669)", border: "none", cursor: "pointer", opacity: (saving || !form.item || !form.valor) ? 0.5 : 1, fontFamily: "inherit" }}>
-                  {saving ? "Salvando..." : editingItem ? "Atualizar" : "Salvar"}
+                  style={{ height: 42, padding: "0 24px", borderRadius: 99, fontSize: 14, fontWeight: 700, color: "#0b0b10", background: "#fff", border: "none", fontFamily: "inherit", cursor: "pointer", boxShadow: "0 6px 24px rgba(255,255,255,0.12)", opacity: (saving || !form.item || !form.valor) ? 0.5 : 1 }}>
+                  {saving ? "Salvando…" : editingItem ? "Salvar" : "Adicionar"}
                 </button>
               </div>
             </form>
@@ -196,197 +226,152 @@ export default function IncomePage() {
         </div>
       )}
 
-      <header className={styles.header}>
-        <div>
-          <h1>Ganhos</h1>
-          <p>{new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</p>
+      {/* Cabeçalho */}
+      <header className={ex.top}>
+        <div className={ex.topLeft}>
+          <span className={ex.eyebrow}>Financeiro · {new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</span>
+          <h1 className={ex.title}>Ganhos</h1>
+        </div>
+        <div className={ex.topRight}>
+          <FinanceOcultarBtn className={ex.pillBtn} />
+          <button className={ex.primaryBtn} onClick={openAdd}>
+            <span className={ex.plus}>+</span> Registrar
+          </button>
         </div>
       </header>
 
-      {loading && <div className={styles.loading}>Carregando...</div>}
+      {loading && <div className={ex.loading}>Carregando…</div>}
       {error && !loading && (
-        <div className={styles.errorCard}>
-          <p style={{ fontWeight: 700, marginBottom: 6 }}>⚠ Erro ao carregar</p>
-          <p style={{ fontSize: 12, opacity: 0.7 }}>{error}</p>
+        <div className={ex.errorBox}>
+          <p><b>Erro ao carregar.</b> {error}</p>
+          <button onClick={refetch} className={ex.retryBtn}>Tentar novamente</button>
         </div>
       )}
 
       {!loading && !error && data && (
         <>
-          {/* ── Total de Ganhos ── */}
-          <div style={{
-            margin: "0 28px 28px",
-            padding: "24px",
-            borderRadius: 16,
-            background: "rgba(16,185,129,0.06)",
-            border: "1px solid rgba(16,185,129,0.18)",
-          }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, textTransform: "uppercase",
-              letterSpacing: "0.07em", color: "rgba(255,255,255,0.35)", marginBottom: 8,
-            }}>
-              Total de Ganhos
-            </div>
-            <div style={{
-              fontFamily: "var(--font-mono)", fontSize: 28, fontWeight: 900,
-              color: "#10b981", letterSpacing: "-0.03em", lineHeight: 1,
-            }}>
-              {fmt(grandTotal)}
-            </div>
-          </div>
-
-          {/* ── Grupos de renda ── */}
-          <div className={styles.content} style={{ paddingBottom: 80 }}>
-            {incomeGroups.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)", fontSize: 13 }}>
-                Nenhuma fonte de renda encontrada para este mês.
-              </div>
-            ) : incomeGroups.map(group => (
-              <div key={group.label} style={{ marginBottom: 32 }}>
-
-                {/* Label do grupo */}
-                <div style={{
-                  fontSize: 13, fontWeight: 700, textTransform: "uppercase",
-                  letterSpacing: "0.09em", color: "rgba(255,255,255,0.35)", marginBottom: 14,
-                }}>
-                  {group.label}
-                </div>
-
-                {/* Grid 2 colunas de cards */}
-                <div className={styles.incomeCardGrid}>
-                  {group.items.map((item, i) => (
-                    <div key={i} style={{
-                      background: item.confirmado ? "rgba(255,255,255,0.03)" : "rgba(245,158,11,0.05)",
-                      border: item.confirmado ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(245,158,11,0.25)",
-                      borderLeft: item.confirmado ? undefined : "3px solid rgba(245,158,11,0.6)",
-                      borderRadius: 16,
-                      padding: 22,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 6,
-                    }}>
-                      {/* Nome */}
-                      <span style={{
-                        fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.5)",
-                        textTransform: "uppercase", letterSpacing: "0.06em",
-                      }}>
-                        {item.item}
-                      </span>
-
-                      {/* Valor */}
-                      <span style={{
-                        fontFamily: "var(--font-mono)", fontSize: "1.9rem", fontWeight: 800,
-                        color: "#10b981", letterSpacing: "-0.02em", lineHeight: 1.1,
-                        margin: "6px 0 10px",
-                      }}>
-                        {fmt(item.valor)}
-                      </span>
-
-                      {fmtPrazo(item.prazo) && (
-                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: -8, marginBottom: 4 }}>
-                          {fmtPrazo(item.prazo)}
-                        </span>
-                      )}
-
-                      {/* Rodapé: status + botões */}
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto" }}>
-                        <div
-                          onClick={() => handleToggle(item)}
-                          style={{
-                            width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 16, fontWeight: 900,
-                            background: item.confirmado ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.04)",
-                            color:      item.confirmado ? "#10b981"                : "rgba(255,255,255,0.3)",
-                            border:    `1.5px solid ${item.confirmado ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.12)"}`,
-                            cursor:    toggling.has(item.item) ? "wait" : "pointer",
-                            opacity:   toggling.has(item.item) ? 0.4 : 1,
-                            transition: "all 0.2s",
-                          }}
-                        >
-                          {toggling.has(item.item) ? "…" : item.confirmado ? "✓" : "○"}
-                        </div>
-                        <div style={{ display: "flex", gap: 6, position: "relative" }}>
-                          <button onClick={() => openEdit(item, group.label)} style={{
-                            fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
-                            fontFamily: "inherit", background: "rgba(255,255,255,0.05)",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            color: "rgba(255,255,255,0.45)", cursor: "pointer",
-                          }}>
-                            Editar
-                          </button>
-                          <div style={{ position: "relative" }}>
-                            <button
-                              onClick={() => { setMenuOpen(menuOpen === item.item ? null : item.item); setDeleteConfirm(null); }}
-                              style={{
-                                fontSize: 15, lineHeight: 1, width: 28, height: 28, borderRadius: 6,
-                                fontFamily: "inherit", background: "rgba(255,255,255,0.05)",
-                                border: "1px solid rgba(255,255,255,0.1)",
-                                color: "rgba(255,255,255,0.4)", cursor: "pointer",
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                              }}>
-                              ···
-                            </button>
-                            {menuOpen === item.item && (
-                              <div
-                                style={{
-                                  position: "absolute", bottom: 34, right: 0, zIndex: 50,
-                                  background: "rgba(17,24,39,0.98)", border: "1px solid rgba(255,255,255,0.12)",
-                                  borderRadius: 10, overflow: "hidden", minWidth: 130,
-                                  boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                                }}
-                              >
-                                {deleteConfirm === item.item ? (
-                                  <button
-                                    onClick={() => handleDelete(item.item)}
-                                    disabled={deleting === item.item}
-                                    style={{
-                                      width: "100%", padding: "10px 14px", fontSize: 12, fontWeight: 700,
-                                      fontFamily: "inherit", background: "rgba(239,68,68,0.15)",
-                                      border: "none", color: "#f87171", cursor: "pointer", textAlign: "left",
-                                    }}>
-                                    {deleting === item.item ? "Removendo…" : "Confirmar exclusão"}
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => handleDelete(item.item)}
-                                    style={{
-                                      width: "100%", padding: "10px 14px", fontSize: 12, fontWeight: 600,
-                                      fontFamily: "inherit", background: "transparent",
-                                      border: "none", color: "#f87171", cursor: "pointer", textAlign: "left",
-                                    }}>
-                                    🗑 Excluir
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Subtotal do grupo */}
-                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "baseline", gap: 8, marginTop: 14 }}>
-                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Total {group.label}</span>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 17, fontWeight: 800, color: "#10b981" }}>
-                    {fmt(group.total)}
-                  </span>
-                </div>
-
+          {/* Big numbers */}
+          <div className={ex.tabs}>
+            {[
+              ...allGroups.map(g => ({ label: g.label, value: g.total, color: FONTE[g.label].color, hint: FONTE[g.label].hint })),
+              { label: "Total", value: grandTotal, color: "#a78bfa", hint: "somando tudo" },
+            ].map(s => (
+              <div key={s.label} className={ex.tabBox} style={{ "--t": s.color }}>
+                <span className={ex.tabLabel}><span className={ex.tabDot} />{s.label}</span>
+                <span className={ex.tabValue} style={{ color: s.color }}>{fmt(s.value)}</span>
+                <span className={ex.tabHint}>{s.hint}</span>
               </div>
             ))}
+          </div>
 
-            {/* Adicionar Fonte de Renda */}
-            <button onClick={openAdd} style={{
-              width: "100%", padding: 14, borderRadius: 12, fontFamily: "inherit",
-              background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.12)",
-              color: "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: 600,
-              cursor: "pointer", marginTop: 4,
-            }}>
-              + Adicionar Fonte de Renda
-            </button>
+          <div className={ex.layout}>
+            <div className={ex.mainArea}>
+              {incomeGroups.length === 0 ? (
+                <p className={ex.empty}>Nenhuma fonte de renda encontrada para este mês.</p>
+              ) : incomeGroups.map(group => {
+                const gc    = FONTE[group.label].color;
+                const recQt = group.items.filter(i => i.confirmado).length;
+                return (
+                  <section key={group.label} className={ex.listPanel}>
+                    <div className={ex.sectionHead}>
+                      <span className={ex.sectionDot} style={{ background: gc, boxShadow: `0 0 10px ${gc}` }} />
+                      <span className={ex.sectionName}>{group.label}</span>
+                      <span className={ex.sectionCount}>{recQt}/{group.items.length} recebidos</span>
+                      <span className={ex.sectionTotal}>{fmt(group.total)}</span>
+                    </div>
+                    <div className={ex.rows}>
+                      {group.items.map(item => {
+                        const busy   = toggling.has(item.item);
+                        const prazo  = fmtPrazo(item.prazo);
+                        const isConf = deleteConfirm === item.item;
+                        return (
+                          <div key={item.item} className={`${ex.uRow} ${item.confirmado ? ex.rowDone : ""}`} style={{ "--c": gc }}>
+                            <span className={ex.uLead}>
+                              <button onClick={() => handleToggle(item)}
+                                className={`${ex.check} ${item.confirmado ? ex.checkOn : ""} ${busy ? ex.checkBusy : ""}`}
+                                title={item.confirmado ? "Desmarcar recebimento" : "Marcar como recebido"}>{CHECK_ICON}</button>
+                            </span>
+                            <div className={`${ex.uName} ${ex.uWide}`}>
+                              <span className={`${ex.rowName} ${item.confirmado ? ex.struck : ""}`}>{item.item}</span>
+                              <span className={ex.uSub} style={{ color: item.confirmado ? "#34d399" : "#fbbf24" }}>
+                                {item.confirmado ? "recebido" : "a receber"}{prazo ? <em style={{ color: "rgba(255,255,255,0.45)" }}> · {prazo}</em> : null}
+                              </span>
+                            </div>
+                            <span className={ex.uAux} />
+                            <span className={ex.uVal}><b>{fmt(item.valor)}</b></span>
+                            <div className={ex.uActs}>
+                              <button onClick={() => openEdit(item, group.label)} title="Editar" className={ex.iconBtn}>{EDIT_ICON}</button>
+                              {isConf ? (
+                                <button onClick={() => handleDelete(item.item)} disabled={deleting === item.item} className={ex.confirmBtn}
+                                  onBlur={() => setTimeout(() => setDeleteConfirm(v => v === item.item ? null : v), 200)}>
+                                  {deleting === item.item ? "…" : "Excluir?"}
+                                </button>
+                              ) : (
+                                <button onClick={() => handleDelete(item.item)} title="Excluir" className={`${ex.iconBtn} ${ex.dangerBtn}`}>{TRASH_ICON}</button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+
+            <div className={ex.side}>
+              {/* Recebido no mês */}
+              <div className={ex.panel}>
+                <div className={ex.panelTitle}>Recebido no mês</div>
+                <div className={ex.ringPanel}>
+                  <Ring pct={pctRec} color={corRec} size={108} stroke={10}>
+                    <span className={ex.ringPct}>{pctRec}%</span>
+                    <span className={ex.ringSub}>recebido</span>
+                  </Ring>
+                  <div className={ex.ringInfo}>
+                    <span className={ex.bigValue} style={{ color: "#34d399" }}>{fmt(recebido)}</span>
+                    <span className={ex.muted}>já caiu na conta</span>
+                    <div className={ex.pair}>
+                      <div><span className={ex.pairLbl}>Previsto</span><span className={ex.pairVal}>{fmt(previsto)}</span></div>
+                      <div><span className={ex.pairLbl}>A receber</span><span className={ex.pairVal} style={{ color: "#fbbf24" }}>{fmt(aReceber)}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Por fonte */}
+              <div className={ex.panel}>
+                <div className={ex.panelTitle}>Por fonte</div>
+                {donut.length === 0 ? <p className={ex.empty}>Sem dados</p> : (
+                  <>
+                    <div style={{ position: "relative" }}>
+                      <ResponsiveContainer width="100%" height={190}>
+                        <PieChart>
+                          <Pie data={donut} cx="50%" cy="50%" innerRadius={60} outerRadius={84} paddingAngle={2} cornerRadius={4} dataKey="value" stroke="none">
+                            {donut.map(d => <Cell key={d.name} fill={FONTE[d.name].color} />)}
+                          </Pie>
+                          <Tooltip formatter={v => [fmt(v)]} contentStyle={TOOLTIP_BOX} itemStyle={{ color: "#e5e7eb" }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                        <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{fmt(grandTotal)}</span>
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>total</span>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
+                      {donut.map(d => (
+                        <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: 4, background: FONTE[d.name].color }} />
+                          <span style={{ flex: 1, color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>{d.name}</span>
+                          <span style={{ color: "#fff", fontWeight: 700 }}>{fmt(d.value)}</span>
+                          <span style={{ minWidth: 38, textAlign: "right", fontWeight: 800, color: FONTE[d.name].color }}>{grandTotal > 0 ? Math.round(d.value / grandTotal * 100) : 0}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </>
       )}
