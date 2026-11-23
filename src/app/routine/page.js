@@ -389,7 +389,8 @@ function TabSemana({ onSelectDay }) {
             const isT    = idx === todayIdx;
             const blocks = week[idx] ?? [];
             const { segs } = catTotals(blocks);
-            const chips  = segs.filter(s => s.mins >= 30).sort((a, b) => b.mins - a.mins).slice(0, 5);
+            // Todas as categorias com 30 min ou mais (antes cortava em 5 e o PDV sumia)
+            const chips  = segs.filter(s => s.mins >= 30).sort((a, b) => b.mins - a.mins);
 
             // Bloco atual e % feito (só hoje)
             let nowBlock = null, donePct = 0;
