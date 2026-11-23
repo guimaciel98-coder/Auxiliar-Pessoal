@@ -4,6 +4,7 @@ import styles from "./TaskEditModal.module.css";
 import { validateRecurrence } from "@/lib/recurrenceValidation";
 import { PROJ } from "@/config/constants";
 import { niceName } from "@/utils/niceName";
+import { recPt } from "@/utils/recurrenceText";
 
 const PROJ_LABELS = { pessoal: "Pessoal", vca: "VCA Brasil", pdv: "Ponto de Vista" };
 
@@ -24,21 +25,6 @@ function fmtDate(ms) {
   return `${WD[d.getUTCDay()]}, ${d.getUTCDate()} ${MO[d.getUTCMonth()]}${y}`;
 }
 
-// Só para exibir: o Todoist devolve a regra em inglês ("every friday")
-const EN_PT = [
-  [/^every day$/i, "todo dia"], [/^every weekday$/i, "todo dia útil"], [/^every workday$/i, "todo dia útil"],
-  [/^every week$/i, "toda semana"], [/^every month$/i, "todo mês"], [/^every year$/i, "todo ano"],
-  [/^every other week$/i, "a cada 2 semanas"], [/^every (d+) days?$/i, "a cada $1 dias"],
-  [/^every (d+) weeks?$/i, "a cada $1 semanas"], [/^every (d+) months?$/i, "a cada $1 meses"],
-  [/^every monday$/i, "toda segunda"], [/^every tuesday$/i, "toda terça"], [/^every wednesday$/i, "toda quarta"],
-  [/^every thursday$/i, "toda quinta"], [/^every friday$/i, "toda sexta"], [/^every saturday$/i, "todo sábado"],
-  [/^every sunday$/i, "todo domingo"],
-];
-function recPt(str = "") {
-  const t = String(str).trim();
-  for (const [re, pt] of EN_PT) if (re.test(t)) return t.replace(re, pt);
-  return t;
-}
 
 export default function TaskEditModal({ task, onClose, onSuccess, clients: clientsProp }) {
   const [mode, setMode]       = useState("view");

@@ -1,146 +1,118 @@
 .container {
-  min-height: 100vh;
-  padding-bottom: 100px;
   margin-left: 220px;
-  background: var(--bg-main);
-}
-.header {
-  padding: 8px 20px 16px;
-  border-bottom: 1px solid var(--border-glass);
-  display: flex; flex-direction: column; gap: 10px;
-}
-.titleRow { display: flex; align-items: center; gap: 10px; }
-.titleRow h1 { font-size: 22px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.01em; }
-.countBadge {
-  font-size: 12px; font-weight: 700; font-family: var(--font-mono);
-  background: rgba(0,229,160,0.1); color: var(--accent-primary);
-  border: 1px solid rgba(0,229,160,0.2); padding: 2px 8px; border-radius: 99px;
-}
-.subtitle { font-size: 13px; color: var(--text-secondary); }
-
-/* Barra de busca */
-.searchBar {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  transition: border-color 0.2s;
-}
-.searchBar:focus-within { border-color: var(--border-active); }
-.searchIcon { color: var(--text-muted); flex-shrink: 0; }
-.searchInput {
-  flex: 1; background: none; border: none; outline: none;
-  color: var(--text-primary); font-size: 14px; font-family: var(--font-sans);
-}
-.searchInput::placeholder { color: var(--text-muted); }
-.searchClear {
-  color: var(--text-muted); font-size: 18px; padding: 0 4px;
-  cursor: pointer; transition: color 0.2s;
-}
-.searchClear:hover { color: var(--text-secondary); }
-
-/* Filtros */
-.filterBar { display: flex; gap: 6px; flex-wrap: wrap; }
-.filterBtn {
-  padding: 6px 13px; border-radius: 99px; font-size: 12px; font-weight: 600;
-  color: var(--text-muted); background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.07); transition: all 0.2s; cursor: pointer;
-}
-.filterBtn:hover { color: var(--text-secondary); background: rgba(255,255,255,0.06); }
-.filterActive {
-  color: var(--accent-primary) !important;
-  background: rgba(0,229,160,0.1) !important;
-  border-color: rgba(0,229,160,0.25) !important;
+  min-height: 100vh;
+  background:
+    radial-gradient(50% 35% at 85% 0%, rgba(167,139,250,0.10), transparent 70%),
+    #07080c;
 }
 
-/* Grupos */
-.groups { padding: 16px 20px; display: flex; flex-direction: column; gap: 24px; }
-.group {}
-.groupHead {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
-}
-.groupCount { font-size: 12px; font-weight: 700; font-family: var(--font-mono); color: var(--text-muted); }
+/* ── Cabeçalho ───────────────────────────────────────────────────────────── */
+.header { padding: 26px 28px 8px; display: flex; flex-direction: column; gap: 18px; }
+.hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+.heroLeft { display: flex; flex-direction: column; gap: 4px; }
+.eyebrow { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.5); }
+.title { font-size: 44px; font-weight: 800; letter-spacing: -0.045em; line-height: 1; color: #fff; }
+.total { display: flex; align-items: baseline; gap: 10px; }
+.totalNum { font-size: 40px; font-weight: 800; letter-spacing: -0.045em; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.totalLbl { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.45); }
 
-/* Badges de frequência */
-.freqBadge {
-  padding: 4px 10px; border-radius: 6px;
-  font-size: 11px; font-weight: 700;
-  font-family: var(--font-mono);
-  text-transform: uppercase; letter-spacing: 0.05em;
+/* Big numbers por frequência (filtros) */
+.freqGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.freqBox {
+  --f: #a78bfa;
+  display: flex; flex-direction: column; gap: 6px; text-align: left;
+  padding: 14px 16px 12px; border-radius: 18px;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: transform .15s, border-color .2s, background .2s;
 }
-.freqDaily     { background: rgba(0,229,160,0.1);   color: var(--accent-primary);  border: 1px solid rgba(0,229,160,0.25); }
-.freqWeekdays  { background: rgba(96,165,250,0.1);  color: #60A5FA;                border: 1px solid rgba(96,165,250,0.25); }
-.freqWeekly    { background: rgba(167,139,250,0.1); color: #A78BFA;                border: 1px solid rgba(167,139,250,0.25); }
-.freqBiweekly  { background: rgba(6,182,212,0.1);   color: #06b6d4;                border: 1px solid rgba(6,182,212,0.25); }
-.freqMonthly   { background: rgba(251,191,36,0.1);  color: var(--accent-warning);  border: 1px solid rgba(251,191,36,0.25); }
-.freqYearly    { background: rgba(251,113,133,0.1); color: #fb7185;                border: 1px solid rgba(251,113,133,0.25); }
-.freqRecurring { background: rgba(255,255,255,0.07); color: var(--text-muted);     border: 1px solid rgba(255,255,255,0.12); }
+.freqBox:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.16); }
+.freqNum { font-size: 30px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.freqLbl { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.55); }
+.freqDot { width: 7px; height: 7px; border-radius: 50%; background: var(--f); box-shadow: 0 0 8px var(--f); }
+.freqActive {
+  border-color: color-mix(in srgb, var(--f) 60%, transparent) !important;
+  background: color-mix(in srgb, var(--f) 14%, transparent) !important;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--f) 15%, transparent);
+}
+.freqActive .freqLbl { color: #fff; }
 
-/* Lista */
-.list { display: flex; flex-direction: column; gap: 6px; }
+/* Projeto + busca */
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.segment { display: inline-flex; gap: 2px; padding: 3px; border-radius: 13px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); }
+.segBtn { --p: #fff; display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); transition: all .2s; }
+.segBtn:hover { color: rgba(255,255,255,0.9); }
+.segDot { width: 7px; height: 7px; border-radius: 50%; background: var(--p); opacity: .55; }
+.segActive { color: #fff; background: rgba(255,255,255,0.1); }
+.segActive .segDot { opacity: 1; box-shadow: 0 0 8px var(--p); }
+
+.searchBox {
+  display: flex; align-items: center; gap: 8px;
+  height: 38px; padding: 0 8px 0 12px; border-radius: 12px; min-width: 240px;
+  color: rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+}
+.searchBox:focus-within { border-color: rgba(167,139,250,0.5); }
+.searchBox input { flex: 1; background: transparent; border: none; outline: none; color: #f4f5f7; font-size: 13.5px; font-family: inherit; }
+.searchClear { color: rgba(255,255,255,0.4); font-size: 11px; padding: 3px 6px; border-radius: 6px; }
+.searchClear:hover { color: #fff; background: rgba(255,255,255,0.06); }
+
+/* ── Lista ───────────────────────────────────────────────────────────────── */
+.main { padding: 14px 28px 80px; }
+
+.group { margin-bottom: 26px; }
+.groupHead { display: flex; align-items: center; gap: 10px; margin: 6px 0 12px; padding: 0 4px; }
+.groupDot { width: 10px; height: 10px; border-radius: 4px; background: var(--f); box-shadow: 0 0 10px var(--f); }
+.groupTitle { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: #fff; }
+.groupCount { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.07); padding: 2px 10px; border-radius: 99px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 8px; }
+
 .card {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 12px 14px; border-radius: 12px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--border-glass);
-  transition: background 0.2s, border-color 0.2s;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 14px; text-align: left;
+  padding: 13px 14px 13px 18px; border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025));
+  border: 1px solid rgba(255,255,255,0.07);
+  transition: background .15s, border-color .15s, transform .15s;
+  cursor: pointer; width: 100%;
 }
-.card:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); }
-.cardLeft { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-.projDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.cardInfo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.cardName { font-size: 14px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cardSub { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-.cardRight { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.dateInfo { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
-.dateLabel { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
-.dueDate { font-size: 12px; font-weight: 600; font-family: var(--font-mono); color: var(--text-secondary); }
+.card:hover { background: rgba(255,255,255,0.065); border-color: rgba(255,255,255,0.14); transform: translateY(-1px); }
+.projBar { position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; }
 
-/* Meta row abaixo do nome (sub-label + hint) */
-.cardMeta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 1px; }
+.cardInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.cardName { font-size: 14.5px; font-weight: 600; color: #f4f5f7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em; }
+.cardMeta { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.rule { font-size: 12px; font-weight: 600; color: color-mix(in srgb, var(--f) 75%, white); }
+.brand { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.45); }
+.brand::before { content: "·"; margin-right: 8px; color: rgba(255,255,255,0.25); }
 
-/* String original do Todoist (ex: "every 3 months") */
-.recHint {
-  font-size: 10px; font-family: var(--font-mono);
-  color: var(--text-muted);
-  background: rgba(255,255,255,0.05);
-  padding: 1px 6px; border-radius: 4px;
-}
+.next { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+.nextRel { font-size: 13px; font-weight: 800; color: #fff; }
+.nextDay { font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.45); }
+.nextNow .nextRel  { color: #34d399; }
+.nextSoon .nextRel { color: #fbbf24; }
 
-/* Badge "↻ sempre" */
-.foreverBadge {
-  font-size: 9px; font-weight: 700;
-  font-family: var(--font-mono);
-  text-transform: uppercase; letter-spacing: 0.04em;
-  padding: 2px 7px; border-radius: 4px;
-  background: rgba(0,229,160,0.07);
-  color: var(--accent-primary);
-  border: 1px solid rgba(0,229,160,0.18);
-  flex-shrink: 0;
-  white-space: nowrap;
-}
+/* ── Estados ─────────────────────────────────────────────────────────────── */
+.loading { padding: 60px; text-align: center; color: rgba(255,255,255,0.45); font-size: 13px; }
+.empty { padding: 60px 20px; text-align: center; color: rgba(255,255,255,0.5); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.emptyIcon { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; color: #a78bfa; background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.3); }
+.errorBox { padding: 16px 18px; border-radius: 16px; background: rgba(251,113,133,0.08); border: 1px solid rgba(251,113,133,0.25); color: rgba(255,255,255,0.85); font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+.retryBtn { height: 34px; padding: 0 14px; border-radius: 99px; background: #fff; color: #0b0b10; font-size: 13px; font-weight: 700; }
 
-/* Empty / Loading */
-.loading { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
-.empty {
-  text-align: center; padding: 60px 20px;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  color: var(--text-secondary); font-size: 14px;
-}
-.emptyIcon { font-size: 40px; opacity: 0.6; }
-
+/* ── Celular ─────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .container { margin-left: 0; padding-bottom: 90px; }
-  .groups { padding: 12px 14px; }
-  .header { padding: 8px 14px 14px; }
-  /* Card: empilhar info e data em coluna */
-  .card { flex-wrap: wrap; gap: 8px; }
-  .cardRight { width: 100%; justify-content: space-between; }
-  .dateInfo { align-items: flex-start; flex-direction: row; gap: 6px; align-items: center; }
-  .dateLabel { display: none; }
-  .filterBar { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
-  .filterBar::-webkit-scrollbar { display: none; }
-  .filterBtn { flex-shrink: 0; }
+  .container { margin-left: 0; padding-bottom: 100px; }
+  .header { padding: 14px 16px 6px; gap: 14px; }
+  .title { font-size: 34px; }
+  .totalNum { font-size: 30px; }
+  .freqGrid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .freqBox { padding: 12px; }
+  .freqNum { font-size: 24px; }
+  .segment { overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+  .segBtn { padding: 10px 12px; flex-shrink: 0; }
+  .searchBox { min-width: 0; width: 100%; height: 44px; }
+  .main { padding: 10px 16px 100px; }
+  .grid { grid-template-columns: 1fr; }
 }
