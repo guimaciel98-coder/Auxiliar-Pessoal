@@ -361,19 +361,23 @@
   .brand     { padding-top: clamp(6px, 1.2vh, 10px); padding-bottom: clamp(6px, 1.2vh, 10px); }
   .brandMark { width: clamp(38px, 5.8vh, 48px); height: clamp(38px, 5.8vh, 48px); }
 
+  /* Cartões compactos: altura do próprio conteúdo (não esticam até o fim da tela) */
   .bento {
-    flex: 1; min-height: 0;
-    grid-auto-rows: minmax(0, 1fr);
-    gap: clamp(10px, 1.8vh, 16px);
+    grid-auto-rows: auto;
+    gap: clamp(10px, 1.6vh, 14px);
     padding-bottom: clamp(14px, 3vh, 32px);
+    max-width: 1080px;
   }
-  .card { min-height: 0; padding: clamp(12px, 2.2vh, 22px) 24px; gap: clamp(6px, 1.6vh, 18px); }
-  .quad { min-height: 0; }
-  .quad .ring { width: clamp(78px, 15vh, 132px) !important; height: clamp(78px, 15vh, 132px) !important; }
-  .quad .ringPct { font-size: clamp(20px, 3.4vh, 30px); }
-  .quad .statValueBig { font-size: clamp(26px, 5vh, 44px); }
-  .quad .statValue { font-size: clamp(17px, 2.8vh, 24px); }
-  .quad .nowTitle { font-size: clamp(22px, 3.8vh, 32px); }
+  .card { min-height: 0; padding: clamp(12px, 1.8vh, 18px) 20px; gap: clamp(6px, 1.2vh, 12px); border-radius: 22px; }
+  .quad { min-height: 0; gap: 22px; }
+  .quad .ring { width: clamp(72px, 11vh, 100px) !important; height: clamp(72px, 11vh, 100px) !important; }
+  .quad .ringPct { font-size: clamp(18px, 2.7vh, 24px); }
+  .quad .ringSub { font-size: 10.5px; }
+  .quad .statValueBig { font-size: clamp(24px, 3.8vh, 34px); }
+  .quad .statValue { font-size: clamp(16px, 2.3vh, 20px); }
+  .quad .nowTitle { font-size: clamp(20px, 3vh, 26px); }
+  .hero { max-width: 1080px; }
+  .topbar { max-width: 1080px; }
   .quadRight { gap: clamp(6px, 1.5vh, 14px); }
   .chipIcon, .arrow { width: clamp(24px, 3.6vh, 30px); height: clamp(24px, 3.6vh, 30px); }
 }
