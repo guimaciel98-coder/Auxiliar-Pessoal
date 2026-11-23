@@ -10,11 +10,9 @@ import { fmtFin } from "@/lib/fmtFin";
 import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
 import {
   PieChart, Pie, Cell, Label, Tooltip, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from "recharts";
 
-const PARC_COLORS = ["#a78bfa", "#38bdf8", "#34d399", "#fbbf24", "#fb7185", "#f472b6", "#22d3ee", "#f97316"];
-const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
 const CHART_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4", "#f97316", "#ef4444"];
 const TOOLTIP_BOX  = {
@@ -840,42 +838,32 @@ export default function ExpensesPage() {
                       {/* Manuais primeiro — têm o botão de pagar */}
                       {parcSection("Manuais", "#a78bfa", manuais)}
                       {parcSection("Automáticas", "#34d399", automaticos)}
-                      <div className={ex.chartPair}>
-                        <div className={ex.panel}>
-                  {(() => {
-                    // Quanto fica comprometido por mês, do mês atual até a última parcela
-                    const hoje  = new Date();
-                    const base  = hoje.getFullYear() * 12 + hoje.getMonth();
-                    const fimDe = i => { const [m, y] = String(i.dataFim ?? "").split("/").map(Number); return y ? y * 12 + (m - 1) : base; };
-                    const ultimo = Math.max(base, ...parcItems.map(fimDe));
-                    const serie = [];
-                    for (let k = base; k <= ultimo + 3; k++) {
-                      serie.push({ mes: `${MESES_CURTOS[k % 12]}/${String(Math.floor(k / 12)).slice(2)}`, valor: parcItems.filter(i => fimDe(i) >= k).reduce((t, i) => t + i.valorMensal, 0) });
-                    }
-                    const livre = serie.find(x => x.valor === 0)?.mes;
-                    return (<>
-                      <div className={ex.panelTitle}>Quando o dinheiro libera</div>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
-                        <span style={{ fontSize: 24, fontWeight: 800, color: "#34d399", letterSpacing: "-0.03em" }}>{livre}</span>
-                        <span className={ex.muted}>sem nenhuma parcela</span>
-                      </div>
-                      <ResponsiveContainer width="100%" height={200}>
-                        <AreaChart data={serie} margin={{ top: 8, right: 6, left: 0, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="parcLib" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#a78bfa" stopOpacity={0.4} /><stop offset="100%" stopColor="#a78bfa" stopOpacity={0} /></linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                          <XAxis dataKey="mes" tick={{ fill: "rgba(255,255,255,0.45)", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={18} />
-                          <YAxis tick={{ fill: "rgba(255,255,255,0.45)", fontSize: 10 }} tickLine={false} axisLine={false} width={44} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v} />
-                          <Tooltip contentStyle={TOOLTIP_BOX} formatter={v => [fmt(v), "Parcelas no mês"]} labelStyle={{ color: "#9ca3af" }} itemStyle={{ color: "#e5e7eb" }} />
-                          <Area type="stepAfter" dataKey="valor" stroke="#a78bfa" strokeWidth={2} fill="url(#parcLib)" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </>);
-                  })()}
+                    </>
+                  )}
+                </div>
 
+                <div className={ex.side}>
+                  {/* Resumo */}
+                  <div className={ex.panel}>
+                    <div className={ex.panelTitle}>Resumo</div>
+                    <div className={ex.ringPanel}>
+                      <Ring pct={pctPagas} color={pctPagas >= 70 ? "#34d399" : "#fbbf24"} size={108} stroke={10}>
+                        <span className={ex.ringPct}>{pctPagas}%</span>
+                        <span className={ex.ringSub}>quitado</span>
+                      </Ring>
+                      <div className={ex.ringInfo}>
+                        <span className={ex.bigValue}>{parcItems.length}<span className={ex.muted}> ativas</span></span>
+                        <span className={ex.muted}>{automaticos.length} automáticas · {manuais.length} manuais</span>
+                        <div className={ex.pair}>
+                          <div><span className={ex.pairLbl}>Por mês</span><span className={ex.pairVal}>{fmt(totalMensal)}</span></div>
+                          <div><span className={ex.pairLbl}>Em dívida</span><span className={ex.pairVal} style={{ color: "#fb7185" }}>{fmt(totalDivida)}</span></div>
                         </div>
-                        <div className={ex.panel}>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pago x restante */}
+                  <div className={ex.panel}>
                   {(() => {
                     const lista = [...parcItems].sort((a, b) => b.restante - a.restante);
                     return (<>
@@ -906,65 +894,6 @@ export default function ExpensesPage() {
                       </div>
                     </>);
                   })()}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className={ex.side}>
-                  {/* Resumo */}
-                  <div className={ex.panel}>
-                    <div className={ex.panelTitle}>Resumo</div>
-                    <div className={ex.ringPanel}>
-                      <Ring pct={pctPagas} color={pctPagas >= 70 ? "#34d399" : "#fbbf24"} size={108} stroke={10}>
-                        <span className={ex.ringPct}>{pctPagas}%</span>
-                        <span className={ex.ringSub}>quitado</span>
-                      </Ring>
-                      <div className={ex.ringInfo}>
-                        <span className={ex.bigValue}>{parcItems.length}<span className={ex.muted}> ativas</span></span>
-                        <span className={ex.muted}>{automaticos.length} automáticas · {manuais.length} manuais</span>
-                        <div className={ex.pair}>
-                          <div><span className={ex.pairLbl}>Por mês</span><span className={ex.pairVal}>{fmt(totalMensal)}</span></div>
-                          <div><span className={ex.pairLbl}>Em dívida</span><span className={ex.pairVal} style={{ color: "#fb7185" }}>{fmt(totalDivida)}</span></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Peso de cada compra no mês */}
-                  <div className={ex.panel}>
-                  {(() => {
-                    const dados = [...parcItems].sort((a, b) => b.valorMensal - a.valorMensal).map((i, k) => ({ name: i.nome, value: i.valorMensal, c: PARC_COLORS[k % PARC_COLORS.length] }));
-                    return (<>
-                      <div className={ex.panelTitle}>Peso de cada compra no mês</div>
-                      <div style={{ position: "relative" }}>
-                        <ResponsiveContainer width="100%" height={190}>
-                          <PieChart>
-                            <Pie data={dados} cx="50%" cy="50%" innerRadius={60} outerRadius={84} paddingAngle={2} cornerRadius={4} dataKey="value" stroke="none">
-                              {dados.map(d => <Cell key={d.name} fill={d.c} />)}
-                            </Pie>
-                            <Tooltip formatter={v => [fmt(v)]} contentStyle={TOOLTIP_BOX} itemStyle={{ color: "#e5e7eb" }} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                          <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{fmt(totalMensal)}</span>
-                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>por mês</span>
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
-                        {dados.map(d => (
-                          <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
-                            <span style={{ width: 10, height: 10, borderRadius: 4, background: d.c, flexShrink: 0 }} />
-                            <span style={{ flex: 1, minWidth: 0, color: "rgba(255,255,255,0.7)", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</span>
-                            <span style={{ color: "#fff", fontWeight: 700 }}>{fmt(d.value)}</span>
-                            <span style={{ minWidth: 38, textAlign: "right", fontWeight: 800, color: d.c }}>{totalMensal > 0 ? Math.round(d.value / totalMensal * 100) : 0}%</span>
-                          </div>
-                        ))}
-                      </div>
-                    </>);
-                  })()}
-
                   </div>
                 </div>
               </div>
