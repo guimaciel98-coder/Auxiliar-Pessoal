@@ -3,6 +3,8 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import Navigation from "@/components/ui/Navigation";
 import ModuleHeader from "@/components/ui/ModuleHeader";
 import styles from "../Finance.module.css";
+import ex from "./Expenses.module.css";
+import Ring from "@/components/ui/Ring";
 import { useFinance } from "@/hooks/useFinance";
 import { fmtFin } from "@/lib/fmtFin";
 import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
@@ -38,9 +40,9 @@ function norm(s) {
   return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 }
 function budgetBarColor(pct) {
-  if (pct >= 100) return "#ef4444";
-  if (pct >= 70)  return "#f59e0b";
-  return "#10b981";
+  if (pct >= 100) return "#fb7185";
+  if (pct >= 70)  return "#fbbf24";
+  return "#34d399";
 }
 function groupByGrupo(items) {
   return items.reduce((acc, item) => {
@@ -52,10 +54,10 @@ function groupByGrupo(items) {
 }
 
 const GROUP_COLOR = {
-  casa:       "#3b82f6",
-  "casa nova": "#f59e0b",
-  pessoal:    "#10b981",
-  outros:     "#8b5cf6",
+  casa:       "#38bdf8",
+  "casa nova": "#fbbf24",
+  pessoal:    "#34d399",
+  outros:     "#a78bfa",
 };
 const GROUP_ORDER = ["Casa Nova", "Casa", "Pessoal", "Outros"];
 function grpColor(grupo) {
@@ -430,544 +432,284 @@ export default function ExpensesPage() {
   const fixosDonutTotal = fixosDonutData.reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className={styles.container}>
-      <ModuleHeader title="Gastos" />
+    <div className={ex.page}>
+      <ModuleHeader title="Gastos" hideOnDesktop />
       <Navigation />
 
       {/* Toast */}
-      {toast && (
-        <div style={{
-          position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)",
-          background: "rgba(17,24,39,0.95)", border: "1px solid rgba(255,255,255,0.1)",
-          color: "#f0f0f8", padding: "10px 20px", borderRadius: 12,
-          fontSize: 13, fontWeight: 600, zIndex: 999, whiteSpace: "nowrap",
-        }}>
-          {toast}
-        </div>
-      )}
+      {toast && <div className={ex.toast}>{toast}</div>}
 
-      {/* Header — único ponto de entrada para o modal */}
-      <header className={styles.header}>
-        <div>
-          <h1>Gastos</h1>
-          <p>{new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</p>
+      {/* Cabeçalho */}
+      <header className={ex.top}>
+        <div className={ex.topLeft}>
+          <span className={ex.eyebrow}>Financeiro · {new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</span>
+          <h1 className={ex.title}>Gastos</h1>
         </div>
-        <button className={styles.addBtn} onClick={() => { setCreateModal(true); setCreateTab("variavel"); setCreateForm({ nome: "", grupo: "Pessoal", previsao: "" }); }}>+ Registrar</button>
+        <div className={ex.topRight}>
+          <FinanceOcultarBtn className={ex.pillBtn} />
+          <button className={ex.primaryBtn} onClick={() => { setCreateModal(true); setCreateTab(tab === "fixos" ? "fixo" : tab === "parcelas" ? "parcela" : "variavel"); setCreateForm({ nome: "", grupo: "Pessoal", previsao: "" }); }}>
+            <span className={ex.plus}>+</span> Registrar
+          </button>
+        </div>
       </header>
 
-      {loading && <div className={styles.loading}>Carregando...</div>}
+      {loading && <div className={ex.loading}>Carregando…</div>}
       {error && !loading && (
-        <div className={styles.errorCard}>
-          <p style={{ fontWeight: 700, marginBottom: 6 }}>⚠ Erro ao carregar</p>
-          <p style={{ fontSize: 12, opacity: 0.7 }}>{error}</p>
-          <button onClick={refetch} className={styles.retryBtn}>Tentar novamente</button>
+        <div className={ex.errorBox}>
+          <p><b>Erro ao carregar.</b> {error}</p>
+          <button onClick={refetch} className={ex.retryBtn}>Tentar novamente</button>
         </div>
       )}
 
       {!loading && !error && data && (
         <>
-          {/* ── Big Numbers — clicáveis, associados às abas ── */}
-          <div className={styles.statGrid}>
+          {/* ── Big numbers — clicáveis, cada um abre sua aba ── */}
+          <div className={ex.tabs}>
             {[
-              { label: "Variáveis", value: totalVariaveis, color: "#f59e0b", icon: "💸", tabKey: "variaveis" },
-              { label: "Fixos",     value: totalFixos,     color: "#3b82f6", icon: "📋", tabKey: "fixos"     },
-              { label: "Parcelas",  value: totalParcelas,  color: "#8b5cf6", icon: "💳", tabKey: "parcelas"  },
-              { label: "Total",     value: totalGeral,     color: "#ef4444", icon: "🧾", tabKey: null         },
+              { label: "Variáveis", value: totalVariaveis, color: "#fbbf24", tabKey: "variaveis", hint: "do dia a dia" },
+              { label: "Fixos",     value: totalFixos,     color: "#38bdf8", tabKey: "fixos",     hint: "contas do mês" },
+              { label: "Parcelas",  value: totalParcelas,  color: "#a78bfa", tabKey: "parcelas",  hint: "por mês" },
+              { label: "Total",     value: totalGeral,     color: "#fb7185", tabKey: null,        hint: "somando tudo" },
             ].map(s => {
               const isActive = s.tabKey && tab === s.tabKey;
+              const Tag = s.tabKey ? "button" : "div";
               return (
-                <div
+                <Tag
                   key={s.label}
-                  onClick={() => s.tabKey && setTab(s.tabKey)}
-                  className="fin-stat-card"
-                  style={{
-                    cursor: s.tabKey ? "pointer" : "default",
-                    border: isActive
-                      ? `1px solid ${s.color}55`
-                      : "1px solid rgba(255,255,255,0.07)",
-                    background: isActive
-                      ? `rgba(${s.color === "#f59e0b" ? "245,158,11" : s.color === "#3b82f6" ? "59,130,246" : s.color === "#8b5cf6" ? "139,92,246" : "239,68,68"},0.08)`
-                      : undefined,
-                    boxShadow: isActive ? `0 0 18px ${s.color}20` : undefined,
-                    transition: "all 0.2s",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
+                  onClick={s.tabKey ? () => setTab(s.tabKey) : undefined}
+                  className={`${ex.tabBox} ${isActive ? ex.tabActive : ""}`}
+                  style={{ "--t": s.color }}
                 >
-                  {/* Indicador inferior colorido quando ativo */}
-                  {isActive && (
-                    <div style={{
-                      position: "absolute", bottom: 0, left: 0, right: 0,
-                      height: 3, background: s.color, borderRadius: "0 0 99px 99px",
-                    }} />
-                  )}
-                  <span className="fin-stat-icon">{s.icon}</span>
-                  <span className="fin-stat-value" style={{ color: s.color }}>{fmt(s.value)}</span>
-                  <span className="fin-stat-label">{s.label}</span>
-                </div>
+                  <span className={ex.tabLabel}><span className={ex.tabDot} />{s.label}</span>
+                  <span className={ex.tabValue} style={{ color: s.color }}>{fmt(s.value)}</span>
+                  <span className={ex.tabHint}>{s.hint}</span>
+                </Tag>
               );
             })}
           </div>
 
           {/* ════ Tab: Variáveis ════ */}
-          {tab === "variaveis" && (
-            <div className={styles.body}>
-              {/* ── Coluna principal: cards de progresso ── */}
-              <div className={styles.mainCol}>
-                <div className={styles.content} style={{ paddingBottom: 80 }}>
+          {tab === "variaveis" && (() => {
+            const prevTotal = data?.gastos?.variaveis?.previsaoTotal ?? variaveis.reduce((s, i) => s + (i.previsao || 0), 0);
+            const saldo  = prevTotal - totalVariaveis;
+            const rawPct = prevTotal > 0 ? Math.round((totalVariaveis / prevTotal) * 100) : 0;
+            const color  = saldo < 0 ? "#fb7185" : rawPct >= 70 ? "#fbbf24" : "#34d399";
+            return (
+              <div className={ex.layout}>
+                <div className={ex.mainArea}>
                   {variaveis.length === 0 ? (
-                    <p style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: 14 }}>
-                      Nenhum gasto variável cadastrado.
-                    </p>
+                    <p className={ex.empty}>Nenhum gasto variável cadastrado.</p>
                   ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div className={ex.listPanel}>
+                      <div className={ex.sectionHead}>
+                        <span className={ex.sectionDot} style={{ background: "#fbbf24", boxShadow: "0 0 10px #fbbf24" }} />
+                        <span className={ex.sectionName}>Categorias</span>
+                        <span className={ex.sectionCount}>{variaveis.length}</span>
+                        <span className={ex.sectionTotal}>{fmt(totalVariaveis)}<small> de {fmt(variaveis.reduce((s, i) => s + (i.previsao || 0), 0))}</small></span>
+                      </div>
                       {variaveis.map(item => {
                         const pct        = item.previsao > 0 ? Math.round((item.real / item.previsao) * 100) : 0;
                         const overBudget = item.real > item.previsao;
                         const diff       = Math.abs(item.real - item.previsao);
                         const barColor   = budgetBarColor(pct);
                         return (
-                          <div key={item.item} style={{
-                            padding: "14px 18px",
-                            borderRadius: 14,
-                            background: overBudget ? "rgba(239,68,68,0.04)" : "rgba(255,255,255,0.03)",
-                            border: overBudget ? "1px solid rgba(239,68,68,0.15)" : "1px solid rgba(255,255,255,0.07)",
-                            borderLeft: `3px solid ${barColor}`,
-                          }}>
-                            {/* Linha topo: nome + valores + editar */}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 8 }}>
-                              <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.item}</span>
-                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                                <div style={{ display: "flex", alignItems: "baseline", gap: 4, fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
-                                  <span style={{ fontSize: 14, fontWeight: 700, color: overBudget ? "#f87171" : "var(--text-primary)" }}>{fmt(item.real)}</span>
-                                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>/ {fmt(item.previsao)}</span>
-                                </div>
-                                <button onClick={() => openEdit("variavel", item)} title="Editar" style={editBtnStyle}>✎</button>
-                              </div>
+                          <div key={item.item} className={ex.listRow}>
+                            <div className={ex.listName}>
+                              <span>{item.item}</span>
+                              <small style={{ color: overBudget ? "#fb7185" : "#34d399" }}>{overBudget ? `↑ ${fmt(diff)} acima` : `${fmt(diff)} livre`}</small>
                             </div>
-                            {/* Barra */}
-                            <div style={{ height: 8, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden", marginBottom: 8 }}>
-                              <div style={{ height: "100%", width: `${Math.min(pct, 100)}%`, background: barColor, borderRadius: 99, transition: "width 0.6s ease" }} />
-                            </div>
-                            {/* Linha rodapé: status + % */}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: overBudget ? "#f87171" : "#10b981" }}>
-                                {overBudget ? `↑ Ultrapassado ${fmt(diff)}` : `✓ Disponível ${fmt(diff)}`}
-                              </span>
-                              <span style={{
-                                fontSize: 11, fontWeight: 800, fontFamily: "var(--font-mono)",
-                                padding: "2px 9px", borderRadius: 99,
-                                background: overBudget ? "rgba(239,68,68,0.15)" : pct >= 70 ? "rgba(245,158,11,0.15)" : "rgba(16,185,129,0.15)",
-                                color: barColor,
-                              }}>
-                                {pct}%
-                              </span>
-                            </div>
+                            <div className={ex.bar}><span style={{ width: `${Math.min(pct, 100)}%`, background: barColor }} /></div>
+                            <span className={ex.listVals}>{fmt(item.real)} <span>/ {fmt(item.previsao)}</span></span>
+                            <span className={ex.listPct} style={{ color: barColor }}>{pct}%</span>
+                            <button onClick={() => openEdit("variavel", item)} title="Editar" className={ex.iconBtn}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
                           </div>
                         );
                       })}
                     </div>
                   )}
                 </div>
-              </div>
 
-              {/* ── Coluna lateral: gráfico de barras ── */}
-              <div className={styles.sideCol}>
-                <div className={styles.sidePanel}>
-                  <div className={styles.sidePanelTitle}>Previsto vs Real</div>
-                  <div style={{ padding: "16px 8px 12px" }}>
-                    <ResponsiveContainer width="100%" height={300}>
+                <div className={ex.side}>
+                  {/* Saldo disponível */}
+                  <div className={ex.panel}>
+                    <div className={ex.panelTitle}>Saldo disponível</div>
+                    <div className={ex.ringPanel}>
+                      <Ring pct={rawPct} color={color} size={108} stroke={10}>
+                        <span className={ex.ringPct}>{rawPct}%</span>
+                        <span className={ex.ringSub}>usado</span>
+                      </Ring>
+                      <div className={ex.ringInfo}>
+                        <span className={ex.bigValue} style={{ color }}>{fmt(saldo)}</span>
+                        <span className={ex.muted}>{saldo < 0 ? "acima do previsto" : "disponível para gastar"}</span>
+                        <div className={ex.pair}>
+                          <div><span className={ex.pairLbl}>Previsto</span><span className={ex.pairVal}>{fmt(prevTotal)}</span></div>
+                          <div><span className={ex.pairLbl}>Gasto</span><span className={ex.pairVal} style={{ color }}>{fmt(totalVariaveis)}</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Previsto vs real */}
+                  <div className={ex.panel}>
+                    <div className={ex.panelTitle}>Previsto vs real</div>
+                    <ResponsiveContainer width="100%" height={260}>
                       <BarChart
-                        data={variaveis.map(i => ({
-                          name: i.item,
-                          Previsto: i.previsao,
-                          Real:     i.real,
-                        }))}
-                        margin={{ top: 8, right: 20, left: 12, bottom: 52 }}
+                        data={variaveis.map(i => ({ name: i.item, Previsto: i.previsao, Real: i.real }))}
+                        margin={{ top: 8, right: 4, left: 4, bottom: 48 }}
                         barGap={3}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                        <XAxis dataKey="name" tick={{ fill: "#9ca3af", fontSize: 13, fontWeight: 600 }} tickLine={false} axisLine={false} angle={-35} textAnchor="end" interval={0} />
+                        <XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600 }} tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} />
                         <YAxis hide />
-                        <Tooltip
-                          contentStyle={TOOLTIP_BOX}
-                          formatter={(v, name) => [fmt(v), name]}
-                          itemStyle={{ color: "#d1d5db" }}
-                        />
-                        <Bar dataKey="Previsto" fill="rgba(255,255,255,0.12)" radius={[4,4,0,0]} />
-                        <Bar dataKey="Real" radius={[4,4,0,0]}>
+                        <Tooltip contentStyle={TOOLTIP_BOX} formatter={(v, name) => [fmt(v), name]} itemStyle={{ color: "#e5e7eb" }} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+                        <Bar dataKey="Previsto" fill="rgba(255,255,255,0.14)" radius={[6,6,0,0]} />
+                        <Bar dataKey="Real" radius={[6,6,0,0]}>
                           {variaveis.map((item, i) => (
                             <Cell key={i} fill={budgetBarColor(item.previsao > 0 ? Math.round((item.real / item.previsao) * 100) : 0)} />
                           ))}
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
-
-                    {/* Legenda */}
-                    <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 4 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--text-muted)" }}>
-                        <div style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(255,255,255,0.12)" }} />
-                        Previsto
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--text-muted)" }}>
-                        <div style={{ width: 10, height: 10, borderRadius: 2, background: "#10b981" }} />
-                        Real
-                      </div>
+                    <div className={ex.legendRow}>
+                      <span><i style={{ background: "rgba(255,255,255,0.14)" }} />Previsto</span>
+                      <span><i style={{ background: "#34d399" }} />Real</span>
                     </div>
-                  </div>
-                </div>
-
-                {/* ── Saldo Disponível ── */}
-                <div className={styles.sidePanel} style={{ marginTop: 12 }}>
-                  <div className={styles.sidePanelTitle}>Saldo Disponível</div>
-                  <div style={{ padding: "16px 14px" }}>
-                    {(() => {
-                      const prevTotal = data?.gastos?.variaveis?.previsaoTotal
-                        ?? variaveis.reduce((s, i) => s + (i.previsao || 0), 0);
-                      const saldo  = prevTotal - totalVariaveis;
-                      const rawPct = prevTotal > 0 ? Math.round((totalVariaveis / prevTotal) * 100) : 0;
-                      const barPct = Math.min(rawPct, 100);
-                      const color  = saldo < 0 ? "#ef4444" : rawPct >= 70 ? "#f59e0b" : "#10b981";
-                      return (
-                        <>
-                          {/* Número principal */}
-                          <div style={{ textAlign: "center", marginBottom: 18 }}>
-                            <div style={{ fontSize: 22, fontWeight: 900, color, lineHeight: 1 }}>
-                              {saldo < 0 ? "-" : ""}{fmt(Math.abs(saldo))}
-                            </div>
-                            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>
-                              {saldo < 0 ? "acima do previsto" : "disponível para gastar"}
-                            </div>
-                          </div>
-
-                          {/* Barra de progresso */}
-                          <div style={{ marginBottom: 16 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 10, color: "var(--text-muted)" }}>
-                              <span>0%</span>
-                              <span style={{ color, fontWeight: 700 }}>{rawPct}% utilizado</span>
-                              <span>100%</span>
-                            </div>
-                            <div style={{ height: 7, background: "rgba(255,255,255,0.07)", borderRadius: 8, overflow: "hidden" }}>
-                              <div style={{ height: "100%", width: `${barPct}%`, background: color, borderRadius: 8 }} />
-                            </div>
-                          </div>
-
-                          {/* Stats */}
-                          <div style={{ display: "flex", justifyContent: "space-around", paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                            {[
-                              { label: "Previsto", value: prevTotal,      col: "rgba(255,255,255,0.45)" },
-                              { label: "Gasto",    value: totalVariaveis, col: color },
-                            ].map(s => (
-                              <div key={s.label} style={{ textAlign: "center" }}>
-                                <div style={{ fontSize: 9, color: "var(--text-muted)", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                  {s.label}
-                                </div>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: s.col }}>
-                                  {fmt(s.value)}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      );
-                    })()}
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
-          {/* ════ Tab: Fixos — cards visuais por grupo ════ */}
+          {/* ════ Tab: Fixos — por grupo ════ */}
           {tab === "fixos" && (() => {
-            const totalPagos   = fixos.filter(i => ctrlOvr[i.item] ?? i.ctrl).length;
-            const pctPagos     = fixos.length > 0 ? Math.round((totalPagos / fixos.length) * 100) : 0;
+            const totalPagos      = fixos.filter(i => ctrlOvr[i.item] ?? i.ctrl).length;
+            const pctPagos        = fixos.length > 0 ? Math.round((totalPagos / fixos.length) * 100) : 0;
+            const valorConfirmado = fixos.filter(i => ctrlOvr[i.item] ?? i.ctrl).reduce((s, i) => s + i.real, 0);
+            const corConf         = pctPagos >= 80 ? "#34d399" : pctPagos >= 50 ? "#fbbf24" : "#fb7185";
             return (
-              <div className={styles.body}>
-                <div className={styles.mainCol}>
-                  <div className={styles.content} style={{ paddingBottom: 80 }}>
-
-                    {/* ── Grupos ── */}
-                    {Object.keys(fixoGroups).length === 0 ? (
-                      <p style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: 14 }}>
-                        Nenhum gasto fixo encontrado.
-                      </p>
-                    ) : sortGroups(Object.entries(fixoGroups)).map(([grupo, items]) => {
-                      const gc         = grpColor(grupo);
-                      const groupTotal = items.reduce((s, i) => s + i.real, 0);
-                      const grpPagos   = items.filter(i => ctrlOvr[i.item] ?? i.ctrl).length;
-                      return (
-                        <div key={grupo} style={{ marginBottom: 32 }}>
-                          {/* Label do grupo */}
-                          <div style={{
-                            display: "flex", alignItems: "center", justifyContent: "space-between",
-                            marginBottom: 14, paddingBottom: 12,
-                            borderBottom: `1.5px solid ${gc}30`,
-                          }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <div style={{ width: 5, height: 22, borderRadius: 2, background: gc }} />
-                              <span style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: gc }}>
-                                {grupo}
-                              </span>
-                              <span style={{
-                                fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 99,
-                                background: `${gc}15`, color: gc, border: `1px solid ${gc}30`,
-                              }}>
-                                {grpPagos}/{items.length}
-                              </span>
-                            </div>
-                            <span style={{ fontSize: 15, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
-                              {fmt(groupTotal)}
-                            </span>
-                          </div>
-
-                          {/* Cards dos itens */}
-                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            {items.map(item => {
-                              const prazoMatch  = item.item.match(/\((Até [^)]+)\)$/i);
-                              const prazo       = prazoMatch ? prazoMatch[1] : null;
-                              const nomeLimpo   = prazo ? item.item.replace(/\s*\(Até [^)]+\)$/i, "").trim() : item.item;
-                              const isCommit    = !!prazo;
-                              const ctrl        = ctrlOvr[item.item] ?? item.ctrl;
-                              const isAuto      = autoOvr[item.item] ?? item.auto ?? false;
-                              const isToggling  = toggling.has(item.item);
-
-                              return (
-                                <div key={item.item} style={{
-                                  display: "flex", alignItems: "center", gap: 14,
-                                  padding: "13px 16px",
-                                  borderRadius: 14,
-                                  background: isAuto
-                                    ? (ctrl ? "rgba(16,185,129,0.02)" : "rgba(16,185,129,0.05)")
-                                    : ctrl
-                                      ? "rgba(255,255,255,0.02)"
-                                      : isCommit
-                                        ? "rgba(251,191,36,0.05)"
-                                        : "rgba(255,255,255,0.05)",
-                                  border: isAuto
-                                    ? (ctrl ? "1px solid rgba(16,185,129,0.08)" : "1px solid rgba(16,185,129,0.18)")
-                                    : ctrl
-                                      ? "1px solid rgba(255,255,255,0.05)"
-                                      : isCommit
-                                        ? "1px solid rgba(251,191,36,0.15)"
-                                        : `1px solid ${gc}20`,
-                                  borderLeft: isAuto
-                                    ? `3px solid ${ctrl ? "rgba(16,185,129,0.45)" : "#10b981"}`
-                                    : `3px solid ${ctrl ? `${isCommit ? "#f59e0b" : gc}55` : isCommit ? "#f59e0b" : gc}`,
-                                  transition: "background 0.2s, border 0.2s",
-                                }}>
-                                  {/* Ícone de status — clicável */}
-                                  <div
-                                    onClick={() => toggleCtrl(item.item, ctrl)}
-                                    style={{
-                                      width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-                                      display: "flex", alignItems: "center", justifyContent: "center",
-                                      fontSize: 16, fontWeight: 900,
-                                      background: ctrl ? "rgba(16,185,129,0.12)" : isAuto ? "rgba(16,185,129,0.06)" : `${gc}18`,
-                                      color:      ctrl ? "#10b981"               : isAuto ? "rgba(16,185,129,0.45)" : gc,
-                                      border:     `1.5px solid ${ctrl ? "rgba(16,185,129,0.3)" : isAuto ? "rgba(16,185,129,0.2)" : `${gc}40`}`,
-                                      cursor:  isToggling ? "wait" : "pointer",
-                                      opacity: isToggling ? 0.4 : 1,
-                                      transition: "all 0.2s",
-                                    }}
-                                  >
-                                    {ctrl ? "✓" : "○"}
-                                  </div>
-
-                                  {/* Nome + prazo + badge AUTO */}
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                                      <div style={{
-                                        fontSize: 15, fontWeight: ctrl ? 400 : 600,
-                                        color: ctrl ? "rgba(255,255,255,0.35)" : "var(--text-primary)",
-                                        textDecoration: ctrl ? "line-through" : "none",
-                                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                                        transition: "all 0.2s",
-                                      }}>
-                                        {nomeLimpo}
-                                      </div>
-                                      {/* Badge AUTO — estilo unificado com parcelas */}
-                                      {isAuto && (
-                                        <button
-                                          onClick={() => toggleAuto(item.item, isAuto)}
-                                          title="Automático (clique para desativar)"
-                                          style={{
-                                            padding: "2px 8px", borderRadius: 99, fontSize: 10, fontWeight: 700, flexShrink: 0,
-                                            background: ctrl ? "rgba(16,185,129,0.15)" : "rgba(96,165,250,0.12)",
-                                            color:      ctrl ? "#10b981" : "#60a5fa",
-                                            border:     `1px solid ${ctrl ? "rgba(16,185,129,0.3)" : "rgba(96,165,250,0.25)"}`,
-                                            cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.04em",
-                                          }}
-                                        >
-                                          ⚡ {ctrl ? "✓ auto" : "auto"}
-                                        </button>
-                                      )}
-                                    </div>
-                                    {prazo && (
-                                      <div style={{
-                                        display: "inline-flex", alignItems: "center", gap: 3,
-                                        marginTop: 4, fontSize: 11, fontWeight: 700,
-                                        color: "#f59e0b",
-                                      }}>
-                                        ⏱ {prazo}
-                                      </div>
+              <div className={ex.layout}>
+                <div className={ex.mainArea}>
+                  {Object.keys(fixoGroups).length === 0 ? (
+                    <p className={ex.empty}>Nenhum gasto fixo encontrado.</p>
+                  ) : sortGroups(Object.entries(fixoGroups)).map(([grupo, items]) => {
+                    const gc         = grpColor(grupo);
+                    const groupTotal = items.reduce((s, i) => s + i.real, 0);
+                    const grpPagos   = items.filter(i => ctrlOvr[i.item] ?? i.ctrl).length;
+                    return (
+                      <section key={grupo} className={ex.listPanel}>
+                        <div className={ex.sectionHead}>
+                          <span className={ex.sectionDot} style={{ background: gc, boxShadow: `0 0 10px ${gc}` }} />
+                          <span className={ex.sectionName}>{grupo}</span>
+                          <span className={ex.sectionCount}>{grpPagos}/{items.length} pagos</span>
+                          <span className={ex.sectionTotal}>{fmt(groupTotal)}</span>
+                        </div>
+                        <div className={ex.rows}>
+                          {items.map(item => {
+                            const prazoMatch = item.item.match(/\((Até [^)]+)\)$/i);
+                            const prazo      = prazoMatch ? prazoMatch[1] : null;
+                            const nomeLimpo  = prazo ? item.item.replace(/\s*\(Até [^)]+\)$/i, "").trim() : item.item;
+                            const ctrl       = ctrlOvr[item.item] ?? item.ctrl;
+                            const isAuto     = autoOvr[item.item] ?? item.auto ?? false;
+                            const isToggling = toggling.has(item.item);
+                            const isConf     = fixoConfirm === item.item;
+                            return (
+                              <div key={item.item} className={`${ex.row} ${ctrl ? ex.rowDone : ""}`} style={{ "--c": prazo ? "#fbbf24" : gc }}>
+                                <button
+                                  onClick={() => toggleCtrl(item.item, ctrl)}
+                                  className={`${ex.check} ${ctrl ? ex.checkOn : ""} ${isToggling ? ex.checkBusy : ""}`}
+                                  title={ctrl ? "Desmarcar pagamento" : "Marcar como pago"}
+                                ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+                                <div className={ex.rowBody}>
+                                  <div className={ex.rowLine}>
+                                    <span className={`${ex.rowName} ${ctrl ? ex.struck : ""}`}>{nomeLimpo}</span>
+                                    {isAuto && (
+                                      <button onClick={() => toggleAuto(item.item, isAuto)} title="Automático (clique para desativar)"
+                                        className={`${ex.badgeAuto} ${ctrl ? ex.badgeAutoOn : ""}`}>
+                                        ⚡ {ctrl ? "pago auto" : "auto"}
+                                      </button>
                                     )}
                                   </div>
-
-                                  {/* Valor + editar */}
-                                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                                    <div style={{
-                                      fontSize: 15, fontWeight: 700,
-                                      fontFamily: "var(--font-mono)",
-                                      color: ctrl ? "rgba(255,255,255,0.28)" : "#e5e7eb",
-                                      transition: "color 0.2s",
-                                    }}>
-                                      {fmt(item.real)}
-                                    </div>
-                                    <button onClick={() => openEdit("fixo", item)} title="Editar" style={editBtnStyle}>✎</button>
-                                    <button
-                                      onClick={() => handleFixoRemove(item)}
-                                      disabled={fixoRemoving.has(item.item)}
-                                      onBlur={() => setTimeout(() => setFixoConfirm(v => v === item.item ? null : v), 200)}
-                                      style={{
-                                        padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600, fontFamily: "inherit",
-                                        border: `1px solid ${fixoConfirm === item.item ? "rgba(239,68,68,0.6)" : "rgba(239,68,68,0.25)"}`,
-                                        background: fixoConfirm === item.item ? "rgba(239,68,68,0.18)" : "transparent",
-                                        color: "#ef4444", cursor: "pointer", transition: "all 0.15s",
-                                        opacity: fixoRemoving.has(item.item) ? 0.5 : 1,
-                                      }}
-                                    >
-                                      {fixoRemoving.has(item.item) ? "…" : fixoConfirm === item.item ? "Confirmar" : "🗑"}
-                                    </button>
-                                  </div>
+                                  {prazo && <span className={ex.prazo}>⏱ {prazo}</span>}
                                 </div>
-                              );
-                            })}
-                          </div>
+                                <span className={ex.rowValue}>{fmt(item.real)}</span>
+                                <div className={ex.rowActions}>
+                                  <button onClick={() => openEdit("fixo", item)} title="Editar" className={ex.iconBtn}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+                                  {isConf ? (
+                                    <button onClick={() => handleFixoRemove(item)} disabled={fixoRemoving.has(item.item)} className={ex.confirmBtn}
+                                      onBlur={() => setTimeout(() => setFixoConfirm(v => v === item.item ? null : v), 200)}>
+                                      {fixoRemoving.has(item.item) ? "…" : "Excluir?"}
+                                    </button>
+                                  ) : (
+                                    <button onClick={() => handleFixoRemove(item)} title="Excluir" className={`${ex.iconBtn} ${ex.dangerBtn}`}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                  </div>
+                      </section>
+                    );
+                  })}
                 </div>
 
-                {/* Coluna lateral */}
-                <div className={styles.sideCol}>
+                <div className={ex.side}>
+                  {/* Confirmados */}
+                  <div className={ex.panel}>
+                    <div className={ex.panelTitle}>Pagos no mês</div>
+                    <div className={ex.ringPanel}>
+                      <Ring pct={pctPagos} color={corConf} size={108} stroke={10}>
+                        <span className={ex.ringPct}>{pctPagos}%</span>
+                        <span className={ex.ringSub}>pagos</span>
+                      </Ring>
+                      <div className={ex.ringInfo}>
+                        <span className={ex.bigValue}>{totalPagos}<span className={ex.muted}> / {fixos.length}</span></span>
+                        <span className={ex.muted}>itens confirmados</span>
+                        <div className={ex.pair}>
+                          <div><span className={ex.pairLbl}>Total fixo</span><span className={ex.pairVal}>{fmt(totalFixos)}</span></div>
+                          <div><span className={ex.pairLbl}>Pago</span><span className={ex.pairVal} style={{ color: corConf }}>{fmt(valorConfirmado)}</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-                  {/* ── Gastos por Grupo (apenas fixos) ── */}
-                  <div className={styles.sidePanel}>
-                    <div className={styles.sidePanelTitle}>Gastos por Grupo</div>
-                    <div style={{ padding: "8px 0 12px", position: "relative" }}>
-                      {fixosDonutData.length === 0 ? (
-                        <div style={{ textAlign: "center", padding: "32px 0", fontSize: 12, color: "var(--text-muted)" }}>Sem dados</div>
-                      ) : (
-                        <>
-                          <ResponsiveContainer width="100%" height={360}>
-                            <PieChart margin={isMobile ? { top: 8, right: 8, bottom: 8, left: 8 } : { top: 34, right: 68, bottom: 34, left: 68 }}>
-                              <Pie
-                                data={fixosDonutData} cx="50%" cy="50%"
-                                innerRadius={82} outerRadius={112}
-                                paddingAngle={3} dataKey="value"
-                                labelLine={false}
-                                label={({ cx, cy, midAngle, outerRadius, percent, name }) => {
-                                  if (percent < 0.04) return null;
-                                  const R = Math.PI / 180;
-                                  const r = outerRadius + 24;
-                                  const x = cx + r * Math.cos(-midAngle * R);
-                                  const y = cy + r * Math.sin(-midAngle * R);
-                                  return (
-                                    <text
-                                      x={x} y={y}
-                                      textAnchor={x > cx ? "start" : "end"}
-                                      dominantBaseline="central"
-                                      fill="#d1d5db" fontSize={13} fontWeight={700}
-                                    >
-                                      {`${name} ${Math.round(percent * 100)}%`}
-                                    </text>
-                                  );
-                                }}
-                              >
-                                {fixosDonutData.map((d) => (
-                                  <Cell key={d.name} fill={grpColor(d.name)} stroke="none" />
-                                ))}
+                  {/* Gastos por grupo */}
+                  <div className={ex.panel}>
+                    <div className={ex.panelTitle}>Por grupo</div>
+                    {fixosDonutData.length === 0 ? (
+                      <p className={ex.empty}>Sem dados</p>
+                    ) : (
+                      <>
+                        <div style={{ position: "relative" }}>
+                          <ResponsiveContainer width="100%" height={190}>
+                            <PieChart>
+                              <Pie data={fixosDonutData} cx="50%" cy="50%" innerRadius={60} outerRadius={84}
+                                paddingAngle={2} cornerRadius={4} dataKey="value" stroke="none">
+                                {fixosDonutData.map(d => <Cell key={d.name} fill={grpColor(d.name)} />)}
                               </Pie>
                               <Tooltip
                                 formatter={v => [`${fmt(v)} (${fixosDonutTotal > 0 ? Math.round(v / fixosDonutTotal * 100) : 0}%)`]}
-                                contentStyle={TOOLTIP_BOX} itemStyle={{ color: "#d1d5db" }}
+                                contentStyle={TOOLTIP_BOX} itemStyle={{ color: "#e5e7eb" }}
                               />
                             </PieChart>
                           </ResponsiveContainer>
-
-                          {/* Centro do donut via CSS — evita o artefato "-" do recharts Label */}
-                          <div style={{
-                            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            pointerEvents: "none",
-                          }}>
-                            <div style={{ textAlign: "center" }}>
-                              <div style={{ fontSize: 9, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>TOTAL</div>
-                              <div style={{ fontSize: 14, fontWeight: 800, color: "#f9fafb" }}>{fmt(fixosDonutTotal)}</div>
-                            </div>
+                          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{fmt(fixosDonutTotal)}</span>
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>total</span>
                           </div>
-                        </>
-                      )}
-                    </div>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
+                          {fixosDonutData.map(d => (
+                            <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+                              <span style={{ width: 10, height: 10, borderRadius: 4, background: grpColor(d.name) }} />
+                              <span style={{ flex: 1, color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>{d.name}</span>
+                              <span style={{ color: "#fff", fontWeight: 700 }}>{fmt(d.value)}</span>
+                              <span style={{ minWidth: 38, textAlign: "right", fontWeight: 800, color: grpColor(d.name) }}>{fixosDonutTotal > 0 ? Math.round(d.value / fixosDonutTotal * 100) : 0}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
-
-                  {/* ── Confirmados ── */}
-                  <div className={styles.sidePanel} style={{ marginTop: 12 }}>
-                    <div className={styles.sidePanelTitle}>Confirmados</div>
-                    <div style={{ padding: "16px 14px" }}>
-                      {(() => {
-                        const valorConfirmado = fixos
-                          .filter(i => ctrlOvr[i.item] ?? i.ctrl)
-                          .reduce((s, i) => s + i.real, 0);
-                        const cor = pctPagos >= 80 ? "#10b981" : pctPagos >= 50 ? "#f59e0b" : "#ef4444";
-                        return (
-                          <>
-                            {/* Número principal */}
-                            <div style={{ textAlign: "center", marginBottom: 18 }}>
-                              <div style={{ fontSize: 22, fontWeight: 900, color: cor, lineHeight: 1 }}>
-                                {totalPagos}
-                                <span style={{ fontSize: 16, color: "var(--text-muted)", fontWeight: 400 }}> / {fixos.length}</span>
-                              </div>
-                              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>
-                                itens confirmados
-                              </div>
-                            </div>
-
-                            {/* Barra de progresso */}
-                            <div style={{ marginBottom: 16 }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 10, color: "var(--text-muted)" }}>
-                                <span>0%</span>
-                                <span style={{ color: cor, fontWeight: 700 }}>{pctPagos}% confirmado</span>
-                                <span>100%</span>
-                              </div>
-                              <div style={{ height: 10, background: "rgba(255,255,255,0.07)", borderRadius: 8, overflow: "hidden" }}>
-                                <div style={{ height: "100%", width: `${pctPagos}%`, background: cor, borderRadius: 8, transition: "width 0.8s ease" }} />
-                              </div>
-                            </div>
-
-                            {/* Stats */}
-                            <div style={{ display: "flex", justifyContent: "space-around", paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                              {[
-                                { label: "Total Fixo",  value: totalFixos,      col: "rgba(255,255,255,0.45)" },
-                                { label: "Confirmado",  value: valorConfirmado, col: cor },
-                              ].map(s => (
-                                <div key={s.label} style={{ textAlign: "center" }}>
-                                  <div style={{ fontSize: 9, color: "var(--text-muted)", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                    {s.label}
-                                  </div>
-                                  <div style={{ fontSize: 12, fontWeight: 700, color: s.col, fontFamily: "var(--font-mono)" }}>
-                                    {fmt(s.value)}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-
                 </div>
               </div>
             );
@@ -993,258 +735,126 @@ export default function ExpensesPage() {
               : null;
 
             const ParcCard = ({ item }) => {
-              const pct    = item.totalParcelas > 0 ? Math.round((item.parcelasPagas / item.totalParcelas) * 100) : 0;
-              const cor    = pct >= 80 ? "#10b981" : pct >= 50 ? "#3b82f6" : "#f59e0b";
-              const isConf = parcConfirm === item.sheetRow;
-              const isRem  = parcRemoving.has(item.sheetRow);
+              const pct      = item.totalParcelas > 0 ? Math.round((item.parcelasPagas / item.totalParcelas) * 100) : 0;
+              const cor      = pct >= 80 ? "#34d399" : pct >= 50 ? "#38bdf8" : "#fbbf24";
+              const isConf   = parcConfirm === item.sheetRow;
+              const isRem    = parcRemoving.has(item.sheetRow);
               const isPaying = parcPaying.has(item.sheetRow);
               // Quitada (todas as parcelas pagas) ou paga no mês → mostra ✓, igual aos Fixos
-              const isDone = item.pago || item.parcelasRestantes === 0;
+              const isDone   = item.pago || item.parcelasRestantes === 0;
               return (
-                <div style={{
-                  padding: "13px 16px", borderRadius: 14,
-                  background: item.auto ? "rgba(16,185,129,0.03)" : "rgba(139,92,246,0.04)",
-                  border: item.auto ? "1px solid rgba(16,185,129,0.12)" : "1px solid rgba(139,92,246,0.15)",
-                  borderLeft: `3px solid ${cor}`,
-                  display: "flex", alignItems: "flex-start", gap: 14,
-                }}>
-                  {/* Círculo de pagar + reset — só manuais */}
+                <div className={`${ex.row} ${isDone ? ex.rowDone : ""}`} style={{ "--c": item.auto ? "#34d399" : "#a78bfa" }}>
                   {!item.auto && (
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0, marginTop: 1 }}>
-                      <div
+                    <div className={ex.checkCol}>
+                      <button
                         onClick={() => !isPaying && !isDone && handleParcPay(item)}
-                        style={{
-                          width: 34, height: 34, borderRadius: "50%",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: isDone ? 16 : 15, fontWeight: 900,
-                          background: isDone ? "rgba(16,185,129,0.12)" : "rgba(139,92,246,0.12)",
-                          color:      isDone ? "#10b981"                : "#a78bfa",
-                          border:    `1.5px solid ${isDone ? "rgba(16,185,129,0.3)" : "rgba(139,92,246,0.35)"}`,
-                          cursor: isPaying ? "wait" : isDone ? "default" : "pointer",
-                          opacity: isPaying ? 0.4 : 1,
-                          transition: "all 0.2s",
-                        }}
-                      >
-                        {isPaying ? "…" : isDone ? "✓" : "○"}
-                      </div>
-                      {item.pago && (
-                        <div
-                          onClick={() => !isPaying && handleParcReset(item)}
-                          title="Desfazer pagamento"
-                          style={{
-                            fontSize: 10, color: "rgba(255,255,255,0.2)",
-                            cursor: isPaying ? "wait" : "pointer",
-                            lineHeight: 1, userSelect: "none",
-                            transition: "color 0.15s",
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.color = "#ef4444"}
-                          onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.2)"}
-                        >
-                          ↺
-                        </div>
-                      )}
+                        className={`${ex.check} ${isDone ? ex.checkOn : ""} ${isPaying ? ex.checkBusy : ""}`}
+                        title={isDone ? "Paga" : "Marcar parcela do mês como paga"}
+                      ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+                      {item.pago && <span className={ex.undo} title="Desfazer pagamento" onClick={() => !isPaying && handleParcReset(item)}>↺</span>}
                     </div>
                   )}
-
-                  {/* Conteúdo */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* Linha 1: nome + auto badge + valor */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                      {(() => { const done = item.pago || item.parcelasRestantes === 0; return (
-                      <span style={{ fontSize: 15, fontWeight: done ? 400 : 700, color: done ? "rgba(255,255,255,0.35)" : "#e5e7eb", textDecoration: done ? "line-through" : "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", transition: "all 0.2s" }}>
-                        {item.nome}
-                      </span>
-                      ); })()}
-                      {item.auto && (
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
-                          background: (item.pago || item.parcelasRestantes === 0) ? "rgba(16,185,129,0.15)" : "rgba(96,165,250,0.12)",
-                          color:      (item.pago || item.parcelasRestantes === 0) ? "#10b981" : "#60a5fa",
-                          border:     `1px solid ${(item.pago || item.parcelasRestantes === 0) ? "rgba(16,185,129,0.3)" : "rgba(96,165,250,0.25)"}`,
-                          flexShrink: 0 }}>
-                          ⚡ {(item.pago || item.parcelasRestantes === 0) ? "✓ auto" : "auto"}
-                        </span>
-                      )}
-                      <span style={{ fontSize: 14, fontWeight: 700, color: "#60a5fa", fontFamily: "var(--font-mono)", flexShrink: 0 }}>
-                        {fmt(item.valorMensal)}<span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>/mês</span>
-                      </span>
+                  <div className={ex.rowBody}>
+                    <div className={ex.rowLine}>
+                      <span className={`${ex.rowName} ${isDone ? ex.struck : ""}`}>{item.nome}</span>
+                      {item.auto && <span className={`${ex.badgeAuto} ${isDone ? ex.badgeAutoOn : ""}`}>⚡ {isDone ? "pago auto" : "auto"}</span>}
                     </div>
-
-                    {/* Barra */}
-                    <div style={{ height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden", marginBottom: 8 }}>
-                      <div style={{ height: "100%", width: `${pct}%`, background: cor, borderRadius: 99, transition: "width 0.6s ease" }} />
+                    <div className={ex.bar}><span style={{ width: `${pct}%`, background: cor }} /></div>
+                    <div className={ex.rowMeta}>
+                      <span className={ex.countPill} style={{ "--c": cor }}>{item.parcelasPagas}/{item.totalParcelas}</span>
+                      {item.dataFim && <span>encerra {fmtMonthYear(item.dataFim)}</span>}
+                      {item.restante > 0 && <span className={ex.restante}>faltam {fmt(item.restante)}</span>}
                     </div>
-
-                    {/* Linha 3: X/Y + encerra + restante + remover */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 9px", borderRadius: 99, background: `${cor}15`, color: cor, border: `1px solid ${cor}30` }}>
-                          {item.parcelasPagas}/{item.totalParcelas}
-                        </span>
-                        {item.dataFim && (
-                          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>encerra {fmtMonthYear(item.dataFim)}</span>
-                        )}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {item.restante > 0 && (
-                          <span style={{ fontSize: 12, fontWeight: 600, color: "#fca5a5", fontFamily: "var(--font-mono)" }}>{fmt(item.restante)}</span>
-                        )}
-                        <button onClick={() => openEdit("parcela", item)} title="Editar" style={editBtnStyle}>✎</button>
-                        <button
-                          onClick={() => handleParcRemove(item)}
-                          disabled={isRem}
-                          onBlur={() => setTimeout(() => setParcConfirm(v => v === item.sheetRow ? null : v), 200)}
-                          style={{
-                            padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600, fontFamily: "inherit",
-                            border: `1px solid ${isConf ? "rgba(239,68,68,0.5)" : "rgba(239,68,68,0.2)"}`,
-                            background: isConf ? "rgba(239,68,68,0.15)" : "transparent",
-                            color: isConf ? "#ef4444" : "rgba(239,68,68,0.45)",
-                            cursor: "pointer", opacity: isRem ? 0.5 : 1,
-                          }}
-                        >
-                          {isRem ? "…" : isConf ? "Confirmar?" : "✕"}
-                        </button>
-                      </div>
-                    </div>
+                  </div>
+                  <span className={ex.rowValue}>{fmt(item.valorMensal)}<small>/mês</small></span>
+                  <div className={ex.rowActions}>
+                    <button onClick={() => openEdit("parcela", item)} title="Editar" className={ex.iconBtn}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+                    {isConf ? (
+                      <button onClick={() => handleParcRemove(item)} disabled={isRem} className={ex.confirmBtn}
+                        onBlur={() => setTimeout(() => setParcConfirm(v => v === item.sheetRow ? null : v), 200)}>
+                        {isRem ? "…" : "Excluir?"}
+                      </button>
+                    ) : (
+                      <button onClick={() => handleParcRemove(item)} title="Excluir" className={`${ex.iconBtn} ${ex.dangerBtn}`}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
+                    )}
                   </div>
                 </div>
               );
             };
 
-            return (
-              <div className={styles.body}>
-                <div className={styles.mainCol}>
-                  <div className={styles.content} style={{ paddingBottom: 80 }}>
+            const parcSection = (title, color, items) => items.length > 0 && (
+              <section className={ex.listPanel}>
+                <div className={ex.sectionHead}>
+                  <span className={ex.sectionDot} style={{ background: color, boxShadow: `0 0 10px ${color}` }} />
+                  <span className={ex.sectionName}>{title}</span>
+                  <span className={ex.sectionCount}>{items.length}</span>
+                  <span className={ex.sectionTotal}>{fmt(items.reduce((s, i) => s + i.valorMensal, 0))}<small>/mês</small></span>
+                </div>
+                <div className={ex.rows}>{items.map(i => <ParcCard key={i.sheetRow} item={i} />)}</div>
+              </section>
+            );
+            const totalPagas = parcItems.reduce((s, i) => s + i.parcelasPagas, 0);
+            const totalAll   = parcItems.reduce((s, i) => s + i.totalParcelas, 0);
+            const pctPagas   = totalAll > 0 ? Math.round((totalPagas / totalAll) * 100) : 0;
 
-                    {parcLoading ? (
-                      <p style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: 14 }}>Carregando...</p>
-                    ) : parcItems.length === 0 ? (
-                      <p style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: 14 }}>Nenhuma parcela ativa.</p>
-                    ) : (
-                      <>
-                        {/* Manuais primeiro — em destaque, com botão de pagamento */}
-                        {manuais.length > 0 && (
-                          <div style={{ marginBottom: 32 }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, paddingBottom: 12, borderBottom: "1.5px solid rgba(139,92,246,0.3)" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                <div style={{ width: 5, height: 22, borderRadius: 2, background: "#8b5cf6" }} />
-                                <span style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "#a78bfa" }}>Manuais</span>
-                                <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 99, background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.3)" }}>
-                                  {manuais.length}
-                                </span>
-                              </div>
-                              <span style={{ fontSize: 15, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
-                                {fmt(manuais.reduce((s, i) => s + i.valorMensal, 0))}<span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>/mês</span>
-                              </span>
-                            </div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                              {manuais.map(i => <ParcCard key={i.sheetRow} item={i} />)}
-                            </div>
-                          </div>
-                        )}
-                        {automaticos.length > 0 && (
-                          <div style={{ marginBottom: 32 }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, paddingBottom: 12, borderBottom: "1.5px solid rgba(16,185,129,0.2)" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                <div style={{ width: 5, height: 22, borderRadius: 2, background: "#10b981" }} />
-                                <span style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "#10b981" }}>Automáticos</span>
-                                <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 99, background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)" }}>
-                                  {automaticos.length}
-                                </span>
-                              </div>
-                              <span style={{ fontSize: 15, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
-                                {fmt(automaticos.reduce((s, i) => s + i.valorMensal, 0))}<span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>/mês</span>
-                              </span>
-                            </div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                              {automaticos.map(i => <ParcCard key={i.sheetRow} item={i} />)}
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
+            return (
+              <div className={ex.layout}>
+                <div className={ex.mainArea}>
+                  {parcLoading ? (
+                    <p className={ex.empty}>Carregando…</p>
+                  ) : parcItems.length === 0 ? (
+                    <p className={ex.empty}>Nenhuma parcela ativa.</p>
+                  ) : (
+                    <>
+                      {/* Manuais primeiro — têm o botão de pagar */}
+                      {parcSection("Manuais", "#a78bfa", manuais)}
+                      {parcSection("Automáticas", "#34d399", automaticos)}
+                    </>
+                  )}
                 </div>
 
-                {/* Lateral */}
-                <div className={styles.sideCol}>
-                  <div className={styles.sidePanel}>
-                    <div className={styles.sidePanelTitle}>Distribuição Mensal</div>
-                    <div style={{ padding: "16px 8px 12px" }}>
-                      <ResponsiveContainer width="100%" height={260}>
-                        <BarChart
-                          data={parcItems.map(i => ({ name: i.nome, Mensal: i.valorMensal, Restante: i.restante }))}
-                          margin={{ top: 8, right: 20, left: 12, bottom: 56 }}
-                          barGap={3}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                          <XAxis dataKey="name" tick={{ fill: "#9ca3af", fontSize: 12, fontWeight: 600 }} tickLine={false} axisLine={false} angle={-35} textAnchor="end" interval={0} />
-                          <YAxis hide />
-                          <Tooltip contentStyle={TOOLTIP_BOX} formatter={(v, name) => [fmt(v), name]} itemStyle={{ color: "#d1d5db" }} />
-                          <Bar dataKey="Mensal"   fill="#f59e0b"              radius={[4,4,0,0]} />
-                          <Bar dataKey="Restante" fill="rgba(239,68,68,0.45)" radius={[4,4,0,0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                      <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 4 }}>
-                        {[{ color: "#f59e0b", label: "Mensal" }, { color: "rgba(239,68,68,0.7)", label: "Restante" }].map(l => (
-                          <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--text-muted)" }}>
-                            <div style={{ width: 10, height: 10, borderRadius: 2, background: l.color }} /> {l.label}
-                          </div>
-                        ))}
+                <div className={ex.side}>
+                  {/* Resumo */}
+                  <div className={ex.panel}>
+                    <div className={ex.panelTitle}>Resumo</div>
+                    <div className={ex.ringPanel}>
+                      <Ring pct={pctPagas} color={pctPagas >= 70 ? "#34d399" : "#fbbf24"} size={108} stroke={10}>
+                        <span className={ex.ringPct}>{pctPagas}%</span>
+                        <span className={ex.ringSub}>quitado</span>
+                      </Ring>
+                      <div className={ex.ringInfo}>
+                        <span className={ex.bigValue}>{parcItems.length}<span className={ex.muted}> ativas</span></span>
+                        <span className={ex.muted}>{automaticos.length} automáticas · {manuais.length} manuais</span>
+                        <div className={ex.pair}>
+                          <div><span className={ex.pairLbl}>Por mês</span><span className={ex.pairVal}>{fmt(totalMensal)}</span></div>
+                          <div><span className={ex.pairLbl}>Em dívida</span><span className={ex.pairVal} style={{ color: "#fb7185" }}>{fmt(totalDivida)}</span></div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* ── Resumo ── */}
-                  <div className={styles.sidePanel} style={{ marginTop: 12 }}>
-                    <div className={styles.sidePanelTitle}>Resumo</div>
-                    <div style={{ padding: "16px 14px" }}>
-                      {/* Contagem */}
-                      <div style={{ textAlign: "center", marginBottom: 16 }}>
-                        <div style={{ fontSize: 22, fontWeight: 900, color: "#f59e0b", lineHeight: 1 }}>
-                          {parcItems.length}
-                          <span style={{ fontSize: 16, color: "var(--text-muted)", fontWeight: 400 }}> ativas</span>
-                        </div>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-                          {automaticos.length} auto · {manuais.length} manual
-                        </div>
-                      </div>
-
-                      {/* Stats */}
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)", marginBottom: 16 }}>
-                        {[
-                          { label: "Desembolso Mensal", value: fmt(totalMensal),   col: "var(--text-primary)" },
-                          { label: "Total em Dívida",   value: fmt(totalDivida),   col: "#ef4444" },
-                        ].map(s => (
-                          <div key={s.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{s.label}</div>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: s.col, fontFamily: "var(--font-mono)" }}>{s.value}</div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Progresso geral das parcelas */}
-                      {(() => {
-                        const totalPagas = parcItems.reduce((s, i) => s + i.parcelasPagas, 0);
-                        const totalAll   = parcItems.reduce((s, i) => s + i.totalParcelas, 0);
-                        const pct = totalAll > 0 ? Math.round((totalPagas / totalAll) * 100) : 0;
-                        return (
-                          <div>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--text-muted)", marginBottom: 6 }}>
-                              <span style={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>Parcelas pagas</span>
-                              <span style={{ fontWeight: 700, color: pct >= 70 ? "#10b981" : "#f59e0b" }}>{pct}%</span>
-                            </div>
-                            <div style={{ height: 10, background: "rgba(255,255,255,0.07)", borderRadius: 8, overflow: "hidden" }}>
-                              <div style={{ height: "100%", width: `${pct}%`, background: pct >= 70 ? "#10b981" : "#f59e0b", borderRadius: 8, transition: "width 0.8s ease" }} />
-                            </div>
-                            <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 5, textAlign: "right" }}>
-                              {totalPagas} de {totalAll} parcelas
-                            </div>
-                          </div>
-                        );
-                      })()}
+                  {/* Distribuição mensal */}
+                  <div className={ex.panel}>
+                    <div className={ex.panelTitle}>Mensal x restante</div>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart
+                        data={parcItems.map(i => ({ name: i.nome, Mensal: i.valorMensal, Restante: i.restante }))}
+                        margin={{ top: 8, right: 4, left: 4, bottom: 52 }}
+                        barGap={3}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600 }} tickLine={false} axisLine={false} angle={-30} textAnchor="end" interval={0} />
+                        <YAxis hide />
+                        <Tooltip contentStyle={TOOLTIP_BOX} formatter={(v, name) => [fmt(v), name]} itemStyle={{ color: "#e5e7eb" }} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+                        <Bar dataKey="Mensal"   fill="#a78bfa"              radius={[6,6,0,0]} />
+                        <Bar dataKey="Restante" fill="rgba(251,113,133,0.5)" radius={[6,6,0,0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className={ex.legendRow}>
+                      <span><i style={{ background: "#a78bfa" }} />Mensal</span>
+                      <span><i style={{ background: "rgba(251,113,133,0.6)" }} />Restante</span>
                     </div>
                   </div>
-
                 </div>
               </div>
             );
