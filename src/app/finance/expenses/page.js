@@ -862,47 +862,64 @@ export default function ExpensesPage() {
                     </div>
                   </div>
 
-                  {/* Mensal x restante */}
+                  {/* Parcelas em colunas */}
                   <div className={ex.panel}>
                     {(() => {
-                      // Barras deitadas: nomes legíveis. Escala logarítmica para que uma compra grande
-                      // não esconda as pequenas; o valor real fica escrito na ponta de cada barra.
-                      const dados = [...parcItems]
-                        .sort((x, y) => y.restante - x.restante)
-                        .map(i => ({ name: i.nome, Mensal: i.valorMensal || null, Restante: i.restante > 0 ? i.restante : null }));
-                      const curto = v => v == null ? "" : v >= 1000 ? `R$ ${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k` : `R$ ${Math.round(v)}`;
+                      const k = v => v >= 1000 ? `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k` : `${Math.round(v)}`;
+                      const base = [...parcItems].map(i => {
+                        const pago  = i.valorMensal * i.parcelasPagas;
+                        const total = pago + i.restante;
+                        return { name: i.nome, mensal: i.valorMensal, restante: i.restante, pago, total,
+                                 pctPago: total > 0 ? Math.round((pago / total) * 100) : 100 };
+                      });
+                      const dados = [...base].sort((x, y) => y.restante - x.restante);
+                      // Nome embaixo da coluna, em até duas linhas
+                      const tickNome = ({ x, y, payload }) => {
+                        const [l1, ...rest] = String(payload.value).split(" ");
+                        const cut = t => t.length > 8 ? t.slice(0, 7) + "…" : t;
+                        const l2 = rest.join(" ");
+                        return (
+                          <text x={x} y={y + 8} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize={10.5} fontWeight={600}>
+                            <tspan x={x}>{cut(l1)}</tspan>
+                            {l2 && <tspan x={x} dy={12}>{cut(l2)}</tspan>}
+                          </text>
+                        );
+                      };
+                      // Rótulo no topo da coluna (acha o item pelo nome)
+                      const topo = (fn, cor) => ({ x, y, width, value }) => {
+                        const d = dados.find(i => i.name === value);
+                        return d ? <text x={x + width / 2} y={y - 7} textAnchor="middle" fill={cor} fontSize={11} fontWeight={800}>{fn(d)}</text> : null;
+                      };
+                      const tip = ({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0].payload;
+                        return (
+                          <div style={{ ...TOOLTIP_BOX, color: "#e5e7eb", lineHeight: 1.6 }}>
+                            <div style={{ fontWeight: 700, color: "#fff", marginBottom: 2 }}>{d.name}</div>
+                            <div>Parcela: <b>{fmt(d.mensal)}</b>/mês</div>
+                            <div>Pago: <b style={{ color: "#34d399" }}>{fmt(d.pago)}</b> ({d.pctPago}%)</div>
+                            <div>Falta: <b style={{ color: "#fb7185" }}>{fmt(d.restante)}</b></div>
+                          </div>
+                        );
+                      };
                       return (<>
-                        <div className={ex.panelTitle}>Mensal x restante</div>
-                        <ResponsiveContainer width="100%" height={250}>
-                          <BarChart data={dados} margin={{ top: 52, right: 4, left: 4, bottom: 4 }} barGap={2} barCategoryGap="22%">
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <YAxis scale="log" domain={[10, "auto"]} hide allowDataOverflow />
-                            {/* Nome em até duas linhas, embaixo de cada par de colunas */}
-                            <XAxis dataKey="name" interval={0} tickLine={false} axisLine={false} height={34}
-                              tick={({ x, y, payload }) => {
-                                const [l1, ...rest] = String(payload.value).split(" ");
-                                const cut = t => t.length > 8 ? t.slice(0, 7) + "…" : t;
-                                const l2 = rest.join(" ");
-                                return (
-                                  <text x={x} y={y + 10} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize={10.5} fontWeight={600}>
-                                    <tspan x={x}>{cut(l1)}</tspan>
-                                    {l2 && <tspan x={x} dy={12}>{cut(l2)}</tspan>}
-                                  </text>
-                                );
-                              }} />
-                            <Tooltip contentStyle={TOOLTIP_BOX} formatter={(v, name) => [fmt(v), name]} itemStyle={{ color: "#e5e7eb" }} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
-                            <Bar dataKey="Mensal" fill="#a78bfa" radius={[5, 5, 0, 0]} maxBarSize={14}>
-                              <LabelList dataKey="Mensal" content={({ x, y, width, value }) => value == null ? null : <text x={x + width / 2} y={y - 6} transform={`rotate(-90 ${x + width / 2} ${y - 6})`} fill="#c4b5fd" fontSize={10.5} fontWeight={700}>{curto(value)}</text>} />
-                            </Bar>
-                            <Bar dataKey="Restante" fill="#fb7185" fillOpacity={0.75} radius={[5, 5, 0, 0]} maxBarSize={14}>
-                              <LabelList dataKey="Restante" content={({ x, y, width, value }) => value == null ? null : <text x={x + width / 2} y={y - 6} transform={`rotate(-90 ${x + width / 2} ${y - 6})`} fill="#fda4af" fontSize={10.5} fontWeight={700}>{curto(value)}</text>} />
+                        <div className={ex.chartHead}>
+                          <div className={ex.panelTitle} style={{ marginBottom: 0 }}>Quanto falta pagar</div>
+                          <span>por compra</span>
+                        </div>
+                        <ResponsiveContainer width="100%" height={230}>
+                          <BarChart data={dados} margin={{ top: 22, right: 2, left: 2, bottom: 0 }} barCategoryGap="28%">
+                            <defs>
+                              <linearGradient id="gFalta" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#fb7185" /><stop offset="100%" stopColor="#fb7185" stopOpacity={0.35} /></linearGradient>
+                            </defs>
+                            <XAxis dataKey="name" interval={0} tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} height={32} tick={tickNome} />
+                            <YAxis hide domain={[0, "auto"]} />
+                            <Tooltip content={tip} cursor={{ fill: "rgba(255,255,255,0.04)", radius: 8 }} />
+                            <Bar dataKey="restante" fill="url(#gFalta)" radius={[8, 8, 3, 3]} maxBarSize={34} minPointSize={4}>
+                                <LabelList dataKey="name" content={topo(d => d.restante > 0 ? k(d.restante) : "✓", "#fda4af")} />
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
-                        <div className={ex.legendRow} style={{ marginTop: 10 }}>
-                          <span><i style={{ background: "#a78bfa" }} />Parcela do mês</span>
-                          <span><i style={{ background: "#fb7185" }} />Falta pagar</span>
-                        </div>
                       </>);
                     })()}
                   </div>
