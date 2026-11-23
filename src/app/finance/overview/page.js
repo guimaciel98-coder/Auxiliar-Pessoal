@@ -3,13 +3,11 @@ import { useState, useMemo, useEffect } from "react";
 import Navigation from "@/components/ui/Navigation";
 import ModuleHeader from "@/components/ui/ModuleHeader";
 import styles from "../Finance.module.css";
-import ov from "./Overview.module.css";
-import Ring from "@/components/ui/Ring";
 import { useFinance } from "@/hooks/useFinance";
 import { fmtFin } from "@/lib/fmtFin";
 import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend,
   PieChart, Pie, Cell,
 } from "recharts";
 
@@ -41,11 +39,11 @@ function abrevMes(m) {
   return `${MES_ABBR[name?.toLowerCase().trim()] || name?.slice(0, 3)}/${yy?.trim()}`;
 }
 
-const AXIS_TICK  = { fill: "rgba(255,255,255,0.4)", fontSize: 11 };
+const AXIS_TICK  = { fill: "#6b7280", fontSize: 10 };
 const GRID_LINE  = "rgba(255,255,255,0.06)";
 const TOOLTIP_CS = {
   background: "#15161f", border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12, fontSize: 12, padding: "8px 12px", boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+  borderRadius: 12, fontSize: 12, padding: "8px 12px",
 };
 
 // ── Helpers de projeção ───────────────────────────────────────────────────────
@@ -237,7 +235,7 @@ export default function OverviewPage() {
   const mesesAtingidos    = historico.filter(m => m.atingido).length;
 
   // ── Donut por grupo (Casa Nova / Casa / Pessoal / Outros / Parcelas) ────────
-  const DONUT_COLORS = { "Casa Nova": "#fbbf24", Casa: "#38bdf8", Pessoal: "#34d399", Outros: "#94a3b8", Parcelas: "#a78bfa" };
+  const DONUT_COLORS = { "Casa Nova": "#fbbf24", Casa: "#38bdf8", Pessoal: "#34d399", Outros: "#9ca3af", Parcelas: "#a78bfa" };
 
   const donutData = useMemo(() => {
     const groups = { "Casa Nova": 0, Casa: 0, Pessoal: 0, Outros: 0, Parcelas: 0 };
@@ -309,180 +307,211 @@ export default function OverviewPage() {
   }, [historico, poupancaAcumulada, summary.ganhoTudo, varPrevTotal, varRealTotal, gastosParcelasMes, poupancaMensalBase, compromissos, emprestimosComPrazo, data]);
 
   const dataAtual = new Date().toLocaleDateString("pt-BR", {
-    weekday: "long", day: "numeric", month: "long",
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
-
-  // ── Ciclo financeiro: dias restantes (mesma regra de antes) ──────────────
-  const cycle = (() => {
-    const now         = new Date();
-    const today       = now.getDate();
-    const melhorDia   = data?.config?.melhorDiaCompra;
-    const cicloInicio = data?.config?.cicloInicio; // "DD/MM/YYYY"
-    let daysLeft, totalDays, pctElapsed;
-    if (melhorDia) {
-      const lastDay = melhorDia - 1;
-      let startDate, endDate;
-      if (cicloInicio) {
-        const [ciDd, ciMm, ciYyyy] = cicloInicio.split("/").map(Number);
-        startDate = new Date(ciYyyy, ciMm - 1, ciDd);
-        // Fim: lastDay do mês seguinte ao início do ciclo
-        const endMon = ciMm % 12;
-        const endYr  = ciMm === 12 ? ciYyyy + 1 : ciYyyy;
-        endDate = new Date(endYr, endMon, lastDay);
-      } else {
-        endDate   = today < melhorDia ? new Date(now.getFullYear(), now.getMonth(), lastDay) : new Date(now.getFullYear(), now.getMonth() + 1, lastDay);
-        startDate = today < melhorDia ? new Date(now.getFullYear(), now.getMonth() - 1, melhorDia) : new Date(now.getFullYear(), now.getMonth(), melhorDia);
-      }
-      const todayMs = new Date(now.getFullYear(), now.getMonth(), today).getTime();
-      const startMs = startDate.getTime();
-      const endMs   = endDate.getTime();
-      // +1 porque o último dia do ciclo também conta
-      daysLeft   = Math.max(0, Math.round((endMs - todayMs) / 86400000) + 1);
-      totalDays  = Math.round((endMs - startMs) / 86400000);
-      pctElapsed = totalDays > 0 ? Math.min(100, Math.max(0, Math.round(((todayMs - startMs) / (endMs - startMs)) * 100))) : 0;
-    } else {
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      daysLeft   = daysInMonth - today + 1;
-      totalDays  = daysInMonth;
-      pctElapsed = Math.round((today / daysInMonth) * 100);
-    }
-    const color = daysLeft <= 3 ? "#fb7185" : daysLeft <= 7 ? "#fbbf24" : "#34d399";
-    return { daysLeft, totalDays, pctElapsed, color, endLabel: melhorDia ? `até dia ${melhorDia - 1}` : "fim do mês" };
-  })();
-
-  // Barra do saldo variável: orçamento + excesso
-  const varIsOver    = varRealTotal > varPrevTotal;
-  const varBudgetW   = varIsOver ? (varPrevTotal / varRealTotal) * 100 : Math.min(varRawPct, 100);
-  const varOverflowW = varIsOver ? ((varRealTotal - varPrevTotal) / varRealTotal) * 100 : 0;
-  const varOverPct   = varIsOver && varPrevTotal > 0 ? Math.round(((varRealTotal - varPrevTotal) / varPrevTotal) * 100) : 0;
-
-  // Meta de poupança
-  const metaFinal = poupanca.meta ?? 50_000;
-  const metaPct   = Math.min(poupancaAcumulada / metaFinal, 1);
-  const metaLabel = Math.round(metaPct * 100);
-  const metaFalta = Math.max(metaFinal - poupancaAcumulada, 0);
-  const metaCor   = metaLabel >= 80 ? "#34d399" : metaLabel >= 50 ? "#38bdf8" : "#fbbf24";
-
-  const KPIS = [
-    { label: "Ganhos",            value: summary.ganhoTudo, color: "#34d399", hint: "do ciclo" },
-    { label: "Gastos até agora",  value: gastosAteMomento,  color: "#fb7185", hint: "variáveis + fixos pagos + parcelas" },
-    { label: "Poupança real",     value: poupancaReal,      sign: true, hint: "ganhos confirmados − gastos" },
-    { label: "Previsão (CLT)",    value: poupancaPrevCLT,   sign: true, hint: "renda fixa − gastos previstos" },
-    { label: "Previsão total",    value: poupancaMensalBase, sign: true, hint: "todos os ganhos − previstos" },
-  ];
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className={ov.page}>
+    <div className={styles.container} style={{ background: "radial-gradient(50% 35% at 85% 0%, rgba(52,211,153,0.08), transparent 70%), #07080c" }}>
       <ModuleHeader title="Visão Geral" hideOnDesktop />
       <Navigation />
 
       {/* Toast */}
-      {toast && <div className={ov.toast}>{toast}</div>}
-
-      {/* ── Cabeçalho ── */}
-      <header className={ov.top}>
-        <div className={ov.topLeft}>
-          <span className={ov.eyebrow}>Financeiro · {dataAtual}</span>
-          <h1 className={ov.title}>Visão Geral</h1>
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)",
+          background: "rgba(17,24,39,0.95)", border: "1px solid rgba(255,255,255,0.1)",
+          color: "#f0f0f8", padding: "10px 20px", borderRadius: 12,
+          fontSize: 13, fontWeight: 600, zIndex: 999, whiteSpace: "nowrap",
+        }}>
+          {toast}
         </div>
-        <div className={ov.topRight}>
-          <FinanceOcultarBtn className={ov.pillBtn} />
-          <button onClick={refetch} className={ov.iconBtn} title="Atualizar">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-          </button>
+      )}
+
+      {/* ── Header ── */}
+      <header className={styles.header} style={{ alignItems: "flex-end", paddingTop: 26 }}>
+        <div>
+          <p style={{ textTransform: "capitalize", fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 4 }}>{dataAtual}</p>
+          <h1 style={{ fontSize: 40, fontWeight: 800, letterSpacing: "-0.045em", lineHeight: 1, color: "#fff", margin: 0 }}>Finanças Pessoais</h1>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <FinanceOcultarBtn className={styles.addBtn} />
+        <button
+          onClick={refetch}
+          className={styles.addBtn}
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            color: "var(--text-secondary)",
+            borderColor: "rgba(255,255,255,0.1)",
+            fontSize: 13,
+          }}
+        >
+          ↻ Atualizar
+        </button>
         </div>
       </header>
 
-      {loading && <div className={ov.loading}>Carregando…</div>}
+      {loading && <div className={styles.loading}>Carregando...</div>}
 
       {error && !loading && (
-        <div className={ov.errorBox}>
-          <p><b>Erro ao carregar.</b> {error}</p>
-          <button onClick={refetch} className={ov.retryBtn}>Tentar novamente</button>
+        <div className={styles.errorCard}>
+          <p style={{ fontWeight: 700, marginBottom: 6 }}>⚠ Erro ao carregar</p>
+          <p style={{ fontSize: 12, opacity: 0.7 }}>{error}</p>
+          <button onClick={refetch} className={styles.retryBtn}>Tentar novamente</button>
         </div>
       )}
 
       {!loading && !error && data && (
-        <main className={ov.grid}>
+        <div className={styles.body}>
 
-          {/* ── Números do ciclo ── */}
-          <section className={ov.kpis}>
-            {KPIS.map(k => {
-              const color = k.sign ? (k.value >= 0 ? "#34d399" : "#fb7185") : k.color;
-              return (
-                <div key={k.label} className={ov.kpi} style={{ "--k": color }}>
-                  <span className={ov.kpiLabel}><span className={ov.kpiDot} />{k.label}</span>
-                  <span className={ov.kpiValue} style={{ color }}>{fmt(k.value)}</span>
-                  <span className={ov.kpiHint}>{k.hint}</span>
-                </div>
-              );
-            })}
-          </section>
+          {/* ════ Coluna esquerda ════ */}
+          <div className={styles.mainCol} style={{ padding: "0 0 80px" }}>
 
-          {/* ── Coluna esquerda ── */}
-          <div className={ov.colMain}>
+            {/* ── Stat Cards ── */}
+            <div style={{ marginBottom: 36, padding: isMobile ? "16px 16px 0" : "20px 28px 0" }}>
 
-            {/* Saldo variável + ciclo */}
-            <section className={`${ov.panel} ${ov.saldo}`} style={{ "--v": varColor }}>
-              <div className={ov.saldoMain}>
-                <Ring pct={varRawPct} color={varColor} size={150} stroke={13}>
-                  <span className={ov.ringPct}>{varRawPct}%</span>
-                  <span className={ov.ringSub}>do orçamento</span>
-                </Ring>
-                <div className={ov.saldoInfo}>
-                  <span className={ov.panelLabel}>Saldo variável</span>
-                  <span className={ov.saldoValue} style={{ color: varColor }}>{fmt(varSaldo)}</span>
-                  <span className={ov.saldoHint}>
-                    {varSaldo < 0 ? "acima do previsto" : "disponível para gastar"}
-                    {varIsOver && !hideNumbers && <b className={ov.over}> · +{varOverPct}% excedido</b>}
-                  </span>
-                  <div className={ov.splitBar}>
-                    <span style={{ width: `${varBudgetW}%`, background: varIsOver ? "#fbbf24" : varColor }} />
-                    {varIsOver && <span style={{ width: `${varOverflowW}%`, background: "#fb7185" }} />}
+              {/* Linha 1: Ganhos + Gastos até agora */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                {[
+                  { label: "Ganhos",           icon: "💰", value: summary.ganhoTudo, color: "#34d399" },
+                  { label: "Gastos até agora", icon: "💸", value: gastosAteMomento,  color: "#fb7185" },
+                ].map(s => (
+                  <div key={s.label} className="fin-stat-card" style={{
+                    background: `radial-gradient(120% 100% at 100% 0%, ${s.color}1f, transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02))`,
+                    border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+                  }}>
+                    <span className="fin-stat-icon">{s.icon}</span>
+                    <span className="fin-stat-value" style={{ color: s.color, fontFamily: "var(--font-sans)", fontSize: 30, letterSpacing: "-0.04em", wordBreak: "normal", whiteSpace: "nowrap" }}>{fmt(s.value)}</span>
+                    <span className="fin-stat-label">{s.label}</span>
                   </div>
-                  <span className={ov.saldoFoot}>{fmt(varRealTotal)} gastos de {fmt(varPrevTotal)} previstos</span>
-                </div>
+                ))}
               </div>
 
-              <div className={ov.cycle}>
-                <div className={ov.cycleNum}>
-                  <span className={ov.cycleDays} style={{ color: cycle.color }}>{cycle.daysLeft}</span>
-                  <span className={ov.cycleLbl}>dias para fechar<br />o ciclo ({cycle.endLabel})</span>
-                </div>
-                <div className={ov.cycleBarWrap}>
-                  <div className={ov.cycleBar}><span style={{ width: `${cycle.pctElapsed}%`, background: cycle.color }} /></div>
-                  <span className={ov.cyclePct}>{cycle.pctElapsed}% do ciclo</span>
-                </div>
+              {/* Linha 2: Poupança Real + Prev. CLT + Prev. Tudo */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                {[
+                  {
+                    label: "Real",
+                    sublabel: "POUPANÇA",
+                    value: poupancaReal,
+                    hint: ["ganhos confirmados", "− gastos realizados"],
+                    icon: "🏦",
+                    accent: null,
+                  },
+                  {
+                    label: "Prev. CLT",
+                    sublabel: "POUPANÇA",
+                    value: poupancaPrevCLT,
+                    hint: ["CLT + empréstimos", "− gastos previstos"],
+                    icon: "🔒",
+                    accent: "#818cf8",
+                  },
+                  {
+                    label: "Prev. Total",
+                    sublabel: "POUPANÇA",
+                    value: poupancaMensalBase,
+                    hint: ["todos os ganhos", "− gastos previstos"],
+                    icon: "📊",
+                    accent: "#a78bfa",
+                  },
+                ].map(({ label, sublabel, value, hint, icon, accent }) => {
+                  const pos = value >= 0;
+                  const cor = pos ? "#34d399" : "#fb7185";
+                  const borderCol = accent
+                    ? (pos ? `${accent}30` : "rgba(251,113,133,0.18)")
+                    : (pos ? "rgba(52,211,153,0.18)" : "rgba(251,113,133,0.18)");
+                  const bgCol = accent
+                    ? (pos ? `${accent}08` : "rgba(251,113,133,0.06)")
+                    : (pos ? "rgba(52,211,153,0.06)" : "rgba(251,113,133,0.06)");
+                  return (
+                    <div key={label} style={{
+                      padding: "14px 16px",
+                      background: bgCol,
+                      border: `1px solid ${borderCol}`,
+                      borderRadius: 18,
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+                        <span style={{ fontSize: 16 }}>{icon}</span>
+                        <div style={{ lineHeight: 1.3 }}>
+                          <div style={{ fontSize: 8, color: accent ?? "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>{sublabel}</div>
+                          <div style={{ fontSize: 10, color: "var(--text-primary)", fontWeight: 700 }}>{label}</div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: cor, lineHeight: 1, marginBottom: 5 }}>
+                        {fmt(value)}
+                      </div>
+                      <div style={{ fontSize: 9, color: "var(--text-muted)", lineHeight: 1.5 }}>
+                        {hint.map((h, i) => <div key={i}>{h}</div>)}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </section>
+            </div>
 
-            {/* Gastos variáveis */}
-            <section className={ov.panel}>
-              <div className={ov.panelHead}>
-                <h2 className={ov.panelTitle}>Gastos variáveis</h2>
-                <span className={ov.panelCount}>{variaveis.length}</span>
+            {/* ── Gastos Variáveis ── */}
+            <div style={{ marginBottom: 36, padding: isMobile ? "0 16px" : "0 28px" }}>
+              <div style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                marginBottom: 18,
+              }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
+                  Gastos Variáveis
+                </h2>
               </div>
+
               {variaveis.length === 0 ? (
-                <p className={ov.empty}>Sem gastos variáveis cadastrados.</p>
+                <p style={{ fontSize: 13, color: "var(--text-muted)", textAlign: "center", padding: "24px 0" }}>
+                  Sem gastos variáveis cadastrados.
+                </p>
               ) : (
-                <div className={ov.varList}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                   {variaveis.map(item => {
                     const pct        = item.previsao > 0 ? Math.round((item.real / item.previsao) * 100) : 0;
                     const overBudget = item.real > item.previsao;
                     const diff       = Math.abs(item.real - item.previsao);
                     const barColor   = budgetBarColor(pct);
+
                     return (
-                      <div key={item.item} className={ov.varRow} style={{ "--b": barColor }}>
-                        <div className={ov.varTop}>
-                          <span className={ov.varName}>{item.item}</span>
-                          <span className={ov.varPct} style={{ color: barColor }}>{pct}%</span>
+                      <div key={item.item} style={{
+                        padding: "16px 20px", borderRadius: 18,
+                        background: overBudget ? "rgba(251,113,133,0.04)" : "rgba(255,255,255,0.03)",
+                        border: overBudget ? "1px solid rgba(251,113,133,0.15)" : "1px solid rgba(255,255,255,0.07)",
+                        borderLeft: `3px solid ${barColor}`,
+                      }}>
+                        <div style={{
+                          display: "flex", justifyContent: "space-between",
+                          alignItems: "baseline", marginBottom: 10,
+                        }}>
+                          <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
+                            {item.item}
+                          </span>
+                          <span style={{
+                            fontSize: 13, color: "var(--text-muted)",
+                            fontFamily: "var(--font-mono)", whiteSpace: "nowrap",
+                          }}>
+                            {fmt(item.real)} <span style={{ opacity: 0.5 }}>/ {fmt(item.previsao)}</span>
+                          </span>
                         </div>
-                        <div className={ov.varBar}><span style={{ width: `${Math.min(pct, 100)}%` }} /></div>
-                        <div className={ov.varBottom}>
-                          <span className={ov.varVals}>{fmt(item.real)} <span>/ {fmt(item.previsao)}</span></span>
-                          <span className={ov.varStatus} style={{ color: overBudget ? "#fb7185" : "#34d399" }}>
-                            {overBudget ? `↑ ${fmt(diff)} acima` : `${fmt(diff)} livre`}
+
+                        <div style={{ height: 10, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden", marginBottom: 8 }}>
+                          <div style={{
+                            height: "100%", width: `${Math.min(pct, 100)}%`,
+                            background: barColor, borderRadius: 99, transition: "width 0.6s ease",
+                          }} />
+                        </div>
+
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: overBudget ? "#fb7185" : "#34d399" }}>
+                            {overBudget ? `↑ Ultrapassado ${fmt(diff)}` : `✓ Disponível ${fmt(diff)}`}
+                          </span>
+                          <span style={{
+                            fontSize: 12, fontWeight: 800, fontFamily: "var(--font-mono)",
+                            padding: "2px 10px", borderRadius: 99,
+                            background: overBudget ? "rgba(251,113,133,0.12)" : pct >= 70 ? "rgba(251,191,36,0.12)" : "rgba(52,211,153,0.12)",
+                            color: barColor,
+                          }}>
+                            {pct}%
                           </span>
                         </div>
                       </div>
@@ -490,140 +519,311 @@ export default function OverviewPage() {
                   })}
                 </div>
               )}
-            </section>
+            </div>
+
           </div>
 
-          {/* ── Coluna direita ── */}
-          <div className={ov.colSide}>
+          {/* ════ Coluna direita ════ */}
+          <div className={`${styles.sideCol} ${styles.sideColMobileShow}`} style={{ position: "static", maxHeight: "none", overflowY: "visible" }}>
 
-            {/* Gastos por grupo */}
-            <section className={ov.panel}>
-              <div className={ov.panelHead}>
-                <h2 className={ov.panelTitle}>Gastos por grupo</h2>
-              </div>
-              {donutData.length > 0 ? (() => {
-                const total = donutData.reduce((s, d) => s + d.value, 0);
-                return (
-                  <div className={ov.donutWrap}>
-                    <div className={ov.donut}>
-                      <ResponsiveContainer width="100%" height={170}>
-                        <PieChart>
-                          <Pie
-                            data={donutData} cx="50%" cy="50%"
-                            innerRadius={56} outerRadius={78} paddingAngle={2} cornerRadius={4}
-                            dataKey="value" strokeWidth={0}
-                            animationBegin={150} animationDuration={700}
-                            labelLine={false}
-                          >
-                            {donutData.map((d, i) => (
-                              <Cell key={i} fill={DONUT_COLORS[d.name] ?? "#6b7280"} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={TOOLTIP_CS}
-                            formatter={(v, name) => [fmt(v), name]}
-                            itemStyle={{ color: "#e5e7eb" }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className={ov.donutCenter}>
-                        <span className={ov.donutTotal}>{fmt(total)}</span>
-                        <span className={ov.donutLbl}>total</span>
+            {/* ── Saldo Variável + Donut de gastos ── */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 0 }}>
+
+              {/* Saldo Disponível */}
+              <div style={{
+                background: "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02))",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 22, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)", padding: "20px 16px",
+                display: "flex", flexDirection: "column",
+              }}>
+                {/* ── Metade superior: Saldo Variável ── */}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: "center" }}>
+                    Saldo Variável
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: varColor, lineHeight: 1, marginBottom: 8, whiteSpace: "nowrap", letterSpacing: "-0.03em" }}>
+                      {fmt(varSaldo)}
+                    </div>
+                    {!hideNumbers && (
+                      <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
+                        {varSaldo < 0 ? "acima do previsto" : "disponível para gastar"}
+                      </div>
+                    )}
+                  </div>
+                  {/* Barra segmentada */}
+                  {(() => {
+                    const isOver    = varRealTotal > varPrevTotal;
+                    const budgetW   = isOver ? (varPrevTotal / varRealTotal) * 100 : Math.min(varRawPct, 100);
+                    const overflowW = isOver ? ((varRealTotal - varPrevTotal) / varRealTotal) * 100 : 0;
+                    const overPct   = isOver ? Math.round(((varRealTotal - varPrevTotal) / varPrevTotal) * 100) : 0;
+                    return (
+                      <div>
+                        <div style={{ textAlign: "center", fontSize: 9, marginBottom: 6 }}>
+                          <span style={{ fontWeight: 700, color: varColor }}>
+                            {isOver ? `${Math.round(varRawPct)}%` : `${varRawPct}%`}
+                            {isOver && <span style={{ color: "#fb7185", marginLeft: 6 }}>+{overPct}% excedido</span>}
+                          </span>
+                        </div>
+                        <div style={{ height: 10, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden", display: "flex" }}>
+                          {isOver ? (
+                            <>
+                              <div style={{ height: "100%", width: `${budgetW}%`, background: "#fbbf24", borderRadius: "99px 0 0 99px", flexShrink: 0, transition: "width 1s cubic-bezier(0.4,0,0.2,1)" }} />
+                              <div style={{ height: "100%", width: `${overflowW}%`, background: "#fb7185", borderRadius: "0 99px 99px 0", flexShrink: 0, transition: "width 1s cubic-bezier(0.4,0,0.2,1) 0.8s" }} />
+                            </>
+                          ) : (
+                            <div style={{ height: "100%", width: `${budgetW}%`, background: varColor, borderRadius: 99, transition: "width 1s cubic-bezier(0.4,0,0.2,1)" }} />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Divisor */}
+                <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "14px 0" }} />
+
+                {/* ── Metade inferior: Dias Restantes (ciclo financeiro) ── */}
+                {(() => {
+                  const now        = new Date();
+                  const today      = now.getDate();
+                  const melhorDia  = data?.config?.melhorDiaCompra;
+                  const cicloInicio = data?.config?.cicloInicio; // "DD/MM/YYYY"
+
+                  let daysLeft, totalDays, pctElapsed;
+
+                  if (melhorDia) {
+                    const lastDay   = melhorDia - 1;
+                    let startDate, endDate;
+                    if (cicloInicio) {
+                      const [ciDd, ciMm, ciYyyy] = cicloInicio.split("/").map(Number);
+                      startDate = new Date(ciYyyy, ciMm - 1, ciDd);
+                      // Fim: lastDay do mês seguinte ao início do ciclo
+                      const endMon = ciMm % 12; // 0-indexed do próximo mês
+                      const endYr  = ciMm === 12 ? ciYyyy + 1 : ciYyyy;
+                      endDate = new Date(endYr, endMon, lastDay);
+                    } else {
+                      endDate   = today < melhorDia
+                        ? new Date(now.getFullYear(), now.getMonth(), lastDay)
+                        : new Date(now.getFullYear(), now.getMonth() + 1, lastDay);
+                      startDate = today < melhorDia
+                        ? new Date(now.getFullYear(), now.getMonth() - 1, melhorDia)
+                        : new Date(now.getFullYear(), now.getMonth(), melhorDia);
+                    }
+                    const todayMs   = new Date(now.getFullYear(), now.getMonth(), today).getTime();
+                    const startMs   = startDate.getTime();
+                    const endMs     = endDate.getTime();
+
+                    // +1 porque o último dia do ciclo também conta (dia 22 com fim no 23 = 2 dias)
+                    daysLeft   = Math.max(0, Math.round((endMs - todayMs) / 86400000) + 1);
+                    totalDays  = Math.round((endMs - startMs) / 86400000);
+                    pctElapsed = totalDays > 0 ? Math.min(100, Math.max(0, Math.round(((todayMs - startMs) / (endMs - startMs)) * 100))) : 0;
+                  } else {
+                    // Fallback: mês calendário
+                    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                    daysLeft   = daysInMonth - today + 1; // inclui o último dia do mês
+                    totalDays  = daysInMonth;
+                    pctElapsed = Math.round((today / daysInMonth) * 100);
+                  }
+
+                  const dayColor = daysLeft <= 3 ? "#fb7185" : daysLeft <= 7 ? "#fbbf24" : "var(--text-primary)";
+                  const barColor = daysLeft <= 3 ? "#fb7185" : daysLeft <= 7 ? "#fbbf24" : "var(--accent-primary)";
+
+                  return (
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: "center", marginBottom: 10 }}>
+                        {melhorDia ? `Ciclo até dia ${melhorDia - 1}` : "Dias Restantes"}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 5, marginBottom: 10 }}>
+                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Faltam</span>
+                        <span style={{ fontSize: 22, fontWeight: 900, color: dayColor, lineHeight: 1 }}>{daysLeft}</span>
+                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>dias</span>
+                      </div>
+                      <div style={{ textAlign: "center", fontSize: 9, marginBottom: 6 }}>
+                        <span style={{ fontWeight: 700, color: barColor }}>{pctElapsed}%</span>
+                      </div>
+                      <div style={{ height: 10, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${pctElapsed}%`, background: barColor, borderRadius: 99, transition: "width 0.8s ease" }} />
                       </div>
                     </div>
-                    <div className={ov.legend}>
-                      {[...donutData].sort((a, b) => b.value - a.value).map(d => {
-                        const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
-                        const cor = DONUT_COLORS[d.name] ?? "#6b7280";
-                        return (
-                          <div key={d.name} className={ov.legendRow}>
-                            <span className={ov.legendDot} style={{ background: cor }} />
-                            <span className={ov.legendName}>{d.name}</span>
-                            <span className={ov.legendVal}>{fmt(d.value)}</span>
-                            <span className={ov.legendPct} style={{ color: cor }}>{pct}%</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })() : (
-                <p className={ov.empty}>Sem dados</p>
-              )}
-            </section>
-
-            {/* Meta de poupança */}
-            <section className={ov.panel}>
-              <div className={ov.panelHead}>
-                <h2 className={ov.panelTitle}>Meta de poupança</h2>
-                <span className={ov.panelAside}>{fmtShort(metaFinal)}</span>
+                  );
+                })()}
               </div>
-              <div className={ov.meta}>
-                <Ring pct={metaLabel} color={metaCor} size={132} stroke={12}>
-                  <span className={ov.ringPct}>{metaLabel}%</span>
-                  <span className={ov.ringSub}>da meta</span>
-                </Ring>
-                <div className={ov.metaInfo}>
-                  <div>
-                    <span className={ov.panelLabel}>Acumulado</span>
-                    <span className={ov.metaValue}>{fmtShort(poupancaAcumulada)}</span>
-                  </div>
-                  <div>
-                    <span className={ov.panelLabel}>Faltam</span>
-                    <span className={ov.metaFalta} style={{ color: metaFalta > 0 ? "#fff" : "#34d399" }}>
-                      {metaFalta > 0 ? fmtShort(metaFalta) : "Meta batida! 🎉"}
-                    </span>
-                  </div>
+
+              {/* Donut: gastos por grupo */}
+              <div style={{
+                background: "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02))",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 22, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)", padding: "16px 14px",
+                display: "flex", flexDirection: "column",
+              }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
+                  Gastos por Grupo
                 </div>
-              </div>
-            </section>
-          </div>
+                {donutData.length > 0 ? (() => {
+                  const total = donutData.reduce((s, d) => s + d.value, 0);
+                  return (
+                    <>
+                      {/* Donut + centro via overlay */}
+                      <div style={{ position: "relative" }}>
+                        <ResponsiveContainer width="100%" height={150}>
+                          <PieChart>
+                            <Pie
+                              data={donutData} cx="50%" cy="50%"
+                              innerRadius={44} outerRadius={64}
+                              dataKey="value" strokeWidth={2} stroke="rgba(15,23,42,0.6)"
+                              animationBegin={150} animationDuration={700}
+                              labelLine={false}
+                            >
+                              {donutData.map((d, i) => (
+                                <Cell key={i} fill={DONUT_COLORS[d.name] ?? "#6b7280"} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{ background: "#1f2937", border: "1px solid rgba(55,65,81,0.7)", borderRadius: 8, fontSize: 11, padding: "6px 10px" }}
+                              formatter={(v, name) => [fmt(v), name]}
+                              itemStyle={{ color: "#d1d5db" }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        {/* Centro */}
+                        <div style={{
+                          position: "absolute", inset: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          pointerEvents: "none",
+                        }}>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontSize: 8, color: "#6b7280", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>TOTAL</div>
+                            <div style={{ fontSize: 13, fontWeight: 900, color: "#f9fafb", lineHeight: 1 }}>{fmt(total)}</div>
+                          </div>
+                        </div>
+                      </div>
 
-          {/* ── Projeção de poupança (largura toda) ── */}
-          <section className={`${ov.panel} ${ov.wide}`}>
-            <div className={ov.panelHead}>
-              <h2 className={ov.panelTitle}>Projeção de poupança</h2>
-              <div className={ov.chartLegend}>
-                <span><i style={{ background: "#34d399" }} />Histórico</span>
-                <span><i className={ov.dash} />Projeção</span>
+                      {/* Legenda rica */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 7, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                        {[...donutData].sort((a, b) => b.value - a.value).map(d => {
+                          const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                          const cor = DONUT_COLORS[d.name] ?? "#6b7280";
+                          return (
+                            <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ width: 9, height: 9, borderRadius: 3, background: cor, flexShrink: 0 }} />
+                              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", flex: 1, fontWeight: 500 }}>{d.name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.8)", fontFamily: "var(--font-mono)" }}>{fmt(d.value)}</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: cor, minWidth: 28, textAlign: "right" }}>{pct}%</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })() : (
+                  <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "24px 0" }}>Sem dados</p>
+                )}
               </div>
             </div>
-            {chartData.length === 0 ? (
-              <p className={ov.empty}>Sem dados ainda.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={isMobile ? 220 : 280}>
-                <AreaChart data={chartData} margin={{ top: 10, right: 12, left: 0, bottom: 4 }}>
-                  <defs>
-                    <linearGradient id="gHist" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#34d399" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="gProj" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.18} />
-                      <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={GRID_LINE} vertical={false} />
-                  <XAxis dataKey="mes" tick={AXIS_TICK} tickLine={false} axisLine={false} interval={isMobile ? 3 : chartData.length > 16 ? 1 : 0} />
-                  <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={v => `R$${(Number(v) / 1000).toFixed(0)}k`} width={48} />
-                  <Tooltip contentStyle={TOOLTIP_CS} labelStyle={{ color: "#9ca3af" }}
-                    formatter={(v, name) => [Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 }), name === "historico" ? "Poupança" : "Projeção"]} />
-                  <ReferenceLine x={mesAtualLabel} stroke="rgba(255,255,255,0.25)" strokeDasharray="4 3"
-                    label={{ value: "hoje", position: "insideTopRight", fontSize: 10, fill: "rgba(255,255,255,0.45)" }} />
-                  <Area type="monotone" dataKey="projecao" stroke="#38bdf8" strokeWidth={2} strokeDasharray="6 4" fill="url(#gProj)" connectNulls={false} dot={false}
-                    activeDot={{ r: 4, fill: "#38bdf8", stroke: "#07080c", strokeWidth: 2 }} />
-                  <Area type="monotone" dataKey="historico" stroke="#34d399" strokeWidth={2.5} fill="url(#gHist)" connectNulls={false}
-                    dot={(props) => {
-                      const { cx, cy, payload } = props;
-                      if (!payload.historico && payload.historico !== 0) return null;
-                      return <circle key={`h${cx}${cy}`} cx={cx} cy={cy} r={3.5} fill={payload.atingido ? "#34d399" : "#07080c"} stroke={payload.atingido ? "#34d399" : "#6b7280"} strokeWidth={2} />;
-                    }}
-                    activeDot={{ r: 5, fill: "#34d399", stroke: "#07080c", strokeWidth: 2 }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </section>
-        </main>
+
+
+            {/* ── Projeção de Poupança ── */}
+            <div style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02))", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 22, padding: "16px 12px 12px", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10, paddingLeft: 4 }}>
+                Projeção de Poupança
+              </div>
+              {chartData.length === 0 ? (
+                <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "16px 0" }}>Sem dados ainda.</p>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart data={chartData} margin={{ top: 4, right: 6, left: 0, bottom: 42 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={GRID_LINE} />
+                      <XAxis dataKey="mes" tick={AXIS_TICK} angle={-35} textAnchor="end" interval={chartData.length > 12 ? 2 : 0} />
+                      <YAxis tick={AXIS_TICK} tickFormatter={v => `R$${(Number(v)/1000).toFixed(0)}k`} width={44} />
+                      <Tooltip contentStyle={TOOLTIP_CS} labelStyle={{ color: "#9ca3af" }}
+                        formatter={(v, name) => [Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:0,maximumFractionDigits:0}), name === "historico" ? "Poupança" : "Projeção"]} />
+                      <ReferenceLine x={mesAtualLabel} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 3"
+                        label={{ value: "hoje", position: "insideTopRight", fontSize: 9, fill: "rgba(255,255,255,0.3)" }} />
+                      <Line type="monotone" dataKey="historico" stroke="#34d399" strokeWidth={2} connectNulls={false}
+                        dot={(props) => {
+                          const { cx, cy, payload } = props;
+                          if (!payload.historico && payload.historico !== 0) return null;
+                          return <circle key={`h${cx}${cy}`} cx={cx} cy={cy} r={3} fill={payload.atingido ? "#34d399" : "#111827"} stroke={payload.atingido ? "#34d399" : "#6b7280"} strokeWidth={2} />;
+                        }}
+                        activeDot={{ r: 5, fill: "#34d399", stroke: "#0a0d14", strokeWidth: 2 }} />
+                      <Line type="monotone" dataKey="projecao" stroke="#38bdf8" strokeWidth={2} strokeDasharray="6 3" connectNulls={false} dot={false}
+                        activeDot={{ r: 4, fill: "#38bdf8", stroke: "#0a0d14", strokeWidth: 2 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div style={{ display: "flex", gap: 14, justifyContent: "center", fontSize: 10, color: "rgba(255,255,255,0.38)", marginTop: 2 }}>
+                    <span><span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: "#34d399", marginRight: 4, verticalAlign: "middle" }} />Histórico</span>
+                    <span><span style={{ display: "inline-block", width: 16, height: 2, background: "#38bdf8", marginRight: 4, verticalAlign: "middle", borderRadius: 1 }} />Projeção</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* ── Meta de Poupança ── */}
+            {(() => {
+              const metaFinal  = poupanca.meta ?? 50_000;
+              const pct        = Math.min(poupancaAcumulada / metaFinal, 1);
+              const pctLabel   = Math.round(pct * 100);
+              const faltam     = Math.max(metaFinal - poupancaAcumulada, 0);
+              const cor        = pctLabel >= 80 ? "#34d399" : pctLabel >= 50 ? "#38bdf8" : "#fbbf24";
+
+              const taxaMensal    = Math.max(poupancaMensalBase, 0);
+              const previsaoLabel = taxaMensal > 0 && faltam > 0 ? (() => {
+                const d = new Date();
+                d.setMonth(d.getMonth() + Math.ceil(faltam / taxaMensal));
+                return d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+              })() : null;
+
+              const cx = 100, cy = 72, R = 56, sw = 10;
+              const bgArc = `M ${cx-R} ${cy} A ${R} ${R} 0 0 1 ${cx+R} ${cy}`;
+              const angle = Math.PI * (1 - Math.min(pct, 0.9999));
+              const ex = (cx + R * Math.cos(angle)).toFixed(1);
+              const ey = (cy - R * Math.sin(angle)).toFixed(1);
+
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 0, padding: 20, borderRadius: 22, background: "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02))", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+
+                  {/* Cabeçalho */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                      Meta de Poupança
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                      Meta: <strong style={{ color: "var(--text-secondary)" }}>{fmtShort(metaFinal)}</strong>
+                    </span>
+                  </div>
+
+                  {/* Gauge */}
+                  <svg width="100%" viewBox={`0 0 200 ${cy + 14}`} style={{ display: "block" }}>
+                    <path d={bgArc} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={sw} strokeLinecap="round" />
+                    {pct > 0 && (
+                      <path d={`M ${cx-R} ${cy} A ${R} ${R} 0 0 1 ${ex} ${ey}`}
+                        fill="none" stroke={cor} strokeWidth={sw} strokeLinecap="round" />
+                    )}
+                    <text x={cx} y={cy-28} textAnchor="middle" fill={cor} fontSize="11" fontWeight="800">{pctLabel}%</text>
+                    <text x={cx} y={cy-13} textAnchor="middle" fill="#f9fafb" fontSize="15" fontWeight="900">{fmtShort(poupancaAcumulada)}</text>
+                    <text x={cx} y={cy-2}  textAnchor="middle" fill="#6b7280" fontSize="8">acumulado</text>
+                    <text x={cx-R+4}  y={cy+12} textAnchor="middle" fill="#4b5563" fontSize="8">R$0</text>
+                    <text x={cx+R-4}  y={cy+12} textAnchor="middle" fill="#4b5563" fontSize="8">50k</text>
+                  </svg>
+
+                  {/* Faltam + previsão */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Faltam</div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: faltam > 0 ? "var(--text-secondary)" : "#34d399" }}>
+                        {faltam > 0 ? fmtShort(faltam) : "Meta! 🎉"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+          </div>
+
+        </div>
       )}
 
       {/* ── Modal de registro de gasto ── */}
@@ -711,7 +911,7 @@ export default function OverviewPage() {
                   disabled={saving || !addCat || !addVal}
                   style={{
                     flex: 2, padding: 12, borderRadius: 10, fontSize: 13, fontWeight: 700,
-                    color: "#fff", background: "linear-gradient(135deg,#10b981,#059669)",
+                    color: "#fff", background: "linear-gradient(135deg,#34d399,#059669)",
                     border: "none", opacity: (!addCat || !addVal || saving) ? 0.5 : 1,
                   }}
                 >
