@@ -4,7 +4,7 @@ import FinanceOcultarBtn from "./FinanceOcultarBtn";
 
 // Telas do Financeiro já redesenhadas têm o botão "Ocultar" no próprio cabeçalho;
 // nas demais, ele continua flutuando no canto superior direito.
-const WITH_OWN_BUTTON = ["/finance/overview", "/finance/expenses", "/finance/income"];
+const WITH_OWN_BUTTON = ["/finance/overview", "/finance/expenses", "/finance/income", "/finance/launch"];
 
 export default function FinanceFloatingOcultar({ className }) {
   const pathname = usePathname();

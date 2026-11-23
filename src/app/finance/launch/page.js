@@ -1,14 +1,20 @@
 "use client";
+// Financeiro > Lançar — mesmo padrão visual de Gastos/Ganhos.
 import { useState, useEffect, useCallback } from "react";
 import Navigation from "@/components/ui/Navigation";
 import ModuleHeader from "@/components/ui/ModuleHeader";
-import finStyles from "../Finance.module.css";
+import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
+import ex from "../expenses/Expenses.module.css";
+import ln from "./Launch.module.css";
 import { useFinance } from "@/hooks/useFinance";
 import { fmtFin } from "@/lib/fmtFin";
-import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
 
 // ── Formatadores ──────────────────────────────────────────────────────────────
-function todayISO() { return new Date().toISOString().slice(0, 10); }
+// Data de hoje no fuso do aparelho (antes usava UTC e, à noite, já mostrava o dia seguinte)
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 const MES_PT_FULL = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 function cicloAtualLabel(melhorDia, cicloInicio) {
@@ -30,42 +36,32 @@ function cicloAtualLabel(melhorDia, cicloInicio) {
   return `${MES_PT_FULL[mFinal]}/${String(yFinal).slice(2)}`;
 }
 
-// Paleta de cores por categoria
-const CAT_COLORS = {
-  "comida":              { bg: "rgba(16,185,129,0.12)",  border: "rgba(16,185,129,0.3)",  text: "#10b981",  dot: "#10b981"  },
-  "mercado":             { bg: "rgba(59,130,246,0.12)",  border: "rgba(59,130,246,0.3)",  text: "#60a5fa",  dot: "#3b82f6"  },
-  "pito":                { bg: "rgba(245,158,11,0.12)",  border: "rgba(245,158,11,0.3)",  text: "#f59e0b",  dot: "#f59e0b"  },
-  "psicologa":           { bg: "rgba(6,182,212,0.12)",   border: "rgba(6,182,212,0.3)",   text: "#06b6d4",  dot: "#06b6d4"  },
-  "outros (disponível)": { bg: "rgba(139,92,246,0.12)",  border: "rgba(139,92,246,0.3)",  text: "#a78bfa",  dot: "#8b5cf6"  },
-};
-const DEFAULT_CAT = { bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.12)", text: "var(--text-secondary)", dot: "#6b7280" };
-function catStyle(name) { return CAT_COLORS[String(name ?? "").toLowerCase()] ?? DEFAULT_CAT; }
+// Cor de cada categoria (as conhecidas têm cor fixa; as demais pegam da paleta)
+const CAT_FIXA = { "comida": "#34d399", "mercado": "#38bdf8", "pito": "#fbbf24", "psicologa": "#22d3ee", "outros (disponível)": "#a78bfa", "transporte": "#fb7185" };
+const PALETA   = ["#f472b6", "#f97316", "#a3e635", "#e879f9", "#60a5fa", "#facc15"];
+function catColor(name) {
+  const k = String(name ?? "").toLowerCase();
+  if (CAT_FIXA[k]) return CAT_FIXA[k];
+  let h = 0; for (const ch of k) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return PALETA[h % PALETA.length];
+}
 
-// Formata "14/05/2026" → "Seg, 14 mai"
-const WEEK_PT  = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-const MON_PT   = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+// "14/05/2026" → "Seg, 14 mai"
+const WEEK_PT = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+const MON_PT  = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
 function fmtDayLabel(dateBR) {
   const [d, m, y] = dateBR.split("/").map(Number);
   const dt = new Date(y, m - 1, d);
   return `${WEEK_PT[dt.getDay()]}, ${String(d).padStart(2,"0")} ${MON_PT[m - 1]}`;
 }
 
-const inputSt = {
-  width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
-  borderRadius: 10, padding: "9px 12px", color: "#f0f0f8", fontSize: 14,
-  fontFamily: "inherit", outline: "none", boxSizing: "border-box",
-};
-const labelSt = {
-  display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase",
-  letterSpacing: "0.07em", color: "rgba(255,255,255,0.35)", marginBottom: 5,
-};
+const TRASH_ICON = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>;
 
 export default function LaunchPage() {
   const { data: finData, loading: finLoading, hideNumbers, refetch } = useFinance();
-  const fmt      = (v) => fmtFin(v, hideNumbers);
-  const fmtShort = (v) => fmtFin(v, hideNumbers);
+  const fmt = (v) => fmtFin(v, hideNumbers);
 
-  const categories = (finData?.gastos?.variaveis?.items ?? []).map(i => i.item);
+  const categories  = (finData?.gastos?.variaveis?.items ?? []).map(i => i.item);
   const melhorDia   = finData?.config?.melhorDiaCompra ?? null;
   const cicloInicio = finData?.config?.cicloInicio ?? null;
   const cicloAtual  = cicloAtualLabel(melhorDia, cicloInicio);
@@ -73,10 +69,12 @@ export default function LaunchPage() {
   // ── Estado: lançamento ───────────────────────────────────────────────────
   const [form, setForm]     = useState({ date: todayISO(), category: "", value: "", ciclo: "" });
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(null); // rowIndex sendo apagado
+  const [deleting, setDeleting]   = useState(null); // rowIndex sendo apagado
+  const [delConfirm, setDelConfirm] = useState(null); // rowIndex aguardando confirmação
 
   async function handleDelete(rowIndex) {
-    if (!window.confirm("Apagar este lançamento?")) return;
+    if (delConfirm !== rowIndex) { setDelConfirm(rowIndex); return; }
+    setDelConfirm(null);
     setDeleting(rowIndex);
     try {
       const res = await fetch("/api/finance/launch", {
@@ -106,11 +104,11 @@ export default function LaunchPage() {
   const [showClose, setShowClose]       = useState(false);
 
   // ── Estado: lista ────────────────────────────────────────────────────────
-  const [entries,     setEntries]    = useState([]);
-  const [entriesLoad,    setEntriesLoad]    = useState(true);
-  const [openCiclos,     setOpenCiclos]     = useState({});
-  const [monthsHistory,  setMonthsHistory]  = useState([]);
-  const [monthsLoad,     setMonthsLoad]     = useState(true);
+  const [entries,       setEntries]       = useState([]);
+  const [entriesLoad,   setEntriesLoad]   = useState(true);
+  const [openCiclos,    setOpenCiclos]    = useState({});
+  const [monthsHistory, setMonthsHistory] = useState([]);
+  const [monthsLoad,    setMonthsLoad]    = useState(true);
 
   // ── Ciclo padrão + lista de ciclos disponíveis ────────────────────────────
   useEffect(() => {
@@ -243,421 +241,302 @@ export default function LaunchPage() {
     const mIdx = MES_PT_FULL.indexOf(mes?.toLowerCase());
     return mIdx >= 0 ? (2000 + parseInt(ano || "0")) * 12 + mIdx : 0;
   };
-  const ciclosSorted = Object.keys(byCiclo).sort((a, b) => parseCiclo(a) - parseCiclo(b));
+  // Ciclo mais recente primeiro
+  const ciclosSorted = Object.keys(byCiclo).sort((a, b) => parseCiclo(b) - parseCiclo(a));
+
+  // ── Big numbers ──────────────────────────────────────────────────────────
+  const hojeBR      = new Date().toLocaleDateString("pt-BR");
+  const doCiclo     = entries.filter(e => e.ciclo === cicloAtual);
+  const totalCiclo  = doCiclo.reduce((s, e) => s + e.valor, 0);
+  const totalHoje   = entries.filter(e => e.data === hojeBR).reduce((s, e) => s + e.valor, 0);
+  const diasCiclo   = new Set(doCiclo.map(e => e.data)).size;
+  const mediaDia    = diasCiclo > 0 ? totalCiclo / diasCiclo : 0;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className={finStyles.container}>
-      <ModuleHeader title="Lançar" />
+    <div className={ex.page} style={{ background: "radial-gradient(50% 35% at 85% 0%, rgba(251,191,36,0.09), transparent 70%), #07080c" }}>
+      <ModuleHeader title="Lançar" hideOnDesktop />
       <Navigation />
 
-      {toast && (
-        <div style={{
-          position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)",
-          background: toast.warn ? "rgba(245,158,11,0.95)" : "rgba(17,24,39,0.95)",
-          border: `1px solid ${toast.warn ? "rgba(245,158,11,0.4)" : "rgba(255,255,255,0.1)"}`,
-          color: "#f0f0f8", padding: "10px 20px", borderRadius: 12,
-          fontSize: 13, fontWeight: 600, zIndex: 999, whiteSpace: "nowrap",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-        }}>{toast.msg}</div>
-      )}
+      {toast && <div className={ex.toast} style={toast.warn ? { borderColor: "rgba(251,191,36,0.5)", color: "#fde68a" } : undefined}>{toast.msg}</div>}
 
-      <header className={finStyles.header}>
-        <div>
-          <h1>Lançar</h1>
-          <p style={{ textTransform: "capitalize" }}>
-            {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-          </p>
+      {/* Cabeçalho */}
+      <header className={ex.top}>
+        <div className={ex.topLeft}>
+          <span className={ex.eyebrow}>
+            Financeiro · {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+          </span>
+          <h1 className={ex.title}>Lançar</h1>
+        </div>
+        <div className={ex.topRight}>
+          <FinanceOcultarBtn className={ex.pillBtn} />
         </div>
       </header>
 
-      {/* ── Layout 2 colunas igual Gastos/Ganhos ── */}
-      <div className={finStyles.body}>
+      {/* Big numbers */}
+      <div className={ex.tabs}>
+        {[
+          { label: "Hoje",          value: fmt(totalHoje),  color: "#fbbf24", hint: "gasto no dia" },
+          { label: "No ciclo",      value: fmt(totalCiclo), color: "#fb7185", hint: cicloAtual ? `ciclo de ${cicloAtual}` : "ciclo atual" },
+          { label: "Média por dia", value: fmt(mediaDia),   color: "#38bdf8", hint: `${diasCiclo} dia${diasCiclo === 1 ? "" : "s"} com gasto` },
+          { label: "Lançamentos",   value: String(doCiclo.length), color: "#a78bfa", hint: "neste ciclo" },
+        ].map(s => (
+          <div key={s.label} className={ex.tabBox} style={{ "--t": s.color }}>
+            <span className={ex.tabLabel}><span className={ex.tabDot} />{s.label}</span>
+            <span className={ex.tabValue} style={{ color: s.color }}>{s.value}</span>
+            <span className={ex.tabHint}>{s.hint}</span>
+          </div>
+        ))}
+      </div>
 
-        {/* ════ mainCol: lista de gastos por dia ════ */}
-        <div className={finStyles.mainCol}>
-          <div className={finStyles.content} style={{ paddingBottom: 80 }}>
+      <div className={ex.layout}>
+        {/* ════ Lista: ciclo → dia → lançamentos ════ */}
+        <div className={ex.mainArea}>
+          {entriesLoad ? (
+            <p className={ex.empty}>Carregando…</p>
+          ) : ciclosSorted.length === 0 ? (
+            <p className={ex.empty}>Nenhum lançamento ainda.</p>
+          ) : ciclosSorted.map(ciclo => {
+            const isCurrent   = ciclo === cicloAtual;
+            const diasByCiclo = byCiclo[ciclo];
+            const dias = Object.keys(diasByCiclo).sort((a, b) => {
+              const [da,ma,ya] = a.split("/").map(Number);
+              const [db,mb,yb] = b.split("/").map(Number);
+              return new Date(yb,mb-1,db) - new Date(ya,ma-1,da);
+            });
+            const total  = dias.reduce((s, d) => s + diasByCiclo[d].reduce((ss, e) => ss + e.valor, 0), 0);
+            const qtd    = dias.reduce((s, d) => s + diasByCiclo[d].length, 0);
+            const isOpen = isCurrent || !!openCiclos[ciclo];
+            const cor    = isCurrent ? "#34d399" : "rgba(255,255,255,0.35)";
 
-            {entriesLoad ? (
-              <p style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: 14 }}>Carregando...</p>
-            ) : ciclosSorted.length === 0 ? (
-              <p style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: 14 }}>Nenhum lançamento ainda.</p>
-            ) : ciclosSorted.map((ciclo, ci) => {
-              const isCurrent   = ciclo === cicloAtual;
-              const diasByCiclo = byCiclo[ciclo];
-              const dias = Object.keys(diasByCiclo).sort((a, b) => {
-                const [da,ma,ya] = a.split("/").map(Number);
-                const [db,mb,yb] = b.split("/").map(Number);
-                return new Date(yb,mb-1,db) - new Date(ya,ma-1,da);
-              });
-              const totalCiclo = dias.reduce((s, d) => s + diasByCiclo[d].reduce((ss, e) => ss + e.valor, 0), 0);
-              const isOpen     = isCurrent || !!openCiclos[ciclo];
+            return (
+              <section key={ciclo} className={ex.listPanel}>
+                <button type="button" disabled={isCurrent}
+                  onClick={() => setOpenCiclos(s => ({ ...s, [ciclo]: !s[ciclo] }))}
+                  className={`${ex.sectionHead} ${ln.cycleBtn}`}>
+                  <span className={ex.sectionDot} style={{ background: cor, boxShadow: isCurrent ? `0 0 10px ${cor}` : "none" }} />
+                  <span className={ex.sectionName} style={{ textTransform: "capitalize" }}>{ciclo}</span>
+                  {isCurrent ? <span className={ln.nowTag}>atual</span> : <span className={ex.sectionCount}>{qtd}</span>}
+                  <span className={ex.sectionTotal}>{fmt(total)}</span>
+                  {!isCurrent && <span className={`${ln.chev} ${isOpen ? ln.chevOpen : ""}`}>▼</span>}
+                </button>
 
-              return (
-                <div key={ciclo} style={{
-                  marginBottom: 24,
-                  background: "rgba(255,255,255,0.025)",
-                  border: `1px solid ${isCurrent ? "rgba(0,229,160,0.15)" : "rgba(255,255,255,0.07)"}`,
-                  borderRadius: 16, overflow: "hidden",
-                }}>
-                  {/* Cabeçalho do ciclo — estilo group header */}
-                  <button
-                    type="button"
-                    onClick={() => { if (!isCurrent) setOpenCiclos(s => ({ ...s, [ciclo]: !s[ciclo] })); }}
-                    style={{
-                      width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-                      padding: "14px 20px",
-                      background: isCurrent ? "rgba(0,229,160,0.04)" : "rgba(255,255,255,0.02)",
-                      border: "none", cursor: isCurrent ? "default" : "pointer", fontFamily: "inherit",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ width: 5, height: 22, borderRadius: 2, background: isCurrent ? "var(--accent-primary)" : "rgba(255,255,255,0.2)" }} />
-                      <span style={{ fontSize: 14, fontWeight: 800, textTransform: "capitalize", color: isCurrent ? "var(--accent-primary)" : "var(--text-primary)" }}>
-                        {ciclo}
-                      </span>
-                      {isCurrent && (
-                        <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 99, background: "rgba(0,229,160,0.12)", color: "var(--accent-primary)", border: "1px solid rgba(0,229,160,0.25)", fontWeight: 700 }}>
-                          atual
+                {isOpen && dias.map(dia => {
+                  const diaEntries = diasByCiclo[dia];
+                  const diaTotal   = diaEntries.reduce((s, e) => s + e.valor, 0);
+                  const isToday    = dia === hojeBR;
+                  return (
+                    <div key={dia}>
+                      <div className={ln.dayHead}>
+                        <span className={`${ln.dayName} ${isToday ? ln.dayToday : ""}`}>
+                          {fmtDayLabel(dia)}{isToday && <span className={ln.nowTag}>hoje</span>}
                         </span>
-                      )}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 800, color: "#ef4444" }}>
-                        {fmt(totalCiclo)}
-                      </span>
-                      {!isCurrent && (
-                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.18s", display: "inline-block" }}>▼</span>
-                      )}
-                    </div>
-                  </button>
-
-                  {/* Dias do ciclo */}
-                  {isOpen && (
-                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", padding: "8px 16px 12px" }}>
-                      {dias.map((dia, di) => {
-                        const diaEntries = diasByCiclo[dia];
-                        const diaTotal   = diaEntries.reduce((s, e) => s + e.valor, 0);
-                        const isToday    = dia === new Date().toLocaleDateString("pt-BR");
+                        <span className={ln.dayTotal}>{fmt(diaTotal)}</span>
+                      </div>
+                      {diaEntries.map((e, i) => {
+                        const c      = catColor(e.categoria);
+                        const isDel  = deleting === e.rowIndex;
+                        const isConf = delConfirm === e.rowIndex;
                         return (
-                          <div key={dia} style={{ marginBottom: di < dias.length - 1 ? 12 : 0 }}>
-                            {/* Header do dia */}
-                            <div style={{
-                              display: "flex", justifyContent: "space-between", alignItems: "center",
-                              marginBottom: 6, paddingBottom: 5,
-                              borderBottom: "1px solid rgba(255,255,255,0.06)",
-                            }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{
-                                  fontSize: 11, fontWeight: 700, color: isToday ? "var(--accent-primary)" : "var(--text-muted)",
-                                  letterSpacing: "0.04em", textTransform: "uppercase",
-                                }}>
-                                  {fmtDayLabel(dia)}
-                                </span>
-                                {isToday && (
-                                  <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 6px", borderRadius: 99, background: "rgba(0,229,160,0.12)", color: "var(--accent-primary)", border: "1px solid rgba(0,229,160,0.25)" }}>
-                                    HOJE
-                                  </span>
-                                )}
-                              </div>
-                              <span style={{ fontSize: 12, fontWeight: 800, color: "#f59e0b", fontFamily: "var(--font-mono)" }}>
-                                {fmt(diaTotal)}
-                              </span>
-                            </div>
-
-                            {/* Entradas com pill de categoria */}
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                              {diaEntries.map((e, i) => {
-                                const cs = catStyle(e.categoria);
-                                const isDel = deleting === e.rowIndex;
-                                return (
-                                  <div key={i} style={{
-                                    display: "flex", alignItems: "center", gap: 8,
-                                    padding: "6px 12px", borderRadius: 99,
-                                    background: cs.bg, border: `1px solid ${cs.border}`,
-                                  }}>
-                                    <span style={{ fontSize: 12, fontWeight: 600, color: cs.text }}>{e.categoria}</span>
-                                    <span style={{ fontSize: 12, fontWeight: 800, color: cs.text, fontFamily: "var(--font-mono)" }}>
-                                      {fmtShort(e.valor)}
-                                    </span>
-                                    <button
-                                      onClick={() => handleDelete(e.rowIndex)}
-                                      disabled={isDel}
-                                      style={{
-                                        background: "none", border: "none", cursor: isDel ? "wait" : "pointer",
-                                        color: "rgba(255,255,255,0.3)", fontSize: 13, lineHeight: 1,
-                                        padding: "0 2px", display: "flex", alignItems: "center",
-                                      }}
-                                    >
-                                      {isDel ? "…" : "✕"}
-                                    </button>
-                                  </div>
-                                );
-                              })}
+                          <div key={`${e.rowIndex}-${i}`} className={ex.uRow} style={{ "--c": c, minHeight: 50 }}>
+                            <span className={ex.uLead}><i className={ex.uDot} /></span>
+                            <div className={`${ex.uName} ${ex.uWide}`}><span className={ex.rowName}>{e.categoria}</span></div>
+                            <span className={ex.uAux} />
+                            <span className={ex.uVal}><b>{fmt(e.valor)}</b></span>
+                            <div className={ex.uActs}>
+                              {isConf ? (
+                                <button onClick={() => handleDelete(e.rowIndex)} disabled={isDel} className={ex.confirmBtn}
+                                  onBlur={() => setTimeout(() => setDelConfirm(v => v === e.rowIndex ? null : v), 200)}>
+                                  {isDel ? "…" : "Apagar?"}
+                                </button>
+                              ) : (
+                                <button onClick={() => handleDelete(e.rowIndex)} disabled={isDel} title="Apagar" className={`${ex.iconBtn} ${ex.dangerBtn}`}>
+                                  {isDel ? "…" : TRASH_ICON}
+                                </button>
+                              )}
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </section>
+            );
+          })}
         </div>
 
-        {/* ════ sideCol: formulários (sideColMobileShow torna visível no mobile) ════ */}
-        <div className={`${finStyles.sideCol} ${finStyles.sideColMobileShow} ${finStyles.sideColFirst}`}>
+        {/* ════ Lateral: lançar, fechar mês, histórico ════ */}
+        <div className={`${ex.side} ${ln.sideFirst}`} style={{ position: "static" }}>
 
-          {/* ── Painel 1: Gasto Variável Dia ── */}
-          <div className={finStyles.sidePanel}>
-            <div className={finStyles.sidePanelTitle} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>💸 Gasto Variável</span>
-              {cicloAtual && (
-                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: "rgba(0,229,160,0.1)", color: "var(--accent-primary)", border: "1px solid rgba(0,229,160,0.2)", textTransform: "none" }}>
-                  {cicloAtual}
-                </span>
-              )}
+          {/* Novo gasto */}
+          <div className={ex.panel}>
+            <div className={ln.panelHead}>
+              <div className={ex.panelTitle} style={{ marginBottom: 0 }}>Novo gasto</div>
+              {cicloAtual && <span className={ln.tag} style={{ color: "#34d399", background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.25)" }}>{cicloAtual}</span>}
             </div>
-
-            <div style={{ padding: "14px 16px 20px" }}>
-              <form onSubmit={handleLaunch} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <form onSubmit={handleLaunch} className={ln.form}>
+              <div>
+                <label className={ln.lbl}>Categoria</label>
+                {finLoading ? (
+                  <p className={ln.hint}>Carregando…</p>
+                ) : (
+                  <div className={ln.chips}>
+                    {categories.map(c => (
+                      <button key={c} type="button" onClick={() => setForm(p => ({ ...p, category: c }))}
+                        className={`${ln.chip} ${form.category === c ? ln.chipOn : ""}`} style={{ "--c": catColor(c) }}>
+                        <i />{c}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className={ln.lbl}>Valor (R$)</label>
+                <input type="number" step="0.01" min="0.01" inputMode="decimal" value={form.value}
+                  onChange={e => setForm(p => ({ ...p, value: e.target.value }))}
+                  placeholder="0,00" required className={`${ln.input} ${ln.bigInput}`} />
+              </div>
+              <div className={ln.two}>
                 <div>
-                  <label style={labelSt}>Data</label>
-                  <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} required style={{ ...inputSt, colorScheme: "dark" }} />
+                  <label className={ln.lbl}>Data</label>
+                  <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} required className={ln.input} />
                 </div>
                 <div>
-                  <label style={labelSt}>Ciclo</label>
-                  <select
-                    value={form.ciclo}
-                    onChange={e => setForm(p => ({ ...p, ciclo: e.target.value }))}
-                    style={{ ...inputSt, appearance: "none", cursor: "pointer", textTransform: "capitalize" }}
-                  >
+                  <label className={ln.lbl}>Ciclo</label>
+                  <select value={form.ciclo} onChange={e => setForm(p => ({ ...p, ciclo: e.target.value }))}
+                    className={ln.input} style={{ cursor: "pointer", textTransform: "capitalize" }}>
                     {availableCycles.map(c => (
                       <option key={c} value={c}>{c}{c === cicloAtual ? " (atual)" : ""}</option>
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label style={labelSt}>Categoria</label>
-                  {finLoading ? (
-                    <div style={{ ...inputSt, color: "var(--text-muted)", fontSize: 13 }}>Carregando...</div>
-                  ) : (
-                    <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} required style={{ ...inputSt, appearance: "none", cursor: "pointer" }}>
-                      <option value="" disabled>Selecione</option>
-                      {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  )}
-                </div>
-                <div>
-                  <label style={labelSt}>Valor (R$)</label>
-                  <input type="number" step="0.01" min="0.01" value={form.value}
-                    onChange={e => setForm(p => ({ ...p, value: e.target.value }))}
-                    placeholder="0,00" required
-                    style={{ ...inputSt, fontSize: 20, fontFamily: "var(--font-mono), monospace", fontWeight: 700 }}
-                  />
-                </div>
-                <button type="submit" disabled={!form.category || !form.value || saving}
-                  style={{
-                    marginTop: 2, padding: "11px 0", borderRadius: 10, border: "none",
-                    fontSize: 13, fontWeight: 700, color: "#fff",
-                    background: (form.category && form.value && !saving) ? "linear-gradient(135deg,#10b981,#059669)" : "rgba(255,255,255,0.06)",
-                    cursor: (form.category && form.value && !saving) ? "pointer" : "not-allowed",
-                    transition: "all 0.2s",
-                  }}
-                >
-                  {saving ? "Salvando…" : "Registrar"}
-                </button>
-              </form>
-            </div>
+              </div>
+              <button type="submit" disabled={!form.category || !form.value || saving} className={ln.submit}>
+                {saving ? "Salvando…" : "Registrar gasto"}
+              </button>
+            </form>
           </div>
 
-          {/* ── Painel 2: Fechamento do Mês ── */}
-          <div className={finStyles.sidePanel} style={{ marginTop: 12, border: closeResult ? "1px solid rgba(16,185,129,0.25)" : undefined }}>
-            <div className={finStyles.sidePanelTitle} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>🗓 Fechar Mês</span>
+          {/* Fechar mês */}
+          <div className={ex.panel} style={closeResult ? { borderColor: "rgba(52,211,153,0.3)" } : undefined}>
+            <div className={ln.panelHead}>
+              <div className={ex.panelTitle} style={{ marginBottom: 0 }}>Fechar mês</div>
               {closePreview?.mesAtual && !closeResult && (
-                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: "rgba(245,158,11,0.12)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.25)", textTransform: "capitalize" }}>
-                  {closePreview.mesAtual}
-                </span>
+                <span className={ln.tag} style={{ color: "#fbbf24", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)" }}>{closePreview.mesAtual}</span>
               )}
             </div>
 
-            <div style={{ padding: "14px 16px 20px" }}>
-              {closeResult ? (
-                /* Resultado */
+            {closeResult ? (
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#34d399", marginBottom: 10 }}>✓ Mês fechado!</div>
+                {[
+                  ["Fixos resetados",    closeResult.fixosResetados],
+                  ["Parcelas avançadas", closeResult.parcelasAvancadas],
+                  ["Parcelas concluídas", closeResult.parcelasConcluidas],
+                  ["Ganhos resetados",   closeResult.ganhosResetados],
+                  closeResult.poupancaAtualizada ? [`Poupança ${closeResult.poupancaAtualizada.mes}`, fmt(closeResult.poupancaAtualizada.acumulado)] : null,
+                  closeResult.novoCicloInicio ? ["Novo ciclo", closeResult.novoCicloInicio] : null,
+                  closeResult.novoMelhorDia   ? ["Melhor dia", `dia ${closeResult.novoMelhorDia}`] : null,
+                  closeResult.fixosAutoMantidos > 0 ? ["Fixos automáticos (pagos)", closeResult.fixosAutoMantidos] : null,
+                ].filter(Boolean).map(([l, v]) => (
+                  <div key={l} className={ln.kv}><span>{l}</span><b>{v}</b></div>
+                ))}
+                <button onClick={() => setCloseResult(null)} className={ln.closeOpen} style={{ marginTop: 14, color: "#fff", background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.12)" }}>Ok</button>
+              </div>
+            ) : !showClose ? (
+              <button onClick={() => setShowClose(true)} className={ln.closeOpen}>
+                Fechar {closePreview?.mesAtual ?? "mês"}
+              </button>
+            ) : (
+              <form onSubmit={handleClose} className={ln.form}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#10b981", marginBottom: 12 }}>✓ Mês fechado!</div>
-                  {[
-                    ["📋 Fixos resetados",    closeResult.fixosResetados],
-                    ["💳 Parcelas avançadas", closeResult.parcelasAvancadas],
-                    ["💳 Concluídas",         closeResult.parcelasConcluidas],
-                    ["💰 Ganhos resetados",   closeResult.ganhosResetados],
-                    closeResult.poupancaAtualizada
-                      ? [`🏦 ${closeResult.poupancaAtualizada.mes}`, fmtShort(closeResult.poupancaAtualizada.acumulado)]
-                      : null,
-                    closeResult.novoCicloInicio ? ["🗓 Novo ciclo", closeResult.novoCicloInicio] : null,
-                    closeResult.novoMelhorDia   ? ["📅 Melhor dia", `dia ${closeResult.novoMelhorDia}`] : null,
-                    closeResult.fixosAutoMantidos > 0 ? ["⚡ Fixos auto (pagos)", closeResult.fixosAutoMantidos] : null,
-                  ].filter(Boolean).map(([l, v]) => (
-                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontSize: 12 }}>
-                      <span style={{ color: "var(--text-muted)" }}>{l}</span>
-                      <span style={{ fontWeight: 700, color: "var(--text-secondary)" }}>{v}</span>
-                    </div>
-                  ))}
-                  <button onClick={() => setCloseResult(null)} style={{ marginTop: 12, width: "100%", padding: 8, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--text-muted)", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
-                    Ok
-                  </button>
+                  <label className={ln.lbl}>Poupanças (R$)</label>
+                  <div className={ln.two}>
+                    {[["Poupança 1", poup1, setPoup1], ["Poupança 2", poup2, setPoup2], ["Poupança 3", poup3, setPoup3], ["Benefício", benef, setBenef]].map(([l, val, set]) => (
+                      <div key={l}>
+                        <div className={ln.mini}>{l}</div>
+                        <input type="number" step="0.01" min="0" inputMode="decimal" value={val} onChange={e => set(e.target.value)} placeholder="0" className={ln.input} />
+                      </div>
+                    ))}
+                  </div>
+                  {totalPoup > 0 && <div className={ln.sum} style={{ color: "#34d399" }}>{fmt(totalPoup)}</div>}
                 </div>
-              ) : !showClose ? (
-                /* Botão para abrir o formulário */
-                <button
-                  onClick={() => setShowClose(true)}
-                  style={{
-                    width: "100%", padding: "11px 0", borderRadius: 10, border: "1px solid rgba(245,158,11,0.25)",
-                    fontSize: 13, fontWeight: 700, color: "#f59e0b",
-                    background: "rgba(245,158,11,0.08)", cursor: "pointer", fontFamily: "inherit",
-                  }}
-                >
-                  Fechar {closePreview?.mesAtual ?? "Mês"}
-                </button>
-              ) : (
-                /* Formulário de fechamento */
-                <form onSubmit={handleClose} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {/* Poupanças */}
-                  <div>
-                    <label style={labelSt}>Poupanças (R$)</label>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                      {[["P1", poup1, setPoup1], ["P2", poup2, setPoup2], ["P3", poup3, setPoup3], ["Benef.", benef, setBenef]].map(([lbl, val, set]) => (
-                        <div key={lbl}>
-                          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginBottom: 3, textTransform: "uppercase" }}>{lbl}</div>
-                          <input type="number" step="0.01" min="0" value={val} onChange={e => set(e.target.value)}
-                            placeholder="0" style={{ ...inputSt, padding: "7px 10px", fontSize: 13, fontFamily: "var(--font-mono), monospace" }} />
-                        </div>
-                      ))}
-                    </div>
-                    {totalPoup > 0 && <div style={{ fontSize: 11, color: "#10b981", marginTop: 5, textAlign: "right", fontFamily: "var(--font-mono)" }}>{fmtShort(totalPoup)}</div>}
+                <div>
+                  <label className={ln.lbl}>Faturas (R$)</label>
+                  <div className={ln.two}>
+                    {[["Bradesco", brad, setBrad], ["Nubank", nub, setNub]].map(([l, val, set]) => (
+                      <div key={l}>
+                        <div className={ln.mini}>{l}</div>
+                        <input type="number" step="0.01" min="0" inputMode="decimal" value={val} onChange={e => set(e.target.value)} placeholder="0" className={ln.input} />
+                      </div>
+                    ))}
                   </div>
-
-                  {/* Faturas */}
-                  <div>
-                    <label style={labelSt}>Faturas (R$)</label>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                      {[["Bradesco", brad, setBrad], ["Nubank", nub, setNub]].map(([lbl, val, set]) => (
-                        <div key={lbl}>
-                          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginBottom: 3, textTransform: "uppercase" }}>{lbl}</div>
-                          <input type="number" step="0.01" min="0" value={val} onChange={e => set(e.target.value)}
-                            placeholder="0" style={{ ...inputSt, padding: "7px 10px", fontSize: 13, fontFamily: "var(--font-mono), monospace" }} />
-                        </div>
-                      ))}
-                    </div>
-                    {totalFat > 0 && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5, textAlign: "right", fontFamily: "var(--font-mono)" }}>{fmtShort(totalFat)}</div>}
+                  {totalFat > 0 && <div className={ln.sum} style={{ color: "#fb7185" }}>{fmt(totalFat)}</div>}
+                </div>
+                <div>
+                  <label className={ln.lbl}>Melhor dia de compra (próximo ciclo)</label>
+                  <input type="number" min="1" max="31" step="1" value={melhorDiaInput} onChange={e => setMelhorDiaInput(e.target.value)}
+                    placeholder={closePreview?.melhorDiaAtual ? `Atual: dia ${closePreview.melhorDiaAtual}` : "Ex: 10"} className={ln.input} />
+                  <p className={ln.hint}>Define o início do ciclo do cartão. Deixe em branco para manter o atual.</p>
+                </div>
+                {totalPoup > 0 && (
+                  <div className={ln.net}>
+                    <span>Poupança líquida</span>
+                    <b style={{ color: liquido >= 0 ? "#34d399" : "#fb7185" }}>{fmt(liquido)}</b>
                   </div>
-
-                  {/* Melhor dia de compra do próximo ciclo */}
-                  <div>
-                    <label style={labelSt}>Melhor dia de compra <span style={{ opacity: 0.5 }}>(próximo ciclo)</span></label>
-                    <input
-                      type="number" min="1" max="31" step="1"
-                      value={melhorDiaInput}
-                      onChange={e => setMelhorDiaInput(e.target.value)}
-                      placeholder={closePreview?.melhorDiaAtual ? `Atual: dia ${closePreview.melhorDiaAtual}` : "Ex: 10"}
-                      style={{ ...inputSt, padding: "7px 10px", fontSize: 14, fontFamily: "var(--font-mono), monospace" }}
-                    />
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 3 }}>
-                      Define o início do ciclo do cartão. Deixe em branco para manter o atual.
-                    </div>
-                  </div>
-
-                  {/* Líquido */}
-                  {totalPoup > 0 && (
-                    <div style={{ padding: "9px 12px", borderRadius: 10, background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.18)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Poupança líquida</span>
-                      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 900, fontSize: 16, color: liquido >= 0 ? "#10b981" : "#ef4444" }}>{fmtShort(liquido)}</span>
-                    </div>
-                  )}
-
-                  <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
-                    <button type="button" onClick={() => setShowClose(false)}
-                      style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.4)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                      Cancelar
-                    </button>
-                    <button type="submit" disabled={!totalPoup || closing}
-                      style={{ flex: 2, padding: "10px 0", borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, color: "#fff",
-                        background: (totalPoup && !closing) ? "linear-gradient(135deg,#f59e0b,#d97706)" : "rgba(255,255,255,0.06)",
-                        cursor: (totalPoup && !closing) ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
-                      {closing ? "Fechando…" : `✓ Confirmar`}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
+                )}
+                <div className={ln.btnRow}>
+                  <button type="button" onClick={() => setShowClose(false)} className={ln.ghost}>Cancelar</button>
+                  <button type="submit" disabled={!totalPoup || closing} className={ln.submit}>{closing ? "Fechando…" : "Confirmar fechamento"}</button>
+                </div>
+              </form>
+            )}
           </div>
 
-          {/* ── Painel 3: Histórico de Fechamentos ── */}
+          {/* Histórico de fechamentos */}
           {(monthsLoad || monthsHistory.length > 0) && (
-            <div className={finStyles.sidePanel} style={{ marginTop: 12 }}>
-              <div className={finStyles.sidePanelTitle} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span>📅 Fechamentos</span>
-                <button
+            <div className={ex.panel}>
+              <div className={ln.panelHead}>
+                <div className={ex.panelTitle} style={{ marginBottom: 0 }}>Fechamentos</div>
+                <button className={ln.smallBtn}
                   onClick={async () => {
                     const r = await fetch("/api/finance/months-history", { method: "PATCH" });
                     const d = await r.json();
                     if (d.ok) { showToast(`✓ ${d.rowsFixed} registro(s) recalculado(s)`); loadMonthsHistory(); }
                     else showToast("⚠ Erro ao recalcular", true);
-                  }}
-                  style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontFamily: "inherit" }}
-                >
+                  }}>
                   Recalcular
                 </button>
               </div>
-              <div style={{ padding: "10px 16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div className={ln.hist}>
                 {monthsLoad ? (
-                  <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "8px 0" }}>Carregando...</p>
+                  <p className={ln.hint} style={{ textAlign: "center" }}>Carregando…</p>
                 ) : monthsHistory.map((m, i) => (
-                  <div key={i} style={{
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.07)",
-                    borderRadius: 12, padding: "12px 14px",
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 800, textTransform: "capitalize", color: "var(--text-primary)" }}>{m.ciclo}</span>
-                      <span style={{ fontSize: 10, color: "var(--text-muted)" }}>fechado {m.fechadoEm}</span>
-                    </div>
+                  <div key={i} className={ln.histCard}>
+                    <div className={ln.histTop}><b>{m.ciclo}</b><span>fechado {m.fechadoEm}</span></div>
                     {[
-                      ["💰 Ganhos",    m.ganhos,    "#10b981"],
-                      ["📋 Fixos",     m.fixos,     "var(--text-secondary)"],
-                      ["💸 Variáveis", m.variaveis, "#f59e0b"],
-                      ...(m.parcelas > 0 ? [["💳 Parcelas", m.parcelas, "#a78bfa"]] : []),
-                      ["🏦 Poupança",  m.poupanca,  "#3b82f6"],
+                      ["Ganhos",    m.ganhos,    "#34d399"],
+                      ["Fixos",     m.fixos,     "#38bdf8"],
+                      ["Variáveis", m.variaveis, "#fbbf24"],
+                      ...(m.parcelas > 0 ? [["Parcelas", m.parcelas, "#a78bfa"]] : []),
+                      ["Poupança",  m.poupanca,  "#60a5fa"],
                     ].map(([label, val, color]) => (
-                      <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 11 }}>
-                        <span style={{ color: "var(--text-muted)" }}>{label}</span>
-                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color }}>{fmt(val)}</span>
-                      </div>
+                      <div key={label} className={ln.kv} style={{ padding: "4px 0", fontSize: 12.5 }}><span>{label}</span><b style={{ color }}>{fmt(val)}</b></div>
                     ))}
-                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 6, paddingTop: 6 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Saldo calc.</span>
-                        <span style={{ fontSize: 13, fontFamily: "var(--font-mono)", fontWeight: 900, color: m.saldo >= 0 ? "#10b981" : "#ef4444" }}>{fmt(m.saldo)}</span>
-                      </div>
-                      {(m.saldoReal !== 0 || m.diferenca !== 0) && (<>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 5 }}>
-                          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Saldo real (Δ poup.)</span>
-                          <span style={{ fontSize: 12, fontFamily: "var(--font-mono)", fontWeight: 700, color: m.saldoReal >= 0 ? "#3b82f6" : "#ef4444" }}>{fmt(m.saldoReal)}</span>
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4, paddingTop: 4, borderTop: "1px dashed rgba(255,255,255,0.06)" }}>
-                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>Diferença</span>
-                          <span style={{ fontSize: 12, fontFamily: "var(--font-mono)", fontWeight: 800, color: Math.abs(m.diferenca) < 100 ? "#10b981" : "#f59e0b" }}>{fmt(m.diferenca)}</span>
-                        </div>
-                      </>)}
+                    <div className={ln.histSaldo}>
+                      <span>Saldo calculado</span>
+                      <b style={{ color: m.saldo >= 0 ? "#34d399" : "#fb7185" }}>{fmt(m.saldo)}</b>
                     </div>
+                    {(m.saldoReal !== 0 || m.diferenca !== 0) && (<>
+                      <div className={ln.kv} style={{ padding: "4px 0", fontSize: 12.5 }}><span>Saldo real (Δ poupança)</span><b style={{ color: m.saldoReal >= 0 ? "#60a5fa" : "#fb7185" }}>{fmt(m.saldoReal)}</b></div>
+                      <div className={ln.kv} style={{ padding: "4px 0", fontSize: 12.5 }}><span>Diferença</span><b style={{ color: Math.abs(m.diferenca) < 100 ? "#34d399" : "#fbbf24" }}>{fmt(m.diferenca)}</b></div>
+                    </>)}
                   </div>
                 ))}
               </div>
             </div>
           )}
-
         </div>
       </div>
     </div>
