@@ -15,9 +15,9 @@ const CAT = {
   treino:      { color: "#a78bfa", label: "Treino"   },
   trabalho:    { color: "#38bdf8", label: "Trabalho" },
   pdv:         { color: "#fb923c", label: "PDV"      },
-  estudo:      { color: "#22d3ee", label: "Estudo"   },
-  pessoal:     { color: "#94a3b8", label: "Pessoal"  },
-  sono:        { color: "#818cf8", label: "Sono"     },
+  estudo:      { color: "#f472b6", label: "Estudo"   },
+  pessoal:     { color: "#cbd5e1", label: "Pessoal"  },
+  sono:        { color: "#64748b", label: "Sono"     },
   livre:       { color: "#34d399", label: "Livre"    },
   "refeição":  { color: "#fbbf24", label: "Refeição" },
 };
