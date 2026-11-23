@@ -65,20 +65,6 @@ export default function Header({
             <Link href="/daily"    className={`${styles.segBtn} ${mode === "today"    ? styles.segActive : ""}`}>Hoje</Link>
             <Link href="/tomorrow" className={`${styles.segBtn} ${mode === "tomorrow" ? styles.segActive : ""}`}>Amanhã</Link>
           </div>
-          <div className={styles.chips}>
-            {[
-              { key: "all",    label: "Todas" },
-              { key: "urgent", label: "Urgentes" },
-            ].map(({ key, label }) => (
-              <button
-                key={key}
-                className={`${styles.chip} ${filter === key ? styles.chipActive : ""}`}
-                onClick={() => setFilter(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className={styles.tools}>

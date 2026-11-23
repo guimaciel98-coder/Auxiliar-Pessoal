@@ -28,7 +28,7 @@ export default function DailyOrchestrator({ mode = "today" }) {
   const [rescheduleOpen, setRescheduleOpen] = useState(null);
   const [editingTask, setEditingTask]  = useState(null);
   const [clients, setClients]         = useState([]);
-  const [doneApiIds, setDoneApiIds]   = useState([]); // concluídas hoje segundo o Todoist (fonte real)
+  const [doneApiItems, setDoneApiItems] = useState([]); // concluídas hoje segundo o Todoist (fonte real)
 
   useEffect(() => {
     fetch("/api/clients").then(r => r.json()).then(setClients).catch(console.error);
@@ -39,7 +39,7 @@ export default function DailyOrchestrator({ mode = "today" }) {
     if (mode !== "today") return;
     fetch("/api/tasks/completed-today")
       .then(r => r.json())
-      .then(d => { if (d.ok) setDoneApiIds(d.ids); })
+      .then(d => { if (d.ok) setDoneApiItems(d.items); })
       .catch(() => {});
   }, [mode]);
   useEffect(() => { loadDoneToday(); }, [loadDoneToday]);
@@ -93,9 +93,14 @@ export default function DailyOrchestrator({ mode = "today" }) {
 
   // Concluídas = Todoist ∪ marcadas neste navegador, sem as que ainda estão abertas
   const openIds        = new Set(all.map(t => String(t.id)));
-  const doneIds        = new Set([...doneApiIds, ...[...completed].map(String)].filter(id => !openIds.has(id)));
+  const doneIds        = new Set([...doneApiItems.map(i => i.id), ...[...completed].map(String)].filter(id => !openIds.has(id)));
   const completedCount = doneIds.size;
   const totalCount     = all.length + completedCount;
+  const doneList = [...doneIds].map(id => {
+    const api = doneApiItems.find(i => i.id === id);
+    const loc = apiAllTasks.find(t => String(t.id) === id);
+    return { id, name: api?.name ?? loc?.name ?? "Tarefa concluída", at: api?.completed_at ?? null };
+  }).sort((x, y) => String(y.at ?? "").localeCompare(String(x.at ?? "")));
   const overdueCount   = overdueTasks.length;
   const timedCount     = all.filter(t => t.timed).length;
   const urgentCount    = all.filter(t => t.urgent || t.high).length;
@@ -112,7 +117,9 @@ export default function DailyOrchestrator({ mode = "today" }) {
 
   function visible(t) {
     if (search && !t.name?.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filter === "urgent") return t.urgent || t.high;
+    if (filter === "urgent")  return t.urgent || t.high;
+    if (filter === "overdue") return !!t.ts && Number(t.ts) < startOfTodayBRT;
+    if (filter === "timed")   return !!t.timed;
     if (filter === "all")    return true;
     return t.proj === filter;
   }
@@ -131,7 +138,17 @@ export default function DailyOrchestrator({ mode = "today" }) {
     onEdit: setEditingTask,
   };
 
-  const nothingToday = overdueTasks.length === 0 && currentTasks.filter(visible).length === 0;
+  const showDone     = filter === "done";
+  const nothingToday = !showDone && overdueTasks.filter(visible).length === 0 && currentTasks.filter(visible).length === 0;
+
+  // Big numbers que também são filtros (clicar de novo volta para "todas")
+  const statFilters = [
+    { key: "overdue", label: "atrasadas",   num: overdueCount,   color: overdueCount ? "#fb7185" : undefined, cor: "#fb7185" },
+    { key: "urgent",  label: "urgentes",    num: urgentCount,    color: urgentCount ? "#fb923c" : undefined,  cor: "#fb923c" },
+    { key: "timed",   label: "com horário", num: timedCount,     color: undefined,                             cor: "#38bdf8" },
+    { key: "done",    label: "feitas",      num: completedCount, color: "#34d399",                             cor: "#34d399" },
+  ];
+  const toggleFilter = (key) => setFilter(f => (f === key ? "all" : key));
 
   // Projeto ativo para pré-selecionar no modal "+ Nova"
   const activeProject = ["pessoal", "vca", "pdv"].includes(filter) ? filter : undefined;
@@ -172,17 +189,33 @@ export default function DailyOrchestrator({ mode = "today" }) {
           {/* Projetos ficam inline no celular; no computador ficam na coluna lateral */}
           <div className={styles.metricsInline}>
             <Metrics metrics={metrics} filter={filter} setFilter={setFilter} />
+            <Metrics metrics={statFilters.map(f => ({ ...f, label: f.label.charAt(0).toUpperCase() + f.label.slice(1) }))} filter={filter} setFilter={setFilter} />
           </div>
 
           {nothingToday && (
             <div className={styles.emptyState}>
               <span className={styles.emptyIcon}>✓</span>
-              <p>{mode === "today" ? "Nada pendente pra hoje" : "Nada marcado pra amanhã"}</p>
+              <p>{filter !== "all" ? "Nenhuma tarefa nesse filtro" : mode === "today" ? "Nada pendente pra hoje" : "Nada marcado pra amanhã"}</p>
               <span className={styles.emptyHint}>Use "Nova tarefa" para adicionar.</span>
             </div>
           )}
 
-          {(() => {
+          {showDone && (
+            <div className={styles.doneList}>
+              {doneList.length === 0 && <div className={styles.emptyHint}>Nenhuma tarefa concluída hoje ainda.</div>}
+              {doneList.map(d => (
+                <div key={d.id} className={styles.doneRow}>
+                  <span className={styles.doneCheck}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+                  </span>
+                  <span className={styles.doneName}>{d.name}</span>
+                  {d.at && <span className={styles.doneTime}>{new Date(d.at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!showDone && (() => {
             // Conta tarefas VISÍVEIS (após filtro) para controlar os divisores
             const pessoalVisible = [...overdueTasks, ...currentTasks].filter(t => t.proj === "pessoal").filter(visible).length;
             const vcaVisible     = [...overdueTasks, ...currentTasks].filter(t => t.proj === "vca").filter(visible).length;
@@ -231,24 +264,20 @@ export default function DailyOrchestrator({ mode = "today" }) {
             </div>
           </div>
 
-          {/* Resumo em números */}
+          {/* Big numbers que também filtram a lista */}
           <div className={styles.statGrid}>
-            <div className={styles.statBox}>
-              <span className={styles.statNum} style={{ color: overdueCount ? "#fb7185" : undefined }}>{overdueCount}</span>
-              <span className={styles.statLbl}>atrasadas</span>
-            </div>
-            <div className={styles.statBox}>
-              <span className={styles.statNum} style={{ color: urgentCount ? "#fb923c" : undefined }}>{urgentCount}</span>
-              <span className={styles.statLbl}>urgentes</span>
-            </div>
-            <div className={styles.statBox}>
-              <span className={styles.statNum}>{timedCount}</span>
-              <span className={styles.statLbl}>com horário</span>
-            </div>
-            <div className={styles.statBox}>
-              <span className={styles.statNum} style={{ color: "#34d399" }}>{completedCount}</span>
-              <span className={styles.statLbl}>feitas</span>
-            </div>
+            {statFilters.map(f => (
+              <button
+                key={f.key}
+                className={`${styles.statBox} ${filter === f.key ? styles.statBoxActive : ""}`}
+                style={{ "--stat-color": f.cor }}
+                onClick={() => toggleFilter(f.key)}
+                title={filter === f.key ? "Mostrar todas" : `Mostrar só ${f.label}`}
+              >
+                <span className={styles.statNum} style={{ color: f.color }}>{f.num}</span>
+                <span className={styles.statLbl}>{f.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
