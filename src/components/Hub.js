@@ -8,6 +8,12 @@ const DAYS         = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","S�
 const MONTHS       = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 const TREINOS_META = 16;
 const LS_KEY       = "dailyapp_completed";
+const PRIO_COLOR   = { p1: "#ff5a5f", p2: "#fb923c", p3: "#fbbf24", p4: "rgba(255,255,255,0.25)" };
+const PROJ_LABEL   = { pessoal: "Pessoal", vca: "VCA", pdv: "Ponto de Vista" };
+
+function fmtHour(ms) {
+  return new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
 
 function greet(h) {
   if (h < 12) return "Bom dia";
@@ -34,6 +40,12 @@ function Ring({ pct, color, size = 88, stroke = 9, children }) {
   const r     = (size - stroke) / 2;
   const circ  = 2 * Math.PI * r;
   const value = pct == null ? 0 : Math.min(100, Math.max(0, pct));
+  // Começa em 0 e anima até o valor (o arco "enche" ao abrir a tela)
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setShown(value));
+    return () => cancelAnimationFrame(id);
+  }, [value]);
   return (
     <div className={styles.ring} style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -42,7 +54,7 @@ function Ring({ pct, color, size = 88, stroke = 9, children }) {
           cx={size / 2} cy={size / 2} r={r} fill="none"
           stroke={color} strokeWidth={stroke} strokeLinecap="round"
           strokeDasharray={circ}
-          strokeDashoffset={circ * (1 - value / 100)}
+          strokeDashoffset={circ * (1 - shown / 100)}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
           className={styles.ringArc}
           style={{ filter: `drop-shadow(0 0 6px ${color}66)` }}
@@ -79,8 +91,10 @@ function Bar({ pct, color }) {
 export default function Hub() {
   const [modal,        setModal]        = useState(false);
   const [health,       setHealth]       = useState(null);
-  const [openTasks,    setOpenTasks]    = useState(null);  // só abertas (da API)
-  const [completedIds, setCompletedIds] = useState(null);  // concluídas (localStorage)
+  const [openTasks,    setOpenTasks]    = useState(null);  // lista de abertas hoje/atrasadas (da API)
+  const [tasksErr,     setTasksErr]     = useState(false);
+  const [completedIds, setCompletedIds] = useState(null);  // concluídas (localStorage deste navegador)
+  const [doneApiIds,   setDoneApiIds]   = useState(null);  // concluídas hoje segundo o Todoist (fonte real)
   const [finance,      setFinance]      = useState(null);
   const [routine,      setRoutine]      = useState(null);
 
@@ -97,9 +111,15 @@ export default function Hub() {
 
     // ── Tarefas abertas ──
     fetch("/api/tasks")
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(d => setOpenTasks(d.tasks ?? []))
+      .catch(() => { setTasksErr(true); setOpenTasks([]); });
+
+    // ── Concluídas hoje (Todoist) — se falhar, fica só o localStorage ──
+    fetch("/api/tasks/completed-today")
       .then(r => r.json())
-      .then(d => setOpenTasks((d.tasks ?? []).length))
-      .catch(() => setOpenTasks(0));
+      .then(d => setDoneApiIds(d.ok ? d.ids : []))
+      .catch(() => setDoneApiIds([]));
 
     // ── Saúde — médias do mês atual ──
     fetch("/api/health")
@@ -176,15 +196,26 @@ export default function Hub() {
       }).catch(() => {});
   }, []);
 
-  // Combina abertas + concluídas do localStorage
-  const tasksDone  = completedIds?.size ?? null;
-  const tasksTotal = openTasks != null && tasksDone != null ? openTasks + tasksDone : null;
+  // ── Tarefas: concluídas = Todoist ∪ este navegador (sem repetir, sem as que reabriram) ──
+  const openIds  = new Set((openTasks ?? []).map(t => String(t.id)));
+  const doneSet  = completedIds && doneApiIds
+    ? new Set([...doneApiIds, ...[...completedIds].map(String)].filter(id => !openIds.has(id)))
+    : null;
+  const tasksDone  = doneSet ? doneSet.size : null;
+  const tasksOpen  = openTasks ? openTasks.length : null;
+  const tasksTotal = tasksOpen != null && tasksDone != null ? tasksOpen + tasksDone : null;
   const tasksPct   = tasksTotal ? Math.round((tasksDone / tasksTotal) * 100) : 0;
+  const allDone    = tasksTotal > 0 && tasksOpen === 0;
+
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const overdue    = (openTasks ?? []).filter(t => Number(t.due_date) < startToday).length;
+  const nextTasks  = (openTasks ?? []).slice(0, 4);
 
   const finColor = finance
     ? (finance.pctVar > 85 ? "#fb7185" : finance.pctVar > 60 ? "#fbbf24" : "#34d399")
     : "#34d399";
   const treinosPct = health ? Math.round((health.monthWks / TREINOS_META) * 100) : null;
+  const dayPct     = Math.round((nowMin / 1440) * 100);
 
   return (
     <div className={styles.root}>
@@ -198,65 +229,97 @@ export default function Hub() {
           <span className={styles.brandName}>Daily</span>
         </Link>
         <div className={styles.topRight}>
-          <span className={styles.clock}>
-            {now.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}
-          </span>
+          <div className={styles.clock} title={`${dayPct}% do dia já passou`}>
+            <span>{now.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}</span>
+            <span className={styles.dayTrack}><span className={styles.dayFill} style={{ width: `${dayPct}%` }} /></span>
+          </div>
           <button className={styles.quickBtn} onClick={() => setModal(true)}>
             <span className={styles.quickPlus}>+</span> Nova tarefa
           </button>
         </div>
       </header>
 
-      {/* ── Saudação ── */}
+      {/* ── Saudação + resumo do dia ── */}
       <section className={styles.hero}>
         <p className={styles.greetSmall}>{greet(hour)}, Guilherme</p>
         <h1 className={styles.greetTitle}>
           {DAYS[now.getDay()]}<span className={styles.greetDate}>, {now.getDate()} de {MONTHS[now.getMonth()]}</span>
         </h1>
+        <p className={styles.summary}>
+          {tasksOpen == null ? "Preparando seu dia…" : allDone
+            ? <>Você zerou as tarefas de hoje. ✨</>
+            : <>Você tem <b>{tasksOpen} {tasksOpen === 1 ? "tarefa" : "tarefas"}</b> pela frente{overdue > 0 && <> (<b className={styles.warn}>{overdue} {overdue === 1 ? "atrasada" : "atrasadas"}</b>)</>}</>}
+          {routine?.current && <>, agora é <b>{routine.current.activity}</b></>}
+          {finance && finance.saldoVar != null && <> e <b style={{ color: finance.saldoVar < 0 ? "#fb7185" : undefined }}>{fmtBRL(Math.abs(finance.saldoVar))}</b> {finance.saldoVar < 0 ? "acima do orçamento" : "para gastar"}</>}.
+        </p>
       </section>
 
-      {/* ── Bento: Financeiro (grande) | Tarefas / Rotina | Saúde (largo) ── */}
+      {/* ── Bento: Tarefas (destaque) | Financeiro / Rotina | Saúde ── */}
       <main className={styles.bento}>
 
+        {/* Tarefas — destaque */}
+        <Link href="/daily" className={`${styles.card} ${styles.cardTasks} ${allDone ? styles.celebrate : ""}`} style={{ "--c": "167,139,250" }}>
+          <div className={styles.cardTop}>
+            <span className={styles.chip}><span className={styles.chipIcon}>✓</span>Tarefas de hoje</span>
+            <span className={styles.arrow}>↗</span>
+          </div>
+
+          <div className={styles.tasksBody}>
+            <div className={styles.tasksLeft}>
+              <Ring pct={tasksPct} color={allDone ? "#34d399" : "#a78bfa"} size={168} stroke={14}>
+                <span className={styles.ringPct}>{tasksTotal != null ? `${tasksPct}%` : "—"}</span>
+                <span className={styles.ringSub}>{tasksTotal != null ? `${tasksDone} de ${tasksTotal}` : "carregando"}</span>
+              </Ring>
+              <div className={styles.miniStats}>
+                <Stat label="Pendentes" value={tasksOpen} />
+                <Stat label="Feitas"    value={tasksDone} color="#34d399" />
+                <Stat label="Atrasadas" value={openTasks ? overdue : null} color={overdue ? "#fb7185" : undefined} />
+              </div>
+            </div>
+
+            <div className={styles.taskList}>
+              <div className={styles.eyebrow}>{allDone ? "Tudo feito" : "Próximas"}</div>
+              {openTasks == null && [0, 1, 2].map(i => <span key={i} className={styles.taskSkeleton} />)}
+              {tasksErr && <div className={styles.muted}>Não consegui carregar as tarefas agora.</div>}
+              {!tasksErr && openTasks && nextTasks.length === 0 && (
+                <div className={styles.emptyTasks}>🎉 Nada pendente pra hoje</div>
+              )}
+              {nextTasks.map(t => {
+                const due  = Number(t.due_date);
+                const late = due < startToday;
+                return (
+                  <div key={t.id} className={styles.taskItem}>
+                    <span className={styles.prio} style={{ background: PRIO_COLOR[t._priority] ?? PRIO_COLOR.p4 }} />
+                    <span className={styles.taskName}>{t.name}</span>
+                    <span className={`${styles.taskMeta} ${late ? styles.taskLate : ""}`}>
+                      {late ? "atrasada" : t.due_date_time ? fmtHour(due) : PROJ_LABEL[t._project_id] ?? ""}
+                    </span>
+                  </div>
+                );
+              })}
+              {openTasks && openTasks.length > nextTasks.length && (
+                <div className={styles.more}>+ {openTasks.length - nextTasks.length} no painel</div>
+              )}
+            </div>
+          </div>
+        </Link>
+
         {/* Financeiro */}
-        <Link href="/finance/overview" className={`${styles.card} ${styles.cardFinance}`} style={{ "--c": "52,211,153" }}>
+        <Link href="/finance/overview" className={styles.card} style={{ "--c": "52,211,153" }}>
           <div className={styles.cardTop}>
             <span className={styles.chip}><span className={styles.chipIcon}>R$</span>Financeiro</span>
             <span className={styles.arrow}>↗</span>
           </div>
-          <div className={styles.financeBody}>
-            <div>
-              <div className={styles.eyebrow}>Disponível para gastar</div>
-              <div className={styles.heroNumber} style={{ color: finance && finance.saldoVar < 0 ? "#fb7185" : "#f9fafb" }}>
-                {finance ? fmtBRL(finance.saldoVar) : <span className={styles.skeletonBig} />}
-              </div>
-              <div className={styles.muted}>
-                {finance?.pctVar != null
-                  ? <>Gastou <b>{fmtBRL(finance.gastoVar)}</b> de {fmtBRL(finance.budgetVar)} no ciclo</>
-                  : "sem orçamento definido"}
-              </div>
+          <div className={styles.stack}>
+            <div className={styles.eyebrow}>{finance && finance.saldoVar < 0 ? "Acima do orçamento" : "Disponível para gastar"}</div>
+            <div className={styles.money} style={{ color: finance && finance.saldoVar < 0 ? "#fb7185" : "#f9fafb" }}>
+              {finance ? fmtBRL(finance.saldoVar) : <span className={styles.skeleton} />}
             </div>
-            <Ring pct={finance?.pctVar} color={finColor} size={132} stroke={12}>
-              <span className={styles.ringPct}>{finance?.pctVar != null ? `${finance.pctVar}%` : "—"}</span>
-              <span className={styles.ringSub}>usado</span>
-            </Ring>
-          </div>
-          <Bar pct={finance?.pctVar} color={finColor} />
-        </Link>
-
-        {/* Tarefas */}
-        <Link href="/daily" className={styles.card} style={{ "--c": "167,139,250" }}>
-          <div className={styles.cardTop}>
-            <span className={styles.chip}><span className={styles.chipIcon}>✓</span>Tarefas</span>
-            <span className={styles.arrow}>↗</span>
-          </div>
-          <div className={styles.rowBody}>
-            <Ring pct={tasksPct} color="#a78bfa">
-              <span className={styles.ringPctSm}>{tasksTotal != null ? `${tasksPct}%` : "—"}</span>
-            </Ring>
-            <div className={styles.stack}>
-              <Stat label="Concluídas" value={tasksTotal != null ? `${tasksDone}/${tasksTotal}` : null} big />
-              <div className={styles.muted}>Pessoal · VCA · Ponto de Vista</div>
+            <Bar pct={finance?.pctVar} color={finColor} />
+            <div className={styles.muted}>
+              {finance?.pctVar != null
+                ? <><b>{finance.pctVar}%</b> usado · {fmtBRL(finance.gastoVar)} de {fmtBRL(finance.budgetVar)}</>
+                : "sem orçamento definido"}
             </div>
           </div>
         </Link>
@@ -269,7 +332,7 @@ export default function Hub() {
           </div>
           <div className={styles.stack}>
             <div className={styles.eyebrow}>
-              {routine?.current ? <><span className={styles.liveDot} />Agora</> : "Agora"}
+              {routine?.current && <span className={styles.liveDot} />}Agora
             </div>
             <div className={styles.nowTitle}>
               {routine == null ? <span className={styles.skeleton} />
@@ -299,7 +362,7 @@ export default function Hub() {
               <Ring pct={treinosPct} color="#fb7185" size={76} stroke={8}>
                 <span className={styles.ringPctSm}>{health ? health.monthWks : "—"}</span>
               </Ring>
-              <div className={styles.statLabel}>de {TREINOS_META} treinos</div>
+              <div className={styles.statLabel}>de {TREINOS_META} treinos<br />no mês</div>
             </div>
           </div>
         </Link>
