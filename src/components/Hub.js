@@ -8,12 +8,6 @@ const DAYS         = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","S�
 const MONTHS       = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 const TREINOS_META = 16;
 const LS_KEY       = "dailyapp_completed";
-const PRIO_COLOR   = { p1: "#ff5a5f", p2: "#fb923c", p3: "#fbbf24", p4: "rgba(255,255,255,0.25)" };
-const PROJ_LABEL   = { pessoal: "Pessoal", vca: "VCA", pdv: "Ponto de Vista" };
-
-function fmtHour(ms) {
-  return new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-}
 
 function greet(h) {
   if (h < 12) return "Bom dia";
@@ -78,12 +72,60 @@ function Stat({ label, value, unit, color, big }) {
   );
 }
 
-// ── Barra fina ───────────────────────────────────────────────────────────────
-function Bar({ pct, color }) {
-  const clamped = Math.min(100, Math.max(0, pct ?? 0));
+// ── Gráfico de área (ex.: passos do mês) ─────────────────────────────────────
+function Sparkline({ data, color, height = 56 }) {
+  if (!data || data.length < 2) return <div className={styles.sparkEmpty}>sem dados no mês</div>;
+  const W = 300, H = height, pad = 4;
+  const max = Math.max(...data.map(d => d.v)) || 1;
+  const pts = data.map((d, i) => [
+    pad + (i / (data.length - 1)) * (W - pad * 2),
+    H - pad - (d.v / max) * (H - pad * 2),
+  ]);
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const area = `${line} L${pts[pts.length - 1][0].toFixed(1)},${H} L${pts[0][0].toFixed(1)},${H} Z`;
+  const last = pts[pts.length - 1];
+  const gid  = `spark-${color.replace("#", "")}`;
   return (
-    <div className={styles.bar}>
-      <div className={styles.barFill} style={{ width: `${clamped}%`, background: color }} />
+    <svg className={styles.spark} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ height }}>
+      <defs>
+        <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gid})`} />
+      <path d={line} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+      <circle cx={last[0]} cy={last[1]} r="3.5" fill={color} />
+    </svg>
+  );
+}
+
+// ── Linha do tempo do dia (blocos da rotina + marcador de agora) ─────────────
+function DayTimeline({ blocks, nowMin, current }) {
+  if (!blocks?.length) return <div className={styles.sparkEmpty}>sem blocos hoje</div>;
+  const start = Math.min(...blocks.map(b => b.minutes));
+  const end   = Math.max(...blocks.map(b => b.minutes + (b.duration ?? 60)));
+  const span  = Math.max(1, end - start);
+  const pos   = m => `${((m - start) / span) * 100}%`;
+  const hh    = m => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}h`;
+  return (
+    <div className={styles.timeline}>
+      <div className={styles.tlTrack}>
+        {blocks.map((b, i) => {
+          const done = b.minutes + (b.duration ?? 60) <= nowMin;
+          const isCur = current && b === current;
+          return (
+            <span
+              key={i}
+              className={`${styles.tlBlock} ${isCur ? styles.tlCur : ""}`}
+              style={{ left: pos(b.minutes), width: `calc(${((b.duration ?? 60) / span) * 100}% - 2px)`, opacity: isCur ? 1 : done ? 0.25 : 0.5 }}
+              title={b.activity}
+            />
+          );
+        })}
+        {nowMin >= start && nowMin <= end && <span className={styles.tlNow} style={{ left: pos(nowMin) }} />}
+      </div>
+      <div className={styles.tlScale}><span>{hh(start)}</span><span>{hh(start + span / 2)}</span><span>{hh(end)}</span></div>
     </div>
   );
 }
@@ -151,6 +193,11 @@ export default function Hub() {
           sleep_h: avg("sleep_h"),
           bpm:     avg("bpm_rest"),
           monthWks,
+          // Passos dia a dia do mês (para o gráfico)
+          stepsSeries: monthDays
+            .map(x => ({ day: parseInt(x.date.split("/")[0]), v: x.steps }))
+            .filter(x => x.v != null)
+            .sort((a, b) => a.day - b.day),
         });
       }).catch(() => {});
 
@@ -192,7 +239,7 @@ export default function Hub() {
             : 0;
         }
 
-        setRoutine({ current, total: sorted.length, eventPct: Math.max(0, Math.min(100, eventPct)) });
+        setRoutine({ current, total: sorted.length, eventPct: Math.max(0, Math.min(100, eventPct)), blocks: sorted });
       }).catch(() => {});
   }, []);
 
@@ -209,7 +256,6 @@ export default function Hub() {
 
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const overdue    = (openTasks ?? []).filter(t => Number(t.due_date) < startToday).length;
-  const nextTasks  = (openTasks ?? []).slice(0, 4);
 
   const finColor = finance
     ? (finance.pctVar > 85 ? "#fb7185" : finance.pctVar > 60 ? "#fbbf24" : "#34d399")
@@ -239,67 +285,33 @@ export default function Hub() {
         </div>
       </header>
 
-      {/* ── Saudação + resumo do dia ── */}
+      {/* ── Saudação ── */}
       <section className={styles.hero}>
         <p className={styles.greetSmall}>{greet(hour)}, Guilherme</p>
         <h1 className={styles.greetTitle}>
           {DAYS[now.getDay()]}<span className={styles.greetDate}>, {now.getDate()} de {MONTHS[now.getMonth()]}</span>
         </h1>
-        <p className={styles.summary}>
-          {tasksOpen == null ? "Preparando seu dia…" : allDone
-            ? <>Você zerou as tarefas de hoje. ✨</>
-            : <>Você tem <b>{tasksOpen} {tasksOpen === 1 ? "tarefa" : "tarefas"}</b> pela frente{overdue > 0 && <> (<b className={styles.warn}>{overdue} {overdue === 1 ? "atrasada" : "atrasadas"}</b>)</>}</>}
-          {routine?.current && <>, agora é <b>{routine.current.activity}</b></>}
-          {finance && finance.saldoVar != null && <> e <b style={{ color: finance.saldoVar < 0 ? "#fb7185" : undefined }}>{fmtBRL(Math.abs(finance.saldoVar))}</b> {finance.saldoVar < 0 ? "acima do orçamento" : "para gastar"}</>}.
-        </p>
       </section>
 
-      {/* ── Bento: Tarefas (destaque) | Financeiro / Rotina | Saúde ── */}
+      {/* ── Grade 2×2, mesmo peso: Tarefas | Financeiro / Rotina | Saúde ── */}
       <main className={styles.bento}>
 
-        {/* Tarefas — destaque */}
-        <Link href="/daily" className={`${styles.card} ${styles.cardTasks} ${allDone ? styles.celebrate : ""}`} style={{ "--c": "167,139,250" }}>
+        {/* Tarefas */}
+        <Link href="/daily" className={`${styles.card} ${allDone ? styles.celebrate : ""}`} style={{ "--c": "167,139,250" }}>
           <div className={styles.cardTop}>
-            <span className={styles.chip}><span className={styles.chipIcon}>✓</span>Tarefas de hoje</span>
+            <span className={styles.chip}><span className={styles.chipIcon}>✓</span>Tarefas</span>
             <span className={styles.arrow}>↗</span>
           </div>
-
-          <div className={styles.tasksBody}>
-            <div className={styles.tasksLeft}>
-              <Ring pct={tasksPct} color={allDone ? "#34d399" : "#a78bfa"} size={168} stroke={14}>
-                <span className={styles.ringPct}>{tasksTotal != null ? `${tasksPct}%` : "—"}</span>
-                <span className={styles.ringSub}>{tasksTotal != null ? `${tasksDone} de ${tasksTotal}` : "carregando"}</span>
-              </Ring>
-              <div className={styles.miniStats}>
-                <Stat label="Pendentes" value={tasksOpen} />
-                <Stat label="Feitas"    value={tasksDone} color="#34d399" />
-                <Stat label="Atrasadas" value={openTasks ? overdue : null} color={overdue ? "#fb7185" : undefined} />
+          <div className={styles.quad}>
+            <Ring pct={tasksPct} color={allDone ? "#34d399" : "#a78bfa"} size={132} stroke={12}>
+              <span className={styles.ringPct}>{tasksTotal != null ? `${tasksPct}%` : "—"}</span>
+            </Ring>
+            <div className={styles.quadRight}>
+              <Stat label="feitas hoje" value={tasksTotal != null ? <>{tasksDone}<span className={styles.of}>/{tasksTotal}</span></> : null} big />
+              <div className={styles.statRow}>
+                <Stat label="pendentes" value={tasksOpen} />
+                <Stat label="atrasadas" value={openTasks ? overdue : null} color={overdue ? "#fb7185" : undefined} />
               </div>
-            </div>
-
-            <div className={styles.taskList}>
-              <div className={styles.eyebrow}>{allDone ? "Tudo feito" : "Próximas"}</div>
-              {openTasks == null && [0, 1, 2].map(i => <span key={i} className={styles.taskSkeleton} />)}
-              {tasksErr && <div className={styles.muted}>Não consegui carregar as tarefas agora.</div>}
-              {!tasksErr && openTasks && nextTasks.length === 0 && (
-                <div className={styles.emptyTasks}>🎉 Nada pendente pra hoje</div>
-              )}
-              {nextTasks.map(t => {
-                const due  = Number(t.due_date);
-                const late = due < startToday;
-                return (
-                  <div key={t.id} className={styles.taskItem}>
-                    <span className={styles.prio} style={{ background: PRIO_COLOR[t._priority] ?? PRIO_COLOR.p4 }} />
-                    <span className={styles.taskName}>{t.name}</span>
-                    <span className={`${styles.taskMeta} ${late ? styles.taskLate : ""}`}>
-                      {late ? "atrasada" : t.due_date_time ? fmtHour(due) : PROJ_LABEL[t._project_id] ?? ""}
-                    </span>
-                  </div>
-                );
-              })}
-              {openTasks && openTasks.length > nextTasks.length && (
-                <div className={styles.more}>+ {openTasks.length - nextTasks.length} no painel</div>
-              )}
             </div>
           </div>
         </Link>
@@ -310,16 +322,22 @@ export default function Hub() {
             <span className={styles.chip}><span className={styles.chipIcon}>R$</span>Financeiro</span>
             <span className={styles.arrow}>↗</span>
           </div>
-          <div className={styles.stack}>
-            <div className={styles.eyebrow}>{finance && finance.saldoVar < 0 ? "Acima do orçamento" : "Disponível para gastar"}</div>
-            <div className={styles.money} style={{ color: finance && finance.saldoVar < 0 ? "#fb7185" : "#f9fafb" }}>
-              {finance ? fmtBRL(finance.saldoVar) : <span className={styles.skeleton} />}
-            </div>
-            <Bar pct={finance?.pctVar} color={finColor} />
-            <div className={styles.muted}>
-              {finance?.pctVar != null
-                ? <><b>{finance.pctVar}%</b> usado · {fmtBRL(finance.gastoVar)} de {fmtBRL(finance.budgetVar)}</>
-                : "sem orçamento definido"}
+          <div className={styles.quad}>
+            <Ring pct={finance?.pctVar} color={finColor} size={132} stroke={12}>
+              <span className={styles.ringPct}>{finance?.pctVar != null ? `${finance.pctVar}%` : "—"}</span>
+              <span className={styles.ringSub}>gasto</span>
+            </Ring>
+            <div className={styles.quadRight}>
+              <Stat
+                label={finance && finance.saldoVar < 0 ? "acima do orçamento" : "disponível"}
+                value={finance ? fmtBRL(finance.saldoVar) : null}
+                color={finance && finance.saldoVar < 0 ? "#fb7185" : undefined}
+                big
+              />
+              <div className={styles.statRow}>
+                <Stat label="gasto" value={finance ? fmtBRL(finance.gastoVar) : null} />
+                <Stat label="orçamento" value={finance ? fmtBRL(finance.budgetVar) : null} />
+              </div>
             </div>
           </div>
         </Link>
@@ -330,41 +348,42 @@ export default function Hub() {
             <span className={styles.chip}><span className={styles.chipIcon}>⏱</span>Rotina</span>
             <span className={styles.arrow}>↗</span>
           </div>
-          <div className={styles.stack}>
-            <div className={styles.eyebrow}>
-              {routine?.current && <span className={styles.liveDot} />}Agora
-            </div>
-            <div className={styles.nowTitle}>
-              {routine == null ? <span className={styles.skeleton} />
-                : routine.current ? routine.current.activity
-                : "Tempo livre"}
-            </div>
-            <Bar pct={routine?.current ? routine.eventPct : 0} color="#38bdf8" />
-            <div className={styles.muted}>
-              {routine == null ? "carregando…"
-                : routine.current ? `${routine.eventPct}% do bloco · ${routine.total} blocos hoje`
-                : `${routine.total} blocos hoje`}
+          <div className={styles.quad}>
+            <Ring pct={routine?.current ? routine.eventPct : 0} color="#38bdf8" size={132} stroke={12}>
+              <span className={styles.ringPct}>{routine?.current ? `${routine.eventPct}%` : "—"}</span>
+            </Ring>
+            <div className={styles.quadRight}>
+              <div className={styles.statLabel}>{routine?.current && <span className={styles.liveDot} />}agora</div>
+              <div className={styles.nowTitle}>
+                {routine == null ? <span className={styles.skeleton} />
+                  : routine.current ? routine.current.activity
+                  : "Livre"}
+              </div>
             </div>
           </div>
+          <DayTimeline blocks={routine?.blocks} nowMin={nowMin} current={routine?.current} />
         </Link>
 
         {/* Saúde */}
-        <Link href="/health" className={`${styles.card} ${styles.cardHealth}`} style={{ "--c": "251,113,133" }}>
+        <Link href="/health" className={styles.card} style={{ "--c": "251,113,133" }}>
           <div className={styles.cardTop}>
-            <span className={styles.chip}><span className={styles.chipIcon}>❤</span>Saúde · média do mês</span>
+            <span className={styles.chip}><span className={styles.chipIcon}>❤</span>Saúde</span>
             <span className={styles.arrow}>↗</span>
           </div>
-          <div className={styles.healthBody}>
-            <Stat label="Passos"      value={health ? fmtNum(health.steps) : null} big />
-            <Stat label="Sono"        value={health ? fmtNum(health.sleep_h, 1) : null} unit="h" big />
-            <Stat label="BPM repouso" value={health ? fmtNum(health.bpm) : null} big />
-            <div className={styles.treinos}>
-              <Ring pct={treinosPct} color="#fb7185" size={76} stroke={8}>
-                <span className={styles.ringPctSm}>{health ? health.monthWks : "—"}</span>
-              </Ring>
-              <div className={styles.statLabel}>de {TREINOS_META} treinos<br />no mês</div>
+          <div className={styles.quad}>
+            <Ring pct={treinosPct} color="#fb7185" size={132} stroke={12}>
+              <span className={styles.ringPct}>{health ? health.monthWks : "—"}</span>
+              <span className={styles.ringSub}>/{TREINOS_META} treinos</span>
+            </Ring>
+            <div className={styles.quadRight}>
+              <Stat label="passos / dia" value={health ? fmtNum(health.steps) : null} big />
+              <div className={styles.statRow}>
+                <Stat label="sono"    value={health ? fmtNum(health.sleep_h, 1) : null} unit="h" />
+                <Stat label="bpm rep." value={health ? fmtNum(health.bpm) : null} />
+              </div>
             </div>
           </div>
+          <Sparkline data={health?.stepsSeries} color="#fb7185" />
         </Link>
 
       </main>
