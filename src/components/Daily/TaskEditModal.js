@@ -2,25 +2,42 @@
 import { useState, useEffect } from "react";
 import styles from "./TaskEditModal.module.css";
 import { validateRecurrence } from "@/lib/recurrenceValidation";
+import { PROJ } from "@/config/constants";
+import { niceName } from "@/utils/niceName";
 
 const PROJ_LABELS = { pessoal: "Pessoal", vca: "VCA Brasil", pdv: "Ponto de Vista" };
 
-const REC_INPUT_STYLE = {
-  empty:   {},
-  valid:   { borderColor: "rgba(52,211,153,0.6)", boxShadow: "0 0 0 2px rgba(52,211,153,0.15)" },
-  unknown: { borderColor: "rgba(245,158,11,0.6)",  boxShadow: "0 0 0 2px rgba(245,158,11,0.12)"  },
-};
 const PRIO_META   = {
-  p1: { label: "P1 — Urgente", color: "var(--status-p1)", bg: "rgba(255,77,77,0.12)", border: "rgba(255,77,77,0.25)" },
-  p2: { label: "P2 — Alta",    color: "var(--status-p2)", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.25)" },
-  p3: { label: "P3 — Normal",  color: "var(--status-p3)", bg: "rgba(251,191,36,0.1)",  border: "rgba(251,191,36,0.2)"  },
-  p4: { label: "P4 — Baixa",   color: "var(--status-p4)", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.15)" },
+  p1: { label: "P1 · Urgente", color: "#ff5a5f", bg: "rgba(255,77,77,0.12)", border: "rgba(255,77,77,0.25)" },
+  p2: { label: "P2 · Alta",    color: "#fb923c", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.25)" },
+  p3: { label: "P3 · Normal",  color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  border: "rgba(251,191,36,0.2)"  },
+  p4: { label: "P4 · Baixa",   color: "#94a3b8", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.15)" },
 };
 
+const WD = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const MO = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+// "Seg, 23 nov" (ano só quando não é o atual)
 function fmtDate(ms) {
   if (!ms) return null;
   const d = new Date(Number(ms) - 3 * 3600 * 1000);
-  return d.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  const y = d.getUTCFullYear() !== new Date().getFullYear() ? ` ${d.getUTCFullYear()}` : "";
+  return `${WD[d.getUTCDay()]}, ${d.getUTCDate()} ${MO[d.getUTCMonth()]}${y}`;
+}
+
+// Só para exibir: o Todoist devolve a regra em inglês ("every friday")
+const EN_PT = [
+  [/^every day$/i, "todo dia"], [/^every weekday$/i, "todo dia útil"], [/^every workday$/i, "todo dia útil"],
+  [/^every week$/i, "toda semana"], [/^every month$/i, "todo mês"], [/^every year$/i, "todo ano"],
+  [/^every other week$/i, "a cada 2 semanas"], [/^every (d+) days?$/i, "a cada $1 dias"],
+  [/^every (d+) weeks?$/i, "a cada $1 semanas"], [/^every (d+) months?$/i, "a cada $1 meses"],
+  [/^every monday$/i, "toda segunda"], [/^every tuesday$/i, "toda terça"], [/^every wednesday$/i, "toda quarta"],
+  [/^every thursday$/i, "toda quinta"], [/^every friday$/i, "toda sexta"], [/^every saturday$/i, "todo sábado"],
+  [/^every sunday$/i, "todo domingo"],
+];
+function recPt(str = "") {
+  const t = String(str).trim();
+  for (const [re, pt] of EN_PT) if (re.test(t)) return t.replace(re, pt);
+  return t;
 }
 
 export default function TaskEditModal({ task, onClose, onSuccess, clients: clientsProp }) {
@@ -115,89 +132,111 @@ export default function TaskEditModal({ task, onClose, onSuccess, clients: clien
     }).then(res => { if (res.ok) onSuccess("🗑 Tarefa excluída"); });
   };
 
-  const PRIORITY_OPTIONS = [
-    { value: '', label: 'Sem prioridade', cls: styles.priorityNone },
-    { value: 'p1', label: 'P1 — Urgente',  cls: styles.priorityP1 },
-    { value: 'p2', label: 'P2 — Alta',     cls: styles.priorityP2 },
-    { value: 'p3', label: 'P3 — Normal',   cls: styles.priorityP3 },
-    { value: 'p4', label: 'P4 — Baixa',    cls: styles.priorityP4 },
+  // ── Opções visuais ─────────────────────────────────────────────────────────
+  const PROJECTS = [
+    { value: "pessoal", label: "Pessoal",        color: PROJ.pessoal.cor },
+    { value: "vca",     label: "VCA Brasil",     color: PROJ.vca.cor },
+    { value: "pdv",     label: "Ponto de Vista", color: PROJ.pdv.cor },
   ];
+  const PRIORITIES = [
+    { value: "",   label: "Nenhuma", color: "rgba(255,255,255,0.35)" },
+    { value: "p1", label: "P1",      color: "#ff5a5f" },
+    { value: "p2", label: "P2",      color: "#fb923c" },
+    { value: "p3", label: "P3",      color: "#fbbf24" },
+    { value: "p4", label: "P4",      color: "#94a3b8" },
+  ];
+  const isoBRT = (offsetDays) => {
+    const b = new Date(Date.now() - 3 * 3600 * 1000 + offsetDays * 86400000);
+    return `${b.getUTCFullYear()}-${String(b.getUTCMonth() + 1).padStart(2, "0")}-${String(b.getUTCDate()).padStart(2, "0")}`;
+  };
+  const todayDow = new Date(Date.now() - 3 * 3600 * 1000).getUTCDay();
+  const DATE_QUICK = [
+    { label: "Hoje",          value: isoBRT(0) },
+    { label: "Amanhã",        value: isoBRT(1) },
+    { label: "Próx. segunda", value: isoBRT(((8 - todayDow) % 7) || 7) },
+  ];
+  const REC_QUICK = ["todo dia", "todo dia útil", "toda semana", "todo mês"];
 
-  const prioMeta = PRIO_META[task._priority];
+  // Marcas VCA de todos os sub-projetos; as da Ocupe ganham o sufixo para diferenciar ("Geral · Ocupe")
+  const brandLabel = (b) => {
+    const base = niceName(b.name);
+    return b.source_project_id && b.source_project_id !== PROJ.vca.id ? `${base} · Ocupe` : base;
+  };
 
-  // ── View mode ──────────────────────────────────────────────────────────────
+  const projColor = PROJ[task._project_id]?.cor ?? "#a78bfa";
+  const prioMeta  = PRIO_META[task._priority];
+  const recState  = validateRecurrence(formData.recurrence);
+
+  // ── Visualização ───────────────────────────────────────────────────────────
   if (mode === "view") {
     return (
       <div className={styles.overlay} onClick={onClose}>
-        <div className={styles.modal} onClick={e => e.stopPropagation()}>
+        <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ "--proj": projColor }}>
 
-          {/* Cabeçalho */}
-          <div className={styles.viewHeader}>
-            <span className={styles.viewProj}>{PROJ_LABELS[task._project_id] ?? task._project_id}</span>
+          <div className={styles.topRow}>
+            <div className={styles.crumbs}>
+              <span className={styles.projPill}><span className={styles.dot} />{PROJ_LABELS[task._project_id] ?? task._project_id}</span>
+              {task._sub_client_label && <span className={styles.crumbSub}>{niceName(task._sub_client_label)}</span>}
+            </div>
             <button onClick={onClose} className={styles.closeBtn} aria-label="Fechar">✕</button>
           </div>
 
-          {/* Nome da tarefa */}
           <h2 className={styles.viewTitle}>{task.name}</h2>
 
-          {/* Sub-cliente */}
-          {task._sub_client_label && (
-            <div className={styles.viewSub}>{task._sub_client_label}</div>
-          )}
-
-          {/* Chips de metadados */}
-          <div className={styles.viewChips}>
-            {task.due_date && (
-              <span className={styles.chip}>
-                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ flexShrink: 0 }}>
-                  <rect x="1" y="3" width="14" height="12" rx="2"/><path d="M5 1v4M11 1v4M1 7h14"/>
-                </svg>
-                {fmtDate(task.due_date)}
+          {/* Informações principais */}
+          <div className={styles.infoGrid}>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Data</span>
+              <span className={styles.infoValue}>
+                {task.due_date ? fmtDate(task.due_date) : "Sem data"}
                 {task.due_date_time && brtDate && (
-                  <> — {String(brtDate.getUTCHours()).padStart(2,"0")}:{String(brtDate.getUTCMinutes()).padStart(2,"0")}</>
+                  <span className={styles.infoTime}>{String(brtDate.getUTCHours()).padStart(2, "0")}:{String(brtDate.getUTCMinutes()).padStart(2, "0")}</span>
                 )}
               </span>
-            )}
-            {prioMeta && (
-              <span className={styles.chip} style={{ color: prioMeta.color, background: prioMeta.bg, borderColor: prioMeta.border }}>
-                {prioMeta.label}
+            </div>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Prioridade</span>
+              <span className={styles.infoValue} style={prioMeta ? { color: prioMeta.color } : undefined}>
+                {prioMeta ? prioMeta.label : "Nenhuma"}
               </span>
-            )}
-            {task._recurrence && task._recurrence !== "none" && (
-              <span className={`${styles.chip} ${styles.chipRecurrence}`}>
-                ↻ {task._recurrence_string || task._recurrence}
+            </div>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Repete</span>
+              <span className={styles.infoValue} style={isRecurring ? { color: "#c4b5fd" } : undefined}>
+                {isRecurring ? `↻ ${recPt(task._recurrence_string) || "recorrente"}` : "Não"}
               </span>
-            )}
+            </div>
           </div>
 
           {/* Descrição */}
           {task.description ? (
             <div className={styles.viewDesc}>
-              <div className={styles.viewDescLabel}>Descrição</div>
+              <div className={styles.infoLabel}>Descrição</div>
               <div className={styles.viewDescText}>{task.description}</div>
             </div>
           ) : (
-            <div className={styles.viewDescEmpty} onClick={() => setMode("edit")}>
+            <button type="button" className={styles.viewDescEmpty} onClick={() => setMode("edit")}>
               + Adicionar descrição
-            </div>
+            </button>
           )}
 
-          {/* Footer */}
-          <div className={styles.viewFooter}>
+          <div className={styles.footer}>
             <div className={styles.deleteArea}>
               {!showDeleteConfirm ? (
                 <button type="button" onClick={() => setShowDeleteConfirm(true)} className={styles.btnDelete}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
                   Excluir
                 </button>
               ) : (
                 <div className={styles.deleteConfirmRow}>
-                  <span className={styles.deleteConfirmLabel}>Tem certeza?</span>
+                  <span className={styles.deleteConfirmLabel}>Excluir de vez?</span>
                   <button type="button" onClick={handleDelete} className={styles.btnDeleteConfirm}>Sim</button>
                   <button type="button" onClick={() => setShowDeleteConfirm(false)} className={styles.btnDeleteCancel}>Não</button>
                 </div>
               )}
             </div>
-            <button type="button" onClick={() => setMode("edit")} className={styles.btnEdit}>
+            <button type="button" onClick={() => setMode("edit")} className={styles.btnPrimary}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
               Editar
             </button>
           </div>
@@ -206,197 +245,173 @@ export default function TaskEditModal({ task, onClose, onSuccess, clients: clien
     );
   }
 
-  // ── Edit mode ──────────────────────────────────────────────────────────────
+  // ── Edição ─────────────────────────────────────────────────────────────────
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
-        <div className={styles.header}>
+        <div className={styles.topRow}>
           <button type="button" onClick={() => setMode("view")} className={styles.backBtn}>← Voltar</button>
-          <h2 className={styles.title}>Editar Tarefa</h2>
+          <span className={styles.editLabel}>Editando tarefa</span>
+          <button type="button" onClick={onClose} className={styles.closeBtn} aria-label="Fechar">✕</button>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>NOME DA TAREFA</label>
+          <div className={styles.titleBlock}>
             <input
               type="text"
               name="title"
               value={formData.title}
               onChange={handleChange}
-              className={styles.input}
+              className={styles.bigInput}
+              placeholder="Nome da tarefa"
               required
             />
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>DESCRIÇÃO (Opcional)</label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
-              className={styles.input}
-              placeholder="Detalhes, links, contexto..."
-              rows={3}
-              style={{ resize: "vertical", minHeight: 72, lineHeight: 1.5 }}
+              className={styles.descInput}
+              placeholder="Descrição (opcional)"
+              rows={2}
             />
           </div>
 
-          <div className={styles.formGroup}>
-            <label className={styles.label}>PROJETO / LISTA</label>
-            <select
-              name="project"
-              value={formData.project}
-              onChange={(e) => setFormData(prev => ({ ...prev, project: e.target.value, subClient: "" }))}
-              className={styles.select}
-            >
-              <option value="pessoal">Pessoal</option>
-              <option value="vca">VCA Brasil</option>
-              <option value="pdv">Ponto de Vista</option>
-            </select>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>PRIORIDADE</label>
-            <div className={styles.priorityPicker}>
-              {PRIORITY_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, priority: opt.value }))}
-                  className={`${styles.priorityOption} ${opt.cls} ${formData.priority === opt.value ? styles.selected : ''}`}
-                >
-                  {opt.label}
+          {/* Projeto */}
+          <div className={styles.field}>
+            <span className={styles.label}>Projeto</span>
+            <div className={styles.chipRow}>
+              {PROJECTS.map(p => (
+                <button key={p.value} type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, project: p.value, subClient: "" }))}
+                  className={`${styles.chip} ${formData.project === p.value ? styles.chipActive : ""}`}
+                  style={{ "--c": p.color }}>
+                  <span className={styles.dot} />{p.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {formData.project === "vca" && (
-            <div className={styles.formGroup}>
-              <label className={styles.label}>MARCA (VCA)</label>
-              <select name="subClient" value={formData.subClient} onChange={handleChange} className={styles.select}>
-                <option value="">Sem marca</option>
-                {vcaBrands.map(b => <option key={b.id} value={b.cf_value}>{b.name}</option>)}
-              </select>
+          {/* Marca VCA / Cliente PDV */}
+          {(formData.project === "vca" || formData.project === "pdv") && (
+            <div className={styles.field}>
+              <span className={styles.label}>{formData.project === "vca" ? "Marca" : "Cliente"}</span>
+              <div className={styles.chipRow}>
+                {[{ id: "none", cf_value: "", name: formData.project === "vca" ? "Nenhuma" : "Nenhum" },
+                  ...(formData.project === "vca" ? vcaBrands : pdvClients)].map(c => (
+                  <button key={c.id} type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, subClient: c.cf_value }))}
+                    className={`${styles.chip} ${formData.subClient === c.cf_value ? styles.chipActive : ""}`}
+                    style={{ "--c": PROJ[formData.project].cor }}>
+                    {c.id === "none" ? c.name : formData.project === "vca" ? brandLabel(c) : niceName(c.name)}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
-          {formData.project === "pdv" && (
-            <div className={styles.formGroup}>
-              <label className={styles.label}>CLIENTE (PDV)</label>
-              <select name="subClient" value={formData.subClient} onChange={handleChange} className={styles.select}>
-                <option value="">Sem cliente</option>
-                {pdvClients.map(c => <option key={c.id} value={c.cf_value}>{c.name}</option>)}
-              </select>
+          {/* Quando */}
+          <div className={styles.field}>
+            <span className={styles.label}>Quando</span>
+            <div className={styles.chipRow}>
+              {DATE_QUICK.map(d => (
+                <button key={d.label} type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, dueDate: d.value }))}
+                  className={`${styles.chip} ${formData.dueDate === d.value ? styles.chipActive : ""}`}
+                  style={{ "--c": "#a78bfa" }}>
+                  {d.label}
+                </button>
+              ))}
             </div>
-          )}
-
-          <div className={styles.formGroup} style={{ display: "flex", gap: "12px" }}>
-            <div style={{ flex: 1 }}>
-              <label className={styles.label}>DATA DE VENCIMENTO</label>
-              <input
-                type="date"
-                name="dueDate"
-                value={formData.dueDate}
-                onChange={handleChange}
-                className={styles.input}
-                required
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label className={styles.label}>HORÁRIO (Opcional)</label>
-              <input
-                type="time"
-                name="time"
-                value={formData.time}
-                onChange={handleChange}
-                className={styles.input}
-              />
+            <div className={styles.dateRow}>
+              <label className={styles.inlineInput}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+                <input type="date" name="dueDate" value={formData.dueDate} onChange={handleChange} required />
+              </label>
+              <label className={styles.inlineInput}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                <input type="time" name="time" value={formData.time} onChange={handleChange} />
+                {formData.time && (
+                  <button type="button" className={styles.clearBtn} title="Sem horário"
+                    onClick={(e) => { e.preventDefault(); setFormData(prev => ({ ...prev, time: "" })); }}>✕</button>
+                )}
+              </label>
             </div>
           </div>
 
-          <div className={styles.formGroup}>
-            <label className={styles.label}>RECORRÊNCIA</label>
+          {/* Prioridade */}
+          <div className={styles.field}>
+            <span className={styles.label}>Prioridade</span>
+            <div className={styles.chipRow}>
+              {PRIORITIES.map(o => (
+                <button key={o.value || "none"} type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, priority: o.value }))}
+                  className={`${styles.chip} ${formData.priority === o.value ? styles.chipActive : ""}`}
+                  style={{ "--c": o.color }}>
+                  <span className={styles.dot} />{o.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-            {/* Task recorrente e campo ainda não aberto → mostra chip */}
-            {isRecurring && !recurrenceOpen && !recurrenceModified && (
-              <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:2 }}>
-                <span style={{
-                  display:"inline-flex", alignItems:"center", gap:6,
-                  padding:"5px 10px", borderRadius:8, fontSize:13, fontWeight:600,
-                  background:"rgba(129,140,248,0.12)", color:"#818cf8",
-                  border:"1px solid rgba(129,140,248,0.25)",
-                }}>
-                  ↻ {currentRecStr || "recorrente"}
-                </span>
-                <button type="button" onClick={() => setRecurrenceOpen(true)}
-                  style={{ fontSize:11, color:"rgba(255,255,255,0.4)", background:"none", border:"none", cursor:"pointer", padding:"4px 6px" }}>
-                  Alterar
-                </button>
-                <button type="button" onClick={handleRemoveRecurrence}
-                  style={{ fontSize:11, color:"#f87171", background:"none", border:"none", cursor:"pointer", padding:"4px 6px" }}>
-                  Remover
-                </button>
+          {/* Repetir — tarefa recorrente começa mostrando a regra atual */}
+          <div className={styles.field}>
+            <span className={styles.label}>Repetir</span>
+
+            {isRecurring && !recurrenceOpen && !recurrenceModified ? (
+              <div className={styles.recCurrent}>
+                <span className={styles.recPill}>↻ {recPt(currentRecStr) || "recorrente"}</span>
+                <button type="button" onClick={() => setRecurrenceOpen(true)} className={styles.linkBtn}>Alterar</button>
+                <button type="button" onClick={handleRemoveRecurrence} className={`${styles.linkBtn} ${styles.linkDanger}`}>Remover</button>
               </div>
-            )}
-
-            {/* Campo de texto: tarefas sem recorrência, ou quando usuário clicou Alterar */}
-            {(!isRecurring || recurrenceOpen || recurrenceModified) && (
+            ) : (
               <>
+                <div className={styles.chipRow}>
+                  {REC_QUICK.map(r => (
+                    <button key={r} type="button"
+                      onClick={() => { setRecurrenceModified(true); setFormData(prev => ({ ...prev, recurrence: prev.recurrence === r ? "" : r })); }}
+                      className={`${styles.chip} ${formData.recurrence === r ? styles.chipActive : ""}`}
+                      style={{ "--c": "#38bdf8" }}>
+                      {r}
+                    </button>
+                  ))}
+                </div>
                 <input
                   type="text"
                   name="recurrence"
                   value={formData.recurrence}
                   onChange={handleChange}
-                  className={styles.input}
-                  placeholder="Ex: toda semana, todo segundo domingo, todo mês..."
-                  style={REC_INPUT_STYLE[validateRecurrence(formData.recurrence)]}
+                  className={`${styles.input} ${recState === "valid" ? styles.inputOk : recState === "unknown" ? styles.inputWarn : ""}`}
+                  placeholder={isRecurring ? "Nova regra (vazio = sem repetição)" : "ou escreva: toda segunda, a cada 2 semanas…"}
                   autoFocus={recurrenceOpen}
                 />
-                {validateRecurrence(formData.recurrence) === "unknown" && (
-                  <p style={{ margin:"4px 0 0", fontSize:11, color:"#f59e0b" }}>
-                    ⚠ Padrão não reconhecido — o Todoist pode ignorar
-                  </p>
-                )}
-                {validateRecurrence(formData.recurrence) === "valid" && (
-                  <p style={{ margin:"4px 0 0", fontSize:11, color:"#34d399" }}>
-                    ✓ Padrão reconhecido
-                  </p>
-                )}
-                {!isRecurring && !formData.recurrence && (
-                  <p style={{ margin:"4px 0 0", fontSize:11, color:"rgba(255,255,255,0.25)" }}>
-                    Deixe vazio para tarefa sem recorrência
-                  </p>
-                )}
+                {recState === "unknown" && <p className={styles.hintWarn}>Padrão não reconhecido: o Todoist pode ignorar</p>}
               </>
             )}
           </div>
 
-          {error && (
-            <p style={{ color: "#f87171", fontSize: "13px", marginTop: "8px", textAlign: "center" }}>
-              {error}
-            </p>
-          )}
+          {error && <p className={styles.error}>{error}</p>}
 
-          <div className={styles.footerDivider} />
-          <div className={styles.footerDelete}>
-            {!showDeleteConfirm ? (
-              <button type="button" onClick={() => setShowDeleteConfirm(true)} className={styles.btnDelete}>
-                Excluir tarefa
-              </button>
-            ) : (
-              <div className={styles.deleteConfirmRow}>
-                <span className={styles.deleteConfirmLabel}>Tem certeza?</span>
-                <button type="button" onClick={handleDelete} className={styles.btnDeleteConfirm}>Sim, excluir</button>
-                <button type="button" onClick={() => setShowDeleteConfirm(false)} className={styles.btnDeleteCancel}>Cancelar</button>
-              </div>
-            )}
-          </div>
           <div className={styles.footer}>
-            <button type="button" onClick={() => setMode("view")} className={styles.btnCancel}>Cancelar</button>
-            <button type="submit" disabled={loading} className={styles.btnSubmit}>
-              {loading ? "Salvando..." : "Salvar Alterações"}
-            </button>
+            <div className={styles.deleteArea}>
+              {!showDeleteConfirm ? (
+                <button type="button" onClick={() => setShowDeleteConfirm(true)} className={styles.btnDelete}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+                  Excluir
+                </button>
+              ) : (
+                <div className={styles.deleteConfirmRow}>
+                  <span className={styles.deleteConfirmLabel}>Excluir de vez?</span>
+                  <button type="button" onClick={handleDelete} className={styles.btnDeleteConfirm}>Sim</button>
+                  <button type="button" onClick={() => setShowDeleteConfirm(false)} className={styles.btnDeleteCancel}>Não</button>
+                </div>
+              )}
+            </div>
+            <div className={styles.footerRight}>
+              <button type="button" onClick={() => setMode("view")} className={styles.btnGhost}>Cancelar</button>
+              <button type="submit" disabled={loading} className={styles.btnPrimary}>
+                {loading ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
           </div>
         </form>
       </div>
