@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./Navigation.module.css";
 import NavIcon from "./NavIcon";
+import BrandMark from "./BrandMark";
 
 const FINANCE_ONLY = process.env.NEXT_PUBLIC_FINANCE_ONLY === "true";
 
@@ -118,7 +119,7 @@ export default function Navigation() {
 
       {/* ── Brand (desktop only) ─────────────────────────────────────────── */}
       <Link href="/" className={styles.brand}>
-        <span className={styles.brandMark}>G</span>
+        <span className={styles.brandMark}><BrandMark size={22} /></span>
         <div className={styles.brandText}>
           <span className={styles.brandName}>Daily</span>
           <span className={styles.brandSub} suppressHydrationWarning>{todayLabel()}</span>

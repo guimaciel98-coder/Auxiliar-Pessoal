@@ -19,6 +19,7 @@ export const metadata = {
   title: "Daily · Guida",
   description: "Tarefas do dia",
   manifest: "/manifest.json",
+  icons: { icon: "/icon-192.png" },
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Daily" },
   other: { "mobile-web-app-capable": "yes" },
 };

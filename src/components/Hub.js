@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import QuickAddModal from "./Daily/QuickAddModal";
 import styles from "./Hub.module.css";
+import BrandMark from "./ui/BrandMark";
 
 const DAYS         = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
 const MONTHS       = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
@@ -273,7 +274,7 @@ export default function Hub() {
       {/* ── Barra do topo ── */}
       <header className={styles.topbar}>
         <Link href="/" className={styles.brand}>
-          <div className={styles.brandMark}>G</div>
+          <div className={styles.brandMark}><BrandMark size={20} /></div>
           <span className={styles.brandName}>Daily</span>
         </Link>
         <div className={styles.topRight}>
