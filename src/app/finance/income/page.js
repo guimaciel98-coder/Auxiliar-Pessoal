@@ -40,6 +40,7 @@ export default function IncomePage() {
   const { data, loading, error, hideNumbers, refetch } = useFinance();
   const fmt = (v) => fmtFin(v, hideNumbers);
   const [toggling, setToggling] = useState(new Set());
+  const [tab, setTab]           = useState("CLT"); // fonte aberta
 
   const [modal, setModal]       = useState(false);
   const [editingItem, setEditingItem] = useState(null); // nome do item quando editando
@@ -74,7 +75,7 @@ export default function IncomePage() {
 
   function openAdd() {
     setEditingItem(null);
-    setForm({ grupo: "PDV", item: "", valor: "", confirmado: false, prazo: "" });
+    setForm({ grupo: FONTE[tab]?.key ?? "PDV", item: "", valor: "", confirmado: false, prazo: "" });
     setModal(true);
   }
 
@@ -135,14 +136,19 @@ export default function IncomePage() {
   const incomeGroups = allGroups.filter(g => g.items.length > 0);
   const grandTotal   = incomeGroups.reduce((s, g) => s + g.total, 0);
 
-  const todos      = incomeGroups.flatMap(g => g.items);
+  // Aba aberta (se a fonte escolhida estiver vazia, mostra a lista vazia dela)
+  const atual      = allGroups.find(g => g.label === tab) ?? allGroups[0];
+  const todos      = atual.items;
   // Os totais da planilha só somam o que já foi recebido; aqui o previsto soma todos os itens.
   const recebido   = todos.filter(i => i.confirmado).reduce((s, i) => s + (i.valor || 0), 0);
   const aReceber   = todos.filter(i => !i.confirmado).reduce((s, i) => s + (i.valor || 0), 0);
   const previsto   = recebido + aReceber;
   const pctRec     = previsto > 0 ? Math.round((recebido / previsto) * 100) : 0;
   const corRec     = pctRec >= 80 ? "#34d399" : pctRec >= 40 ? "#fbbf24" : "#fb7185";
-  const donut      = incomeGroups.map(g => ({ name: g.label, value: g.total })).filter(d => d.value > 0);
+  // Rosca: cada item da fonte aberta, em tons da cor da fonte
+  const corFonte   = FONTE[atual.label].color;
+  const TONS       = [1, 0.75, 0.55, 0.4, 0.3, 0.22];
+  const donut      = todos.filter(i => (i.valor || 0) > 0).map((i, k) => ({ name: i.item, value: i.valor, c: corFonte, o: TONS[k % TONS.length] }));
 
   return (
     <div className={ex.page} style={{ background: "radial-gradient(50% 35% at 85% 0%, rgba(52,211,153,0.10), transparent 70%), #07080c" }}>
@@ -255,20 +261,25 @@ export default function IncomePage() {
             {[
               ...allGroups.map(g => ({ label: g.label, value: g.total, color: FONTE[g.label].color, hint: FONTE[g.label].hint })),
               { label: "Total", value: grandTotal, color: "#a78bfa", hint: "somando tudo" },
-            ].map(s => (
-              <div key={s.label} className={ex.tabBox} style={{ "--t": s.color }}>
-                <span className={ex.tabLabel}><span className={ex.tabDot} />{s.label}</span>
-                <span className={ex.tabValue} style={{ color: s.color }}>{fmt(s.value)}</span>
-                <span className={ex.tabHint}>{s.hint}</span>
-              </div>
-            ))}
+            ].map(s => {
+              const clicavel = s.label !== "Total";
+              const Tag = clicavel ? "button" : "div";
+              return (
+                <Tag key={s.label} onClick={clicavel ? () => setTab(s.label) : undefined}
+                  className={`${ex.tabBox} ${clicavel && tab === s.label ? ex.tabActive : ""}`} style={{ "--t": s.color }}>
+                  <span className={ex.tabLabel}><span className={ex.tabDot} />{s.label}</span>
+                  <span className={ex.tabValue} style={{ color: s.color }}>{fmt(s.value)}</span>
+                  <span className={ex.tabHint}>{s.hint}</span>
+                </Tag>
+              );
+            })}
           </div>
 
           <div className={ex.layout}>
             <div className={ex.mainArea}>
-              {incomeGroups.length === 0 ? (
-                <p className={ex.empty}>Nenhuma fonte de renda encontrada para este mês.</p>
-              ) : incomeGroups.map(group => {
+              {atual.items.length === 0 ? (
+                <p className={ex.empty}>Nenhum ganho de {atual.label} neste mês.</p>
+              ) : [atual].map(group => {
                 const gc    = FONTE[group.label].color;
                 const recQt = group.items.filter(i => i.confirmado).length;
                 return (
@@ -322,7 +333,7 @@ export default function IncomePage() {
             <div className={ex.side}>
               {/* Recebido no mês */}
               <div className={ex.panel}>
-                <div className={ex.panelTitle}>Recebido no mês</div>
+                <div className={ex.panelTitle}>{atual.label} · recebido</div>
                 <div className={ex.ringPanel}>
                   <Ring pct={pctRec} color={corRec} size={108} stroke={10}>
                     <span className={ex.ringPct}>{pctRec}%</span>
@@ -341,30 +352,30 @@ export default function IncomePage() {
 
               {/* Por fonte */}
               <div className={ex.panel}>
-                <div className={ex.panelTitle}>Por fonte</div>
+                <div className={ex.panelTitle}>Por item</div>
                 {donut.length === 0 ? <p className={ex.empty}>Sem dados</p> : (
                   <>
                     <div style={{ position: "relative" }}>
                       <ResponsiveContainer width="100%" height={190}>
                         <PieChart>
                           <Pie data={donut} cx="50%" cy="50%" innerRadius={60} outerRadius={84} paddingAngle={2} cornerRadius={4} dataKey="value" stroke="none">
-                            {donut.map(d => <Cell key={d.name} fill={FONTE[d.name].color} />)}
+                            {donut.map(d => <Cell key={d.name} fill={d.c} fillOpacity={d.o} />)}
                           </Pie>
                           <Tooltip formatter={v => [fmt(v)]} contentStyle={TOOLTIP_BOX} itemStyle={{ color: "#e5e7eb" }} />
                         </PieChart>
                       </ResponsiveContainer>
                       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                        <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{fmt(grandTotal)}</span>
+                        <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{fmt(previsto)}</span>
                         <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>total</span>
                       </div>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
                       {donut.map(d => (
                         <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
-                          <span style={{ width: 10, height: 10, borderRadius: 4, background: FONTE[d.name].color }} />
-                          <span style={{ flex: 1, color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>{d.name}</span>
+                          <span style={{ width: 10, height: 10, borderRadius: 4, background: d.c, opacity: d.o, flexShrink: 0 }} />
+                          <span style={{ flex: 1, minWidth: 0, color: "rgba(255,255,255,0.7)", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</span>
                           <span style={{ color: "#fff", fontWeight: 700 }}>{fmt(d.value)}</span>
-                          <span style={{ minWidth: 38, textAlign: "right", fontWeight: 800, color: FONTE[d.name].color }}>{grandTotal > 0 ? Math.round(d.value / grandTotal * 100) : 0}%</span>
+                          <span style={{ minWidth: 38, textAlign: "right", fontWeight: 800, color: d.c }}>{previsto > 0 ? Math.round(d.value / previsto * 100) : 0}%</span>
                         </div>
                       ))}
                     </div>
