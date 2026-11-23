@@ -873,17 +873,29 @@ export default function ExpensesPage() {
                       const curto = v => v == null ? "" : v >= 1000 ? `R$ ${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k` : `R$ ${Math.round(v)}`;
                       return (<>
                         <div className={ex.panelTitle}>Mensal x restante</div>
-                        <ResponsiveContainer width="100%" height={dados.length * 58 + 10}>
-                          <BarChart data={dados} layout="vertical" margin={{ top: 14, right: 58, left: 0, bottom: 0 }} barGap={2} barCategoryGap="34%">
-                            <XAxis type="number" scale="log" domain={[10, "auto"]} hide allowDataOverflow />
-                            <YAxis type="category" dataKey="name" width={1} tickLine={false} axisLine={false}
-                              tick={({ y, payload }) => <text x={2} y={y - 15} fill="rgba(255,255,255,0.75)" fontSize={12} fontWeight={600}>{payload.value}</text>} />
+                        <ResponsiveContainer width="100%" height={250}>
+                          <BarChart data={dados} margin={{ top: 52, right: 4, left: 4, bottom: 4 }} barGap={2} barCategoryGap="22%">
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                            <YAxis scale="log" domain={[10, "auto"]} hide allowDataOverflow />
+                            {/* Nome em até duas linhas, embaixo de cada par de colunas */}
+                            <XAxis dataKey="name" interval={0} tickLine={false} axisLine={false} height={34}
+                              tick={({ x, y, payload }) => {
+                                const [l1, ...rest] = String(payload.value).split(" ");
+                                const cut = t => t.length > 8 ? t.slice(0, 7) + "…" : t;
+                                const l2 = rest.join(" ");
+                                return (
+                                  <text x={x} y={y + 10} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize={10.5} fontWeight={600}>
+                                    <tspan x={x}>{cut(l1)}</tspan>
+                                    {l2 && <tspan x={x} dy={12}>{cut(l2)}</tspan>}
+                                  </text>
+                                );
+                              }} />
                             <Tooltip contentStyle={TOOLTIP_BOX} formatter={(v, name) => [fmt(v), name]} itemStyle={{ color: "#e5e7eb" }} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
-                            <Bar dataKey="Mensal" fill="#a78bfa" radius={[0, 5, 5, 0]} barSize={10}>
-                              <LabelList dataKey="Mensal" content={({ x, y, width, height, value }) => value == null ? null : <text x={x + width + 6} y={y + height / 2} dominantBaseline="central" fill="#c4b5fd" fontSize={11} fontWeight={700}>{curto(value)}</text>} />
+                            <Bar dataKey="Mensal" fill="#a78bfa" radius={[5, 5, 0, 0]} maxBarSize={14}>
+                              <LabelList dataKey="Mensal" content={({ x, y, width, value }) => value == null ? null : <text x={x + width / 2} y={y - 6} transform={`rotate(-90 ${x + width / 2} ${y - 6})`} fill="#c4b5fd" fontSize={10.5} fontWeight={700}>{curto(value)}</text>} />
                             </Bar>
-                            <Bar dataKey="Restante" fill="#fb7185" fillOpacity={0.75} radius={[0, 5, 5, 0]} barSize={10}>
-                              <LabelList dataKey="Restante" content={({ x, y, width, height, value }) => value == null ? null : <text x={x + width + 6} y={y + height / 2} dominantBaseline="central" fill="#fda4af" fontSize={11} fontWeight={700}>{curto(value)}</text>} />
+                            <Bar dataKey="Restante" fill="#fb7185" fillOpacity={0.75} radius={[5, 5, 0, 0]} maxBarSize={14}>
+                              <LabelList dataKey="Restante" content={({ x, y, width, value }) => value == null ? null : <text x={x + width / 2} y={y - 6} transform={`rotate(-90 ${x + width / 2} ${y - 6})`} fill="#fda4af" fontSize={10.5} fontWeight={700}>{curto(value)}</text>} />
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
