@@ -66,7 +66,7 @@ export default function RecurrencesPage() {
 
   return (
     <div className={styles.container}>
-      <ModuleHeader title="Repetir" showConfig />
+      <ModuleHeader title="Repetir" />
 
       <header className={styles.header}>
         <div className={styles.titleRow}>

@@ -74,7 +74,7 @@ export default function CalendarPage() {
 
   return (
     <div className={styles.container}>
-      <ModuleHeader title="Agenda" showConfig />
+      <ModuleHeader title="Agenda" />
 
       <header className={styles.header}>
         <div className={styles.monthNav}>

@@ -31,10 +31,7 @@
 
 /* ── Topo ───────────────────────────────────────────────────────────────── */
 .topRow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-.segment { display: inline-flex; padding: 3px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); }
-.segBtn { padding: 7px 14px; border-radius: 9px; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.5); transition: all .2s; }
-.segBtn:hover { color: rgba(255,255,255,0.85); }
-.segActive { background: rgba(255,255,255,0.1); color: #fff; }
+.modalTitle { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.6); }
 .closeBtn { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: rgba(255,255,255,0.45); background: rgba(255,255,255,0.04); font-size: 13px; }
 .closeBtn:hover { color: #fff; background: rgba(255,255,255,0.1); }
 

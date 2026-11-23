@@ -24,14 +24,6 @@
 .stat { display: flex; flex-direction: column; gap: 3px; }
 .statNum { font-size: 30px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
 .statLbl { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.45); }
-.configBtn {
-  width: 38px; height: 38px; border-radius: 12px;
-  display: grid; place-items: center;
-  color: rgba(255,255,255,0.5);
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-  transition: all .2s;
-}
-.configBtn:hover { color: #fff; background: rgba(255,255,255,0.08); transform: rotate(30deg); }
 
 .topNav { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 

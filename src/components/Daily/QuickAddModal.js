@@ -11,15 +11,7 @@ const VCA_AGENCIES = [
   { id: PROJ.vca.extraIds[0], label: "Ocupe" },
 ];
 
-const MODES = [
-  { key: "task", label: "Tarefa" },
-  { key: "pdv",  label: "Cliente PDV" },
-  { key: "vca",  label: "Marca VCA" },
-];
-
 export default function QuickAddModal({ onClose, onSuccess, initialProjectId, initialVcaProjectId, initialSubClientId, clients: clientsProp }) {
-  const [mode, setMode]       = useState("task");
-  const [fading, setFading]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState(null);
   const [localClients, setLocalClients] = useState([]);
@@ -41,12 +33,6 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
     recurrence: "",
   });
 
-  // ── Estado: Cliente PDV ───────────────────────────────────────────────────
-  const [pdvData, setPdvData] = useState({ name: "", canal: "meta", observacoes: "" });
-
-  // ── Estado: Marca VCA ─────────────────────────────────────────────────────
-  const [vcaData, setVcaData] = useState({ name: "", vertical: "", observacoes: "" });
-
   useEffect(() => {
     if (clientsProp) return;
     fetch("/api/clients").then(r => r.json()).then(setLocalClients).catch(console.error);
@@ -60,16 +46,6 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
 
   const vcaBrands  = clients.filter(c => c.project_id === "vca");
   const pdvClients = clients.filter(c => c.project_id === "pdv");
-
-  function switchMode(newMode) {
-    if (newMode === mode) return;
-    setError(null);
-    setFading(true);
-    setTimeout(() => {
-      setMode(newMode);
-      setFading(false);
-    }, 150);
-  }
 
   // ── Submit: Tarefa ────────────────────────────────────────────────────────
   async function handleTaskSubmit(e) {
@@ -97,62 +73,8 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
     }
   }
 
-  // ── Submit: Cliente PDV ───────────────────────────────────────────────────
-  async function handlePdvSubmit(e) {
-    e.preventDefault();
-    if (!pdvData.name.trim()) return;
-    setLoading(true); setError(null);
-    try {
-      const res = await fetch("/api/clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "pdv", ...pdvData }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || "Erro ao adicionar cliente");
-      }
-      onSuccess();
-      onClose();
-    } catch (err) {
-      setError(err.message || "Erro ao adicionar cliente. Tente novamente.");
-      setLoading(false);
-    }
-  }
-
-  // ── Submit: Marca VCA ─────────────────────────────────────────────────────
-  async function handleVcaSubmit(e) {
-    e.preventDefault();
-    if (!vcaData.name.trim()) return;
-    setLoading(true); setError(null);
-    try {
-      const res = await fetch("/api/clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "vca", ...vcaData }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || "Erro ao adicionar marca");
-      }
-      onSuccess();
-      onClose();
-    } catch (err) {
-      setError(err.message || "Erro ao adicionar marca. Tente novamente.");
-      setLoading(false);
-    }
-  }
-
-  const canSubmit = {
-    task: !loading && !!taskData.title.trim(),
-    pdv:  !loading && !!pdvData.name.trim(),
-    vca:  !loading && !!vcaData.name.trim(),
-  };
-  const submitLabel = {
-    task: loading ? "Criando..."  : "Criar Tarefa",
-    pdv:  loading ? "Salvando..." : "Adicionar Cliente",
-    vca:  loading ? "Salvando..." : "Adicionar Marca",
-  };
+  const canSubmit   = { task: !loading && !!taskData.title.trim() };
+  const submitLabel = { task: loading ? "Criando..." : "Criar Tarefa" };
 
   // ── Atalhos de data (BRT) ───────────────────────────────────────────────
   const isoBRT = (offsetDays) => {
@@ -186,23 +108,11 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
 
         {/* ── Topo: tipo de cadastro + fechar ── */}
         <div className={styles.topRow}>
-          <div className={styles.segment}>
-            {MODES.map(m => (
-              <button key={m.key} type="button" onClick={() => switchMode(m.key)}
-                className={`${styles.segBtn} ${mode === m.key ? styles.segActive : ""}`}>
-                {m.label}
-              </button>
-            ))}
-          </div>
+          <span className={styles.modalTitle}>Nova tarefa</span>
           <button type="button" onClick={onClose} className={styles.closeBtn} title="Fechar (Esc)">✕</button>
         </div>
 
-        {/* ── Área animada com fade ao trocar de modo ── */}
-        <div style={{ transition: "opacity 0.15s ease", opacity: fading ? 0 : 1 }}>
-
-          {/* ════ Formulário: Tarefa ════ */}
-          {mode === "task" && (
-            <form onSubmit={handleTaskSubmit}>
+          <form onSubmit={handleTaskSubmit}>
               {/* Nome grande + descrição logo abaixo (estilo Todoist) */}
               <div className={styles.titleBlock}>
                 <input
@@ -366,112 +276,6 @@ export default function QuickAddModal({ onClose, onSuccess, initialProjectId, in
                 </button>
               </div>
             </form>
-          )}
-
-          {/* ════ Formulário: Cliente PDV ════ */}
-          {mode === "pdv" && (
-            <form onSubmit={handlePdvSubmit}>
-              <div className={styles.titleBlock}>
-                <input
-                  autoFocus
-                  type="text"
-                  value={pdvData.name}
-                  onChange={e => setPdvData(p => ({ ...p, name: e.target.value }))}
-                  className={styles.bigInput}
-                  placeholder="Nome do cliente"
-                  required
-                />
-              </div>
-
-              <div className={styles.field}>
-                <span className={styles.label}>Canal</span>
-                <div className={styles.chipRow}>
-                  {[
-                    { value: "meta",   label: "Meta" },
-                    { value: "google", label: "Google" },
-                    { value: "ambos",  label: "Ambos" },
-                  ].map(opt => (
-                    <button key={opt.value} type="button"
-                      onClick={() => setPdvData(p => ({ ...p, canal: opt.value }))}
-                      className={`${styles.chip} ${pdvData.canal === opt.value ? styles.chipActive : ""}`}
-                      style={{ "--c": PROJ.pdv.cor }}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className={styles.field}>
-                <span className={styles.label}>Observações</span>
-                <textarea
-                  value={pdvData.observacoes}
-                  onChange={e => setPdvData(p => ({ ...p, observacoes: e.target.value }))}
-                  className={styles.input}
-                  placeholder="Informações adicionais..."
-                  rows={3}
-                />
-              </div>
-
-              {error && <p className={styles.error}>{error}</p>}
-
-              <div className={styles.footer}>
-                <button type="button" onClick={onClose} className={styles.btnCancel}>Cancelar</button>
-                <button type="submit" disabled={!canSubmit.pdv} className={styles.btnSubmit}>
-                  {submitLabel.pdv}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* ════ Formulário: Marca VCA ════ */}
-          {mode === "vca" && (
-            <form onSubmit={handleVcaSubmit}>
-              <div className={styles.titleBlock}>
-                <input
-                  autoFocus
-                  type="text"
-                  value={vcaData.name}
-                  onChange={e => setVcaData(p => ({ ...p, name: e.target.value }))}
-                  className={styles.bigInput}
-                  placeholder="Nome da marca"
-                  required
-                />
-              </div>
-
-              <div className={styles.field}>
-                <span className={styles.label}>Vertical</span>
-                <input
-                  type="text"
-                  value={vcaData.vertical}
-                  onChange={e => setVcaData(p => ({ ...p, vertical: e.target.value }))}
-                  className={styles.input}
-                  placeholder="Ex: hospital, clínica, farmácia..."
-                />
-              </div>
-
-              <div className={styles.field}>
-                <span className={styles.label}>Observações</span>
-                <textarea
-                  value={vcaData.observacoes}
-                  onChange={e => setVcaData(p => ({ ...p, observacoes: e.target.value }))}
-                  className={styles.input}
-                  placeholder="Informações adicionais..."
-                  rows={3}
-                />
-              </div>
-
-              {error && <p className={styles.error}>{error}</p>}
-
-              <div className={styles.footer}>
-                <button type="button" onClick={onClose} className={styles.btnCancel}>Cancelar</button>
-                <button type="submit" disabled={!canSubmit.vca} className={styles.btnSubmit}>
-                  {submitLabel.vca}
-                </button>
-              </div>
-            </form>
-          )}
-
-        </div>
       </div>
     </div>
   );
