@@ -145,7 +145,7 @@
 }
 
 /* ── Big numbers clicáveis (filtros) ─────────────────────────────────────── */
-.statBox { text-align: left; cursor: pointer; transition: transform .15s, border-color .2s, background .2s; }
+.statBox { color: #fff; text-align: left; cursor: pointer; transition: transform .15s, border-color .2s, background .2s; }
 .statBox:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.16); }
 .statBoxActive {
   border-color: color-mix(in srgb, var(--stat-color) 60%, transparent) !important;

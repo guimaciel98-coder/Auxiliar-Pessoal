@@ -274,7 +274,7 @@ export default function DailyOrchestrator({ mode = "today" }) {
                 onClick={() => toggleFilter(f.key)}
                 title={filter === f.key ? "Mostrar todas" : `Mostrar só ${f.label}`}
               >
-                <span className={styles.statNum} style={{ color: f.color }}>{f.num}</span>
+                <span className={styles.statNum} style={{ color: f.num === 0 ? "#fff" : f.color }}>{f.num}</span>
                 <span className={styles.statLbl}>{f.label}</span>
               </button>
             ))}
