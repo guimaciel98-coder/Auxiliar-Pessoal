@@ -274,8 +274,11 @@ export default function Hub() {
       {/* ── Barra do topo ── */}
       <header className={styles.topbar}>
         <Link href="/" className={styles.brand}>
-          <div className={styles.brandMark}><BrandMark size={20} /></div>
-          <span className={styles.brandName}>Daily</span>
+          <div className={styles.brandMark}><BrandMark size={28} /></div>
+          <div className={styles.brandText}>
+            <span className={styles.brandName}>Daily</span>
+            <span className={styles.brandSub}>Guilherme</span>
+          </div>
         </Link>
         <div className={styles.topRight}>
           <div className={styles.clock} title={`${dayPct}% do dia já passou`}>
