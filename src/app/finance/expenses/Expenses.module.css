@@ -261,7 +261,7 @@ button.tabBox:hover { transform: translateY(-2px); border-color: rgba(255,255,25
 .uRow {
   --c: #a78bfa;
   position: relative;
-  display: grid; grid-template-columns: 28px minmax(150px, 1.3fr) minmax(70px, 1fr) 52px 112px 66px;
+  display: grid; grid-template-columns: 28px minmax(140px, 1.5fr) minmax(48px, 0.8fr) 44px 92px 66px;
   align-items: center; gap: 14px;
   min-height: 62px; padding: 10px 18px;
   border-bottom: 1px solid rgba(255,255,255,0.05);

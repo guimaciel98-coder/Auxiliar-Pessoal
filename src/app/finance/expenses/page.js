@@ -10,7 +10,7 @@ import { fmtFin } from "@/lib/fmtFin";
 import FinanceOcultarBtn from "@/components/ui/FinanceOcultarBtn";
 import {
   PieChart, Pie, Cell, Label, Tooltip, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
 } from "recharts";
 
 
@@ -862,38 +862,37 @@ export default function ExpensesPage() {
                     </div>
                   </div>
 
-                  {/* Pago x restante */}
+                  {/* Mensal x restante */}
                   <div className={ex.panel}>
-                  {(() => {
-                    const lista = [...parcItems].sort((a, b) => b.restante - a.restante);
-                    return (<>
-                      <div className={ex.panelTitle}>Pago x restante</div>
-                      <div className={ex.payList}>
-                        {lista.map(i => {
-                          const pago  = i.valorMensal * i.parcelasPagas;
-                          const total = pago + i.restante;
-                          const pc    = total > 0 ? (pago / total) * 100 : 100;
-                          return (
-                            <div key={i.sheetRow} className={ex.payRow}>
-                              <div className={ex.payTop}>
-                                <span>{i.nome}</span>
-                                {i.restante > 0 ? <b style={{ color: "#fb7185" }}>faltam {fmt(i.restante)}</b> : <b style={{ color: "#34d399" }}>quitada</b>}
-                              </div>
-                              <div className={ex.split}>
-                                <span style={{ width: `${pc}%`, background: "#34d399" }} />
-                                {i.restante > 0 && <span style={{ width: `${100 - pc}%`, background: "rgba(251,113,133,0.55)" }} />}
-                              </div>
-                              <div className={ex.payFoot}>pago {fmt(pago)} · {fmt(i.valorMensal)}/mês</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className={ex.legendRow}>
-                        <span><i style={{ background: "#34d399" }} />Pago</span>
-                        <span><i style={{ background: "rgba(251,113,133,0.6)" }} />Restante</span>
-                      </div>
-                    </>);
-                  })()}
+                    {(() => {
+                      // Barras deitadas: nomes legíveis. Escala logarítmica para que uma compra grande
+                      // não esconda as pequenas; o valor real fica escrito na ponta de cada barra.
+                      const dados = [...parcItems]
+                        .sort((x, y) => y.restante - x.restante)
+                        .map(i => ({ name: i.nome, Mensal: i.valorMensal || null, Restante: i.restante > 0 ? i.restante : null }));
+                      const curto = v => v == null ? "" : v >= 1000 ? `R$ ${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k` : `R$ ${Math.round(v)}`;
+                      return (<>
+                        <div className={ex.panelTitle}>Mensal x restante</div>
+                        <ResponsiveContainer width="100%" height={dados.length * 58 + 10}>
+                          <BarChart data={dados} layout="vertical" margin={{ top: 14, right: 58, left: 0, bottom: 0 }} barGap={2} barCategoryGap="34%">
+                            <XAxis type="number" scale="log" domain={[10, "auto"]} hide allowDataOverflow />
+                            <YAxis type="category" dataKey="name" width={1} tickLine={false} axisLine={false}
+                              tick={({ y, payload }) => <text x={2} y={y - 15} fill="rgba(255,255,255,0.75)" fontSize={12} fontWeight={600}>{payload.value}</text>} />
+                            <Tooltip contentStyle={TOOLTIP_BOX} formatter={(v, name) => [fmt(v), name]} itemStyle={{ color: "#e5e7eb" }} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+                            <Bar dataKey="Mensal" fill="#a78bfa" radius={[0, 5, 5, 0]} barSize={10}>
+                              <LabelList dataKey="Mensal" content={({ x, y, width, height, value }) => value == null ? null : <text x={x + width + 6} y={y + height / 2} dominantBaseline="central" fill="#c4b5fd" fontSize={11} fontWeight={700}>{curto(value)}</text>} />
+                            </Bar>
+                            <Bar dataKey="Restante" fill="#fb7185" fillOpacity={0.75} radius={[0, 5, 5, 0]} barSize={10}>
+                              <LabelList dataKey="Restante" content={({ x, y, width, height, value }) => value == null ? null : <text x={x + width + 6} y={y + height / 2} dominantBaseline="central" fill="#fda4af" fontSize={11} fontWeight={700}>{curto(value)}</text>} />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                        <div className={ex.legendRow} style={{ marginTop: 10 }}>
+                          <span><i style={{ background: "#a78bfa" }} />Parcela do mês</span>
+                          <span><i style={{ background: "#fb7185" }} />Falta pagar</span>
+                        </div>
+                      </>);
+                    })()}
                   </div>
                 </div>
               </div>
