@@ -1,0 +1,43 @@
+/* Coluna esquerda da Visão Geral (minimalista). Evitar nomes usados pelo finance-theme.css. */
+
+.empty { font-size: 13px; color: rgba(255,255,255,0.4); text-align: center; padding: 24px 0; }
+
+/* ── B · Minimalista ─────────────────────────────────────────────────────── */
+.bWrap { display: flex; flex-direction: column; gap: 12px; }
+.bTwo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.bKpi {
+  --c: #fff; position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 18px 20px 18px 24px; border-radius: 16px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+}
+.bKpi::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c); }
+.bLabel { font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.5); }
+.bValue { font-size: 32px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bStrip { display: grid; grid-template-columns: repeat(3, 1fr); border-radius: 16px; overflow: hidden; background: rgba(255,255,255,0.07); gap: 1px; border: 1px solid rgba(255,255,255,0.07); }
+.bStripItem { display: flex; flex-direction: column; gap: 6px; padding: 14px 18px; background: #0c0d12; min-width: 0; }
+.bStripValue { font-size: 20px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bHint { font-size: 11px; color: rgba(255,255,255,0.35); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.bPanel { border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); overflow: hidden; }
+.bPanelHead { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.bPanelTitle { font-size: 15px; font-weight: 700; color: #fff; }
+.bPanelCols { display: flex; gap: 40px; font-size: 11.5px; color: rgba(255,255,255,0.35); }
+.bRow { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(80px, 1.4fr) 160px 52px; align-items: center; gap: 18px; padding: 13px 18px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.bRow:last-child { border-bottom: none; }
+.bRow:hover { background: rgba(255,255,255,0.025); }
+.bRowName { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bRowName span { font-size: 14px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bRowName small { font-size: 11.5px; font-weight: 600; }
+.bRowBar { height: 6px; border-radius: 99px; background: rgba(255,255,255,0.07); overflow: hidden; }
+.bRowBar span { display: block; height: 100%; border-radius: 99px; transition: width .8s cubic-bezier(.16,1,.3,1); }
+.bRowVals { text-align: right; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bRowVals span { color: rgba(255,255,255,0.35); }
+.bRowPct { font-size: 15px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 768px) {
+  .bTwo, .bStrip { grid-template-columns: 1fr; }
+  .bRow { grid-template-columns: 1fr auto; }
+  .bRowBar { grid-column: 1 / -1; order: 3; }
+  .bPanelCols { display: none; }
+}
