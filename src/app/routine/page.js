@@ -66,7 +66,7 @@ function catTotals(blocks) {
 }
 
 // Barra empilhada + legenda por categoria
-function Distribution({ blocks, title, aside }) {
+function Distribution({ blocks, title, aside, wide }) {
   const { segs, total } = catTotals(blocks);
   if (!segs.length) return null;
   const sorted = [...segs].sort((a, b) => b.mins - a.mins);
@@ -79,7 +79,7 @@ function Distribution({ blocks, title, aside }) {
       <div className={rt.stack}>
         {sorted.map(s => <span key={s.cat} style={{ width: `${s.pct}%`, background: CAT[s.cat]?.color }} />)}
       </div>
-      <div className={rt.legend}>
+      <div className={wide ? rt.legendWide : rt.legend}>
         {sorted.map(s => (
           <div key={s.cat} className={rt.legRow}>
             <i style={{ background: CAT[s.cat]?.color }} />
@@ -381,9 +381,10 @@ function TabSemana({ onSelectDay }) {
   const allBlocks = [0,1,2,3,4,5,6].flatMap(d => week[d] ?? []);
 
   return (
-    <div className={ex.layout}>
-      <div className={ex.mainArea}>
-        <div className={rt.weekGrid}>
+    <div className={rt.weekCol}>
+      {/* Soma da semana no topo */}
+      <Distribution blocks={allBlocks} title="Tempo da semana" wide />
+      <div className={rt.weekGrid}>
           {DAYS_SHORT.map((_, idx) => {
             const isT    = idx === todayIdx;
             const blocks = week[idx] ?? [];
@@ -432,10 +433,6 @@ function TabSemana({ onSelectDay }) {
               </button>
             );
           })}
-        </div>
-      </div>
-      <div className={ex.side}>
-        <Distribution blocks={allBlocks} title="Tempo da semana" />
       </div>
     </div>
   );
