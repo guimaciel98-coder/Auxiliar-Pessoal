@@ -226,46 +226,36 @@ export default function OverviewPage() {
     ?? (() => { const a = historico.filter(m => m.atingido); return a.length ? a[a.length-1].valor : 0; })();
   const mesesAtingidos    = historico.filter(m => m.atingido).length;
 
-  // ── Donut por grupo (Casa Nova / Casa / Pessoal / Outros / Parcelas) ────────
-  const DONUT_COLORS = { "Casa Nova": "#fbbf24", Casa: "#38bdf8", Pessoal: "#34d399", Outros: "#9ca3af", Parcelas: "#a78bfa" };
+  // ── Rosca por tema: para onde o dinheiro vai ─────────────────────────────────
+  // Fixos entram inteiros (pagos ou não); variáveis pelo que já foi gasto no ciclo; parcelas pela parcela do mês.
+  const DONUT_COLORS = {
+    "Alimentação": "#34d399", "Moradia": "#38bdf8", "Apartamento novo": "#fbbf24", "Parcelas": "#a78bfa",
+    "Livre": "#f472b6", "Contas pessoais": "#cbd5e1", "Pito": "#fb923c", "Transporte": "#fb7185",
+  };
 
   const donutData = useMemo(() => {
-    const groups = { "Casa Nova": 0, Casa: 0, Pessoal: 0, Outros: 0, Parcelas: 0 };
+    const t = Object.fromEntries(Object.keys(DONUT_COLORS).map(k => [k, 0]));
 
-    // Fixos pelo valor real (todos, pagos ou não), excluindo parcelas antigas ("Até")
+    // Fixos: Casa → Moradia, Casa Nova → Apartamento novo, resto → Contas pessoais
     for (const item of data?.gastos?.fixos?.items ?? []) {
       if (!item.real || item.item.includes("Até")) continue;
       const g = (item.grupo ?? "").toLowerCase();
-      if      (g === "casa nova") groups["Casa Nova"] += item.real;
-      else if (g === "casa")      groups.Casa         += item.real;
-      else if (g === "pessoal")   groups.Pessoal      += item.real;
-      else                        groups.Outros        += item.real;
+      t[g === "casa" ? "Moradia" : g === "casa nova" ? "Apartamento novo" : "Contas pessoais"] += item.real;
     }
 
-    // Variáveis: usa o real do ciclo atual — cada item vai para o grupo correto
-    const VAR_GRUPO = {
-      "Mercado":           "Casa",
-      "Comida":            "Pessoal",
-      "Pito":              "Pessoal",
-      "Psicologa":         "Pessoal",
-      "Outros (Disponível)": "Pessoal",
-      "Transporte":        "Outros",
-    };
+    // Variáveis: pelo nome da categoria (categoria nova cai em Contas pessoais até entrar na regra)
+    const VAR_TEMA = { "mercado": "Alimentação", "comida": "Alimentação", "pito": "Pito", "transporte": "Transporte", "outros (disponível)": "Livre" };
     for (const item of data?.gastos?.variaveis?.items ?? []) {
       if (!item.real) continue;
-      // Usa o grupo cadastrado na planilha (o mesmo da aba Gastos); a lista fixa acima só vale se o item não tiver grupo.
-      // Antes, "Transporte" ia sempre para Outros, mesmo estando em Pessoal na planilha.
-      const g = (item.grupo ?? "").toLowerCase();
-      const grupo = g === "casa nova" ? "Casa Nova" : g === "casa" ? "Casa" : g === "pessoal" ? "Pessoal" : g ? "Outros" : (VAR_GRUPO[item.item] ?? "Outros");
-      groups[grupo] += item.real;
+      t[VAR_TEMA[String(item.item).toLowerCase()] ?? "Contas pessoais"] += item.real;
     }
 
     // Parcelas ativas
     for (const c of data?.compromissos?.items ?? []) {
-      if (c.valorMensal) groups.Parcelas += c.valorMensal;
+      if (c.valorMensal) t.Parcelas += c.valorMensal;
     }
 
-    return Object.entries(groups)
+    return Object.entries(t)
       .filter(([, v]) => v > 0)
       .map(([name, value]) => ({ name, value: Math.round(value) }));
   }, [data]);

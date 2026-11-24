@@ -125,7 +125,7 @@ export function RightB(p) {
         </div>
       </Panel>
 
-      <Panel title="Gastos por grupo">
+      <Panel title="Gastos por tema">
         <Donut fmt={fmt} donutData={donutData} colors={donutColors} horizontal />
       </Panel>
 
