@@ -1,5 +1,5 @@
 .root {
-  min-height: 100vh; min-height: 100dvh;
+  min-height: calc(100vh / var(--vz, 1)); min-height: calc(100dvh / var(--vz, 1));
   background: #07080c;
   color: #f4f5f7;
   font-family: var(--font-sans);
@@ -334,7 +334,7 @@
 .timeline { display: flex; flex-direction: column; gap: 6px; }
 .tlTrack { position: relative; height: 14px; border-radius: 99px; background: rgba(255,255,255,0.05); }
 .tlBlock { position: absolute; top: 2px; bottom: 2px; border-radius: 99px; background: #38bdf8; }
-.tlCur   { top: -1px; bottom: -1px; box-shadow: 0 0 14px rgba(56,189,248,0.7); }
+.tlCur   { top: -1px; bottom: -1px; box-shadow: 0 0 14px var(--g, #38bdf8); }
 .tlNow   { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; border-radius: 2px; background: #fff; box-shadow: 0 0 8px #fff; }
 .tlScale { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.3); font-variant-numeric: tabular-nums; }
 
@@ -353,31 +353,31 @@
 .ring svg { width: 100%; height: 100%; }
 
 @media (min-width: 761px) and (min-height: 600px) {
-  .root   { height: 100vh; height: 100dvh; overflow: hidden; }
-  .topbar { padding-top: clamp(10px, 2vh, 22px); padding-bottom: clamp(8px, 1.5vh, 16px); }
-  .hero   { padding-top: clamp(4px, 1.5vh, 20px); padding-bottom: clamp(12px, 2.6vh, 30px); }
-  .greetSmall { font-size: clamp(13px, 1.9vh, 15px); margin-bottom: 4px; }
-  .greetTitle { font-size: clamp(30px, 5.6vh, 52px); }
-  .brand     { padding-top: clamp(6px, 1.2vh, 10px); padding-bottom: clamp(6px, 1.2vh, 10px); }
-  .brandMark { width: clamp(38px, 5.8vh, 48px); height: clamp(38px, 5.8vh, 48px); }
+  .root   { height: calc(100vh / var(--vz, 1)); height: calc(100dvh / var(--vz, 1)); overflow: hidden; }
+  .topbar { padding-top: clamp(10px, calc(2vh / var(--vz, 1)), 22px); padding-bottom: clamp(8px, calc(1.5vh / var(--vz, 1)), 16px); }
+  .hero   { padding-top: clamp(4px, calc(1.5vh / var(--vz, 1)), 20px); padding-bottom: clamp(12px, calc(2.6vh / var(--vz, 1)), 30px); }
+  .greetSmall { font-size: clamp(13px, calc(1.9vh / var(--vz, 1)), 15px); margin-bottom: 4px; }
+  .greetTitle { font-size: clamp(30px, calc(5.6vh / var(--vz, 1)), 52px); }
+  .brand     { padding-top: clamp(6px, calc(1.2vh / var(--vz, 1)), 10px); padding-bottom: clamp(6px, calc(1.2vh / var(--vz, 1)), 10px); }
+  .brandMark { width: clamp(38px, calc(5.8vh / var(--vz, 1)), 48px); height: clamp(38px, calc(5.8vh / var(--vz, 1)), 48px); }
 
   /* Cartões compactos: altura do próprio conteúdo (não esticam até o fim da tela) */
   .bento {
     grid-auto-rows: auto;
-    gap: clamp(10px, 1.6vh, 14px);
-    padding-bottom: clamp(14px, 3vh, 32px);
+    gap: clamp(10px, calc(1.6vh / var(--vz, 1)), 14px);
+    padding-bottom: clamp(14px, calc(3vh / var(--vz, 1)), 32px);
     max-width: 1080px;
   }
-  .card { min-height: 0; padding: clamp(12px, 1.8vh, 18px) 20px; gap: clamp(6px, 1.2vh, 12px); border-radius: 22px; }
+  .card { min-height: 0; padding: clamp(12px, calc(1.8vh / var(--vz, 1)), 18px) 20px; gap: clamp(6px, calc(1.2vh / var(--vz, 1)), 12px); border-radius: 22px; }
   .quad { min-height: 0; gap: 22px; }
-  .quad .ring { width: clamp(72px, 11vh, 100px) !important; height: clamp(72px, 11vh, 100px) !important; }
-  .quad .ringPct { font-size: clamp(18px, 2.7vh, 24px); }
+  .quad .ring { width: clamp(72px, calc(11vh / var(--vz, 1)), 100px) !important; height: clamp(72px, calc(11vh / var(--vz, 1)), 100px) !important; }
+  .quad .ringPct { font-size: clamp(18px, calc(2.7vh / var(--vz, 1)), 24px); }
   .quad .ringSub { font-size: 10.5px; }
-  .quad .statValueBig { font-size: clamp(24px, 3.8vh, 34px); }
-  .quad .statValue { font-size: clamp(16px, 2.3vh, 20px); }
-  .quad .nowTitle { font-size: clamp(20px, 3vh, 26px); }
+  .quad .statValueBig { font-size: clamp(24px, calc(3.8vh / var(--vz, 1)), 34px); }
+  .quad .statValue { font-size: clamp(16px, calc(2.3vh / var(--vz, 1)), 20px); }
+  .quad .nowTitle { font-size: clamp(20px, calc(3vh / var(--vz, 1)), 26px); }
   .hero { max-width: 1080px; }
   .topbar { max-width: 1080px; }
-  .quadRight { gap: clamp(6px, 1.5vh, 14px); }
-  .chipIcon, .arrow { width: clamp(24px, 3.6vh, 30px); height: clamp(24px, 3.6vh, 30px); }
+  .quadRight { gap: clamp(6px, calc(1.5vh / var(--vz, 1)), 14px); }
+  .chipIcon, .arrow { width: clamp(24px, calc(3.6vh / var(--vz, 1)), 30px); height: clamp(24px, calc(3.6vh / var(--vz, 1)), 30px); }
 }

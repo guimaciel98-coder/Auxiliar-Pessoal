@@ -1,12 +1,16 @@
 "use client";
+// Tela de login — mesma identidade visual do app (fundo escuro, brilhos dos 4 módulos, botão branco).
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import BrandMark from "@/components/ui/BrandMark";
+import s from "./Login.module.css";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [form, setForm]     = useState({ username: "", password: "" });
-  const [error, setError]   = useState("");
+  const [form, setForm]       = useState({ username: "", password: "" });
+  const [error, setError]     = useState("");
   const [loading, setLoading] = useState(false);
+  const [show, setShow]       = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -32,81 +36,49 @@ export default function LoginPage() {
     }
   }
 
+  const hora  = new Date().getHours();
+  const saud  = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+
   return (
-    <div style={{
-      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "var(--bg-primary, #0a0d14)",
-    }}>
-      <div style={{
-        width: "100%", maxWidth: 360, padding: "40px 32px",
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        borderRadius: 20,
-      }}>
-        {/* Logo / título */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 36, marginBottom: 10 }}>⚡</div>
-          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#f9fafb", margin: 0 }}>Daily App</h1>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>Faça login para continuar</p>
+    <div className={s.wrap}>
+      <div className={s.glow} aria-hidden />
+      <div className={s.card}>
+        <div className={s.brand}>
+          <span className={s.logo}><BrandMark size={34} /></span>
+          <div>
+            <b>Daily</b>
+            <span>Tarefas · Finanças · Rotina · Saúde</span>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "rgba(255,255,255,0.35)", marginBottom: 6 }}>
-              Usuário
-            </label>
-            <input
-              type="text" autoComplete="username" required
-              value={form.username}
-              onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-              style={{
-                width: "100%", boxSizing: "border-box",
-                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 10, padding: "11px 14px", color: "#f0f0f8", fontSize: 14,
-                fontFamily: "inherit", outline: "none",
-              }}
-            />
-          </div>
+        <h1 className={s.title}>{saud}.</h1>
+        <p className={s.sub}>Entre para ver o seu dia.</p>
 
-          <div>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "rgba(255,255,255,0.35)", marginBottom: 6 }}>
-              Senha
-            </label>
-            <input
-              type="password" autoComplete="current-password" required
-              value={form.password}
-              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-              style={{
-                width: "100%", boxSizing: "border-box",
-                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 10, padding: "11px 14px", color: "#f0f0f8", fontSize: 14,
-                fontFamily: "inherit", outline: "none",
-              }}
-            />
-          </div>
-
-          {error && (
-            <div style={{
-              fontSize: 12, color: "#ef4444", background: "rgba(239,68,68,0.08)",
-              border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "9px 12px",
-            }}>
-              {error}
+        <form onSubmit={handleSubmit} className={s.form}>
+          <label className={s.field}>
+            <span>Usuário</span>
+            <input type="text" autoComplete="username" required autoFocus
+              value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} />
+          </label>
+          <label className={s.field}>
+            <span>Senha</span>
+            <div className={s.pass}>
+              <input type={show ? "text" : "password"} autoComplete="current-password" required
+                value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+              <button type="button" onClick={() => setShow(v => !v)} className={s.eye}>{show ? "ocultar" : "mostrar"}</button>
             </div>
-          )}
+          </label>
 
-          <button
-            type="submit" disabled={loading}
-            style={{
-              marginTop: 4, padding: "13px 0", borderRadius: 10, border: "none",
-              fontSize: 14, fontWeight: 700, color: "#fff",
-              background: loading ? "rgba(255,255,255,0.08)" : "linear-gradient(135deg,#6366f1,#4f46e5)",
-              cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit",
-              transition: "opacity 0.2s",
-            }}
-          >
-            {loading ? "Entrando..." : "Entrar"}
+          {error && <div className={s.error}>{error}</div>}
+
+          <button type="submit" disabled={loading} className={s.submit}>
+            {loading ? "Entrando…" : "Entrar"}
           </button>
         </form>
+
+        <div className={s.dots} aria-hidden>
+          <i style={{ background: "#a78bfa" }} /><i style={{ background: "#34d399" }} /><i style={{ background: "#38bdf8" }} /><i style={{ background: "#fb7185" }} />
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 /* ── Container: offset sidebar ─────────────────────────────────────────── */
 .container {
   margin-left: 220px;
-  min-height: 100vh;
+  min-height: calc(100vh / var(--vz, 1));
 }
 
 /* ── Layout 2 colunas no desktop ────────────────────────────────────────── */
@@ -21,7 +21,7 @@
   padding: 20px 24px 80px 8px;
   position: sticky;
   top: 56px;
-  max-height: calc(100vh - 56px);
+  max-height: calc(calc(100vh / var(--vz, 1)) - 56px);
   overflow-y: auto;
   display: flex; flex-direction: column; gap: 16px;
   scrollbar-width: thin;

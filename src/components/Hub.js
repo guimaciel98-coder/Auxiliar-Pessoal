@@ -102,6 +102,20 @@ function Sparkline({ data, color, height = 56 }) {
 }
 
 // ── Linha do tempo do dia (blocos da rotina + marcador de agora) ─────────────
+// Cores das categorias — iguais às da página Minha Rotina
+const ROT_COLOR = { treino: "#a78bfa", trabalho: "#38bdf8", pdv: "#fb923c", estudo: "#f472b6", pessoal: "#cbd5e1", sono: "#64748b", livre: "#34d399", "refeição": "#fbbf24" };
+function rotColor(b) {
+  const a = (b.activity ?? "").toLowerCase();
+  const c = /acordar|dormir/.test(a) ? "sono" : /estudo/.test(a) ? "estudo" : /ponto de vista/.test(a) ? "pdv" : b.category;
+  return ROT_COLOR[c] ?? ROT_COLOR.livre;
+}
+// % do dia: blocos já terminados ÷ total de blocos, sem contar Dormir (igual à página Minha Rotina)
+function dayDonePct(allBlocks, nowMin) {
+  const blocks = (allBlocks ?? []).filter(b => !/dormir/i.test(b.activity ?? ""));
+  if (!blocks.length) return null;
+  return Math.round((blocks.filter(b => b.minutes + (b.duration ?? 60) <= nowMin).length / blocks.length) * 100);
+}
+
 function DayTimeline({ blocks: allBlocks, nowMin, current }) {
   // "Dormir" fica fora: a barra mostra só o dia acordado
   const blocks = (allBlocks ?? []).filter(b => !/dormir/i.test(b.activity ?? ""));
@@ -121,7 +135,7 @@ function DayTimeline({ blocks: allBlocks, nowMin, current }) {
             <span
               key={i}
               className={`${styles.tlBlock} ${isCur ? styles.tlCur : ""}`}
-              style={{ left: pos(b.minutes), width: `calc(${((b.duration ?? 60) / span) * 100}% - 2px)`, opacity: isCur ? 1 : done ? 0.25 : 0.5 }}
+              style={{ left: pos(b.minutes), width: `calc(${((b.duration ?? 60) / span) * 100}% - 2px)`, background: rotColor(b), opacity: isCur ? 1 : done ? 0.3 : 0.75, "--g": rotColor(b) }}
               title={b.activity}
             />
           );
@@ -355,8 +369,8 @@ export default function Hub() {
             <span className={styles.arrow}>↗</span>
           </div>
           <div className={styles.quad}>
-            <Ring pct={routine?.current ? routine.eventPct : 0} color="#38bdf8" size={132} stroke={12}>
-              <span className={styles.ringPct}>{routine?.current ? `${routine.eventPct}%` : "—"}</span>
+            <Ring pct={dayDonePct(routine?.blocks, nowMin) ?? 0} color="#38bdf8" size={132} stroke={12}>
+              <span className={styles.ringPct}>{dayDonePct(routine?.blocks, nowMin) != null ? `${dayDonePct(routine?.blocks, nowMin)}%` : "—"}</span>
             </Ring>
             <div className={styles.quadRight}>
               <div className={styles.statLabel}>{routine?.current && <span className={styles.liveDot} />}agora</div>

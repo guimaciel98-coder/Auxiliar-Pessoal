@@ -44,28 +44,45 @@ function Donut({ fmt, donutData, colors, horizontal }) {
   );
 }
 
-function Projection({ chartData, mesAtualLabel, height = 200, wide = false }) {
+function Projection({ chartData, mesAtualLabel, height = 200, wide = false, meta }) {
   if (!chartData.length) return <p className={rs.empty}>Sem dados ainda.</p>;
+  const brl = v => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  const k   = v => `R$ ${(Number(v) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}k`;
+  // Dica: cartão próprio, com mês, valor e se é histórico ou projeção
+  const Tip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const h = payload.find(p => p.dataKey === "historico" && p.value != null);
+    const pj = payload.find(p => p.dataKey === "projecao" && p.value != null);
+    return (
+      <div style={{ ...TOOLTIP, padding: "10px 14px" }}>
+        <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11.5, marginBottom: 4, textTransform: "capitalize" }}>{label}</div>
+        {h  && <div style={{ color: "#34d399", fontWeight: 800, fontSize: 15 }}>{brl(h.value)} <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.45)" }}>guardado</span></div>}
+        {pj && !h && <div style={{ color: "#7dd3fc", fontWeight: 800, fontSize: 15 }}>{brl(pj.value)} <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.45)" }}>previsto</span></div>}
+      </div>
+    );
+  };
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <AreaChart data={chartData} margin={{ top: 18, right: 14, left: 4, bottom: 0 }}>
         <defs>
-          <linearGradient id="rHist" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={0.35} /><stop offset="100%" stopColor="#34d399" stopOpacity={0} /></linearGradient>
-          <linearGradient id="rProj" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#38bdf8" stopOpacity={0.18} /><stop offset="100%" stopColor="#38bdf8" stopOpacity={0} /></linearGradient>
+          <linearGradient id="rHist" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={0.45} /><stop offset="100%" stopColor="#34d399" stopOpacity={0.02} /></linearGradient>
+          <linearGradient id="rProj" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#38bdf8" stopOpacity={0.28} /><stop offset="100%" stopColor="#38bdf8" stopOpacity={0.01} /></linearGradient>
+          <filter id="rGlow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-        <XAxis dataKey="mes" tick={AXIS_TICK} tickLine={false} axisLine={false} interval={wide ? 1 : 3} />
-        <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={v => `R${(Number(v) / 1000).toFixed(0)}k`} width={44} />
-        <Tooltip contentStyle={TOOLTIP} labelStyle={{ color: "#9ca3af" }}
-          formatter={(v, name) => [Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }), name === "historico" ? "Poupança" : "Projeção"]} />
-        <ReferenceLine x={mesAtualLabel} stroke="rgba(255,255,255,0.25)" strokeDasharray="4 3" label={{ value: "hoje", position: "insideTopRight", fontSize: 10, fill: "rgba(255,255,255,0.45)" }} />
-        <Area type="monotone" dataKey="projecao" stroke="#38bdf8" strokeWidth={2} strokeDasharray="6 4" fill="url(#rProj)" dot={false} connectNulls={false} />
-        <Area type="monotone" dataKey="historico" stroke="#34d399" strokeWidth={2.5} fill="url(#rHist)" connectNulls={false} activeDot={{ r: 5 }}
-          dot={(props) => {
-            const { cx, cy, payload } = props;
-            if (!payload.historico && payload.historico !== 0) return null;
-            return <circle key={`h${cx}${cy}`} cx={cx} cy={cy} r={3} fill={payload.atingido ? "#34d399" : "#07080c"} stroke={payload.atingido ? "#34d399" : "#6b7280"} strokeWidth={2} />;
-          }} />
+        <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <XAxis dataKey="mes" tick={AXIS_TICK} tickLine={false} axisLine={false} interval={wide ? 1 : 3} dy={6} />
+        <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={k} width={56} />
+        <Tooltip content={<Tip />} cursor={{ stroke: "rgba(255,255,255,0.18)", strokeWidth: 1 }} />
+        {meta > 0 && (
+          <ReferenceLine y={meta} stroke="#fbbf24" strokeOpacity={0.6} strokeDasharray="2 4"
+            label={{ value: `meta ${k(meta)}`, position: "insideTopLeft", fontSize: 11, fontWeight: 700, fill: "#fbbf24" }} />
+        )}
+        <ReferenceLine x={mesAtualLabel} stroke="rgba(255,255,255,0.3)" strokeDasharray="3 3"
+          label={{ value: "hoje", position: "top", fontSize: 11, fontWeight: 700, fill: "rgba(255,255,255,0.6)" }} />
+        <Area type="monotone" dataKey="projecao" stroke="#38bdf8" strokeWidth={2.5} strokeDasharray="7 5" fill="url(#rProj)" dot={false} connectNulls={false}
+          activeDot={{ r: 6, fill: "#38bdf8", stroke: "#07080c", strokeWidth: 3 }} />
+        <Area type="monotone" dataKey="historico" stroke="#34d399" strokeWidth={3} fill="url(#rHist)" connectNulls={false} filter="url(#rGlow)"
+          dot={false} activeDot={{ r: 6, fill: "#34d399", stroke: "#07080c", strokeWidth: 3 }} />
       </AreaChart>
     </ResponsiveContainer>
   );
@@ -91,7 +108,7 @@ export function RightB(p) {
           <span className={rs.muted}>{saldo.value < 0 ? "acima do previsto" : "disponível para gastar"}</span>
         </div>
         <div className={rs.split}>
-          <span style={{ width: `${saldo.budgetW}%`, background: saldo.isOver ? "#fbbf24" : saldo.color }} />
+          <span style={{ width: `${saldo.budgetW}%`, background: saldo.isOver ? "rgba(251,113,133,0.4)" : saldo.color }} />
           {saldo.isOver && <span style={{ width: `${saldo.overflowW}%`, background: "#fb7185" }} />}
         </div>
         <div className={rs.rowMeta}>
@@ -129,10 +146,19 @@ export function RightB(p) {
 }
 
 // ── Projeção de poupança (painel de largura toda, abaixo das colunas) ─────────
-export function ProjectionPanel({ chartData, mesAtualLabel, height = 280 }) {
+export function ProjectionPanel({ chartData, mesAtualLabel, height = 280, meta, fmtShort }) {
+  // Número de destaque: onde a projeção termina
+  const fim = [...chartData].reverse().find(d => d.projecao != null);
   return (
-    <Panel title="Projeção de poupança" aside={<span className={rs.key}><i style={{ background: "#34d399" }} />Histórico <i className={rs.dash} />Projeção</span>}>
-      <Projection chartData={chartData} mesAtualLabel={mesAtualLabel} height={height} wide />
-    </Panel>
+    <div className={rs.panel}>
+      <div className={rs.projHead}>
+        <div>
+          <span className={rs.projTitle}>Projeção de poupança</span>
+          {fim && <div className={rs.projBig}>{fmtShort ? fmtShort(fim.projecao) : Math.round(fim.projecao)}<em> em {fim.mes}</em></div>}
+        </div>
+        <span className={rs.key}><i style={{ background: "#34d399" }} />Guardado <i className={rs.dash} />Previsto{meta > 0 && <><i className={rs.goal} />Meta</>}</span>
+      </div>
+      <Projection chartData={chartData} mesAtualLabel={mesAtualLabel} height={height} wide meta={meta} />
+    </div>
   );
 }

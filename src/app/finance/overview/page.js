@@ -253,7 +253,10 @@ export default function OverviewPage() {
     };
     for (const item of data?.gastos?.variaveis?.items ?? []) {
       if (!item.real) continue;
-      const grupo = VAR_GRUPO[item.item] ?? "Outros";
+      // Usa o grupo cadastrado na planilha (o mesmo da aba Gastos); a lista fixa acima só vale se o item não tiver grupo.
+      // Antes, "Transporte" ia sempre para Outros, mesmo estando em Pessoal na planilha.
+      const g = (item.grupo ?? "").toLowerCase();
+      const grupo = g === "casa nova" ? "Casa Nova" : g === "casa" ? "Casa" : g === "pessoal" ? "Pessoal" : g ? "Outros" : (VAR_GRUPO[item.item] ?? "Outros");
       groups[grupo] += item.real;
     }
 
@@ -427,7 +430,7 @@ export default function OverviewPage() {
 
           {/* ════ Projeção de poupança — largura toda ════ */}
           <div style={{ gridColumn: "1 / -1", padding: isMobile ? "0 16px 100px" : "0 24px 80px 28px" }}>
-            <ProjectionPanel chartData={chartData} mesAtualLabel={mesAtualLabel} height={isMobile ? 220 : 280} />
+            <ProjectionPanel chartData={chartData} mesAtualLabel={mesAtualLabel} height={isMobile ? 240 : 320} fmtShort={fmtShort} />
           </div>
 
         </div>

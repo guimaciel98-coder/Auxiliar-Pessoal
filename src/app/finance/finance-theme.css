@@ -8,7 +8,7 @@
 /* ── CSS custom properties ──────────────────────────────────────────────────── */
 .finance-module {
   background: #0f1117;
-  min-height: 100vh;
+  min-height: calc(100vh / var(--vz, 1));
 
   --fin-bg:           #0f1117;
   --fin-card-bg:      #1a1d27;

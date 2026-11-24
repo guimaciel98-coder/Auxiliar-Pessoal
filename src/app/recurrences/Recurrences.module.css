@@ -1,6 +1,6 @@
 .container {
   margin-left: 220px;
-  min-height: 100vh;
+  min-height: calc(100vh / var(--vz, 1));
   background:
     radial-gradient(50% 35% at 85% 0%, rgba(167,139,250,0.10), transparent 70%),
     #07080c;

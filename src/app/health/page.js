@@ -567,7 +567,7 @@ export default function HealthPage() {
   }), [dayMap, todayStr]);
 
   return (
-    <div style={{ marginLeft:220, minHeight:"100vh" }}>
+    <div style={{ marginLeft:220, minHeight:"calc(100vh / var(--vz, 1))" }}>
       <ModuleHeader title="Saúde" />
       <Navigation />
 
