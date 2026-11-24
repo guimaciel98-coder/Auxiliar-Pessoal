@@ -147,14 +147,11 @@ export function RightB(p) {
 
 // ── Projeção de poupança (painel de largura toda, abaixo das colunas) ─────────
 export function ProjectionPanel({ chartData, mesAtualLabel, height = 280, meta, fmtShort }) {
-  // Número de destaque: onde a projeção termina
-  const fim = [...chartData].reverse().find(d => d.projecao != null);
   return (
     <div className={rs.panel}>
       <div className={rs.projHead}>
         <div>
           <span className={rs.projTitle}>Projeção de poupança</span>
-          {fim && <div className={rs.projBig}>{fmtShort ? fmtShort(fim.projecao) : Math.round(fim.projecao)}<em> em {fim.mes}</em></div>}
         </div>
         <span className={rs.key}><i style={{ background: "#34d399" }} />Guardado <i className={rs.dash} />Previsto{meta > 0 && <><i className={rs.goal} />Meta</>}</span>
       </div>
