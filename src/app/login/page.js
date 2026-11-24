@@ -1,9 +1,12 @@
 "use client";
-// Tela de login — mesma identidade visual do app (fundo escuro, brilhos dos 4 módulos, botão branco).
+// Tela de login — minimalista, na identidade do app (mesmo título com data do Hub, cores dos 4 módulos).
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import BrandMark from "@/components/ui/BrandMark";
 import s from "./Login.module.css";
+
+const DIAS  = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+const MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,50 +39,56 @@ export default function LoginPage() {
     }
   }
 
-  const hora  = new Date().getHours();
-  const saud  = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+  const now  = new Date();
+  const hora = now.getHours();
+  const saud = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
 
   return (
     <div className={s.wrap}>
       <div className={s.glow} aria-hidden />
-      <div className={s.card}>
-        <div className={s.brand}>
-          <span className={s.logo}><BrandMark size={34} /></span>
-          <div>
-            <b>Daily</b>
-            <span>Tarefas · Finanças · Rotina · Saúde</span>
-          </div>
+      <main className={s.box}>
+        {/* Ícone com aro nas cores dos módulos */}
+        <div className={s.mark}>
+          <span className={s.ring} aria-hidden />
+          <span className={s.markInner}><BrandMark size={30} /></span>
         </div>
 
-        <h1 className={s.title}>{saud}.</h1>
-        <p className={s.sub}>Entre para ver o seu dia.</p>
+        <p className={s.hello}>{saud}</p>
+        <h1 className={s.title}><b>{DIAS[now.getDay()]}</b>, {now.getDate()} de {MESES[now.getMonth()]}</h1>
 
         <form onSubmit={handleSubmit} className={s.form}>
-          <label className={s.field}>
-            <span>Usuário</span>
-            <input type="text" autoComplete="username" required autoFocus
-              value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} />
-          </label>
-          <label className={s.field}>
-            <span>Senha</span>
-            <div className={s.pass}>
-              <input type={show ? "text" : "password"} autoComplete="current-password" required
-                value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
-              <button type="button" onClick={() => setShow(v => !v)} className={s.eye}>{show ? "ocultar" : "mostrar"}</button>
+          <div className={`${s.group} ${error ? s.groupErr : ""}`}>
+            <input className={s.input} type="text" placeholder="Usuário" autoComplete="username" required autoFocus
+              value={form.username} onChange={e => { setError(""); setForm(f => ({ ...f, username: e.target.value })); }} />
+            <div className={s.sep} />
+            <div className={s.passRow}>
+              <input className={s.input} type={show ? "text" : "password"} placeholder="Senha" autoComplete="current-password" required
+                value={form.password} onChange={e => { setError(""); setForm(f => ({ ...f, password: e.target.value })); }} />
+              <button type="button" onClick={() => setShow(v => !v)} className={s.eye} title={show ? "Ocultar senha" : "Mostrar senha"}>
+                {show ? (
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.6 6.6C3.9 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/></svg>
+                ) : (
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
+              </button>
             </div>
-          </label>
+          </div>
 
-          {error && <div className={s.error}>{error}</div>}
+          {error && <p className={s.error}>{error}</p>}
 
           <button type="submit" disabled={loading} className={s.submit}>
-            {loading ? "Entrando…" : "Entrar"}
+            <span>{loading ? "Entrando…" : "Entrar"}</span>
+            {!loading && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>}
           </button>
         </form>
 
-        <div className={s.dots} aria-hidden>
-          <i style={{ background: "#a78bfa" }} /><i style={{ background: "#34d399" }} /><i style={{ background: "#38bdf8" }} /><i style={{ background: "#fb7185" }} />
+        <div className={s.foot}>
+          <span><i style={{ background: "#a78bfa" }} />Tarefas</span>
+          <span><i style={{ background: "#34d399" }} />Finanças</span>
+          <span><i style={{ background: "#38bdf8" }} />Rotina</span>
+          <span><i style={{ background: "#fb7185" }} />Saúde</span>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
