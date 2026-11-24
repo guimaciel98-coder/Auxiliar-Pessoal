@@ -1,85 +1,50 @@
 "use client";
+// Saúde > Atividade — o calendário continua no centro, agora no padrão visual do redesign.
 import { useState, useMemo } from "react";
-import Link from "next/link";
 import Navigation from "@/components/ui/Navigation";
 import ModuleHeader from "@/components/ui/ModuleHeader";
+import Ring from "@/components/ui/Ring";
+import ex from "../finance/expenses/Expenses.module.css";
+import hl from "./Health.module.css";
 import { useHealth } from "@/hooks/useHealth";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
-const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-                     "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const MONTH_ABBR  = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-const WEEKDAY_PT  = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+const WEEKDAY_FULL = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
 const WEEK_SHORT  = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
 
 const WORKOUT_EMOJI = {
   Corrida:"🏃", Ciclismo:"🚴", Caminhada:"🚶", Musculação:"💪",
-  Yoga:"🧘", Natação:"🏊", HIIT:"🔥",
-  Elíptico:"🏋️", "Cross Training":"🏅", Outro:"🎯",
+  Yoga:"🧘", Natação:"🏊", HIIT:"🔥", Elíptico:"🏋️", "Cross Training":"🏅", Outro:"🎯",
 };
 const WORKOUT_COLOR = {
-  Corrida:"#10b981", Ciclismo:"#3b82f6", Caminhada:"#94a3b8",
-  Musculação:"#f59e0b", Yoga:"#8b5cf6",
-  Natação:"#06b6d4", HIIT:"#ef4444", Outro:"#94a3b8",
+  Corrida:"#34d399", Ciclismo:"#38bdf8", Caminhada:"#94a3b8", Musculação:"#fbbf24",
+  Yoga:"#a78bfa", Natação:"#22d3ee", HIIT:"#fb7185", Outro:"#94a3b8",
 };
 
-// ── Definição dos seletores ───────────────────────────────────────────────────
+// Cor da célula: mais forte quanto maior o valor (4 níveis)
+const level = (hex, steps) => v => {
+  if (!v) return null;
+  const i = steps.findIndex(s => v < s);
+  const a = [0.18, 0.36, 0.6, 0.9][i === -1 ? 3 : i];
+  return `color-mix(in srgb, ${hex} ${Math.round(a * 100)}%, transparent)`;
+};
+
 const METRICS = [
-  {
-    id:"workouts", icon:"🏋️", label:"Treinos", unit:"", dec:0,
-    color:"#8b5cf6",
-    cellColor: null,
-    goal: 27,
-  },
-  {
-    id:"calories", icon:"🔥", label:"Calorias", unit:"kcal", dec:0,
-    color:"#f59e0b",
-    cellColor: v => {
-      if (!v) return null;
-      if (v < 200)  return "rgba(245,158,11,0.20)";
-      if (v < 400)  return "rgba(245,158,11,0.42)";
-      if (v < 500)  return "rgba(245,158,11,0.68)";
-      return "#f59e0b";
-    },
-    goal: 500,
-  },
-  {
-    id:"sleep_h", icon:"🌙", label:"Sono", unit:"h", dec:1,
-    color:"#6366f1",
-    cellColor: v => {
-      if (!v) return null;
-      if (v < 5)  return "rgba(99,102,241,0.20)";
-      if (v < 7)  return "rgba(99,102,241,0.42)";
-      if (v < 9)  return "rgba(99,102,241,0.68)";
-      return "#6366f1";
-    },
-    goal: 8,
-  },
-  {
-    id:"bpm_avg", icon:"💓", label:"BPM", unit:"bpm", dec:0,
-    color:"#ef4444",
-    cellColor: v => {
-      if (!v) return null;
-      const pct = Math.min(1, Math.max(0, (v - 55) / 50));
-      return `rgba(239,68,68,${0.15 + pct * 0.55})`;
-    },
-  },
-  {
-    id:"steps", icon:"👟", label:"Passos", unit:"", dec:0,
-    color:"#10b981",
-    cellColor: v => {
-      if (!v) return null;
-      if (v < 3000)  return "rgba(16,185,129,0.20)";
-      if (v < 6000)  return "rgba(16,185,129,0.42)";
-      if (v < 10000) return "rgba(16,185,129,0.68)";
-      return "#10b981";
-    },
-  },
+  { id:"workouts", icon:"🏋️", label:"Treinos",  unit:"",     dec:0, color:"#a78bfa", goal: 27 },
+  { id:"steps",    icon:"👟", label:"Passos",   unit:"",     dec:0, color:"#34d399", goal: 10000, cellColor: level("#34d399", [3000, 6000, 10000]), scale: ["<3k", "3–6k", "6–10k", "10k+"] },
+  { id:"calories", icon:"🔥", label:"Calorias", unit:"kcal", dec:0, color:"#fbbf24", goal: 500,   cellColor: level("#fbbf24", [200, 400, 500]),     scale: ["<200", "200–400", "400–500", "500+"] },
+  { id:"sleep_h",  icon:"🌙", label:"Sono",     unit:"h",    dec:1, color:"#818cf8", goal: 8,     cellColor: level("#818cf8", [5, 7, 9]),           scale: ["<5h", "5–7h", "7–9h", "9h+"] },
+  { id:"bpm_avg",  icon:"💓", label:"BPM",      unit:"bpm",  dec:0, color:"#fb7185",              cellColor: level("#fb7185", [65, 75, 85]),        scale: ["<65", "65–75", "75–85", "85+"] },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function dateToBR(d) {
   return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+}
+function brOf(year, month, day) {
+  return `${String(day).padStart(2,"0")}/${String(month+1).padStart(2,"0")}/${year}`;
 }
 function fmt(v, dec = 0) {
   if (v === null || v === undefined) return "—";
@@ -94,111 +59,11 @@ function getMonthGrid(year, month) {
   while (grid.length % 7 !== 0) grid.push(null);
   return grid;
 }
-
-// ── Barra de progresso ────────────────────────────────────────────────────────
-function Bar({ value, max, color }) {
-  const pct = value ? Math.min(100, (value / max) * 100) : 0;
-  return (
-    <div style={{ background:"rgba(255,255,255,0.08)", borderRadius:99, height:3, overflow:"hidden", marginTop:6 }}>
-      <div style={{ width:`${pct}%`, height:"100%", background:color, borderRadius:99, transition:"width .5s ease" }}/>
-    </div>
-  );
-}
-
-// ── Calcula estatísticas de um mês específico ─────────────────────────────────
-function calcMonthStats(year, month, dayMap, workoutMap) {
-  const lastDate = new Date(year, month + 1, 0).getDate();
-  const acc = { steps:[], sleep_h:[], calories:[], bpm_avg:[], workouts:0 };
-  for (let d = 1; d <= lastDate; d++) {
-    const br  = `${String(d).padStart(2,"0")}/${String(month+1).padStart(2,"0")}/${year}`;
-    const day = dayMap[br];
-    const wks = workoutMap[br] ?? [];
-    if (day?.steps    != null) acc.steps.push(day.steps);
-    if (day?.sleep_h  != null) acc.sleep_h.push(day.sleep_h);
-    if (day?.calories != null) acc.calories.push(day.calories);
-    if (day?.bpm_avg  != null) acc.bpm_avg.push(day.bpm_avg);
-    acc.workouts += wks.length;
-  }
-  const avg = arr => arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length : null;
-  return {
-    steps:    avg(acc.steps),
-    sleep_h:  avg(acc.sleep_h),
-    calories: avg(acc.calories),
-    bpm_avg:  avg(acc.bpm_avg),
-    workouts: acc.workouts,
-  };
-}
-
-// ── Seletor de métrica ────────────────────────────────────────────────────────
-function MetricSelector({ metrics, selected, onSelect, monthStats, todayStats, isCurrentMonth }) {
-  return (
-    <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6 }}>
-      {metrics.map(m => {
-        const isSelected = selected === m.id;
-
-        const todayVal   = todayStats[m.id];
-        const displayVal = m.id === "workouts"
-          ? monthStats.workouts
-          : isCurrentMonth
-            ? (todayVal ?? monthStats[m.id])
-            : monthStats[m.id];
-
-        const subLabel = m.id === "workouts"
-          ? "no mês"
-          : isCurrentMonth
-            ? (todayVal != null ? "hoje" : "média do mês")
-            : "média";
-
-        return (
-          <button
-            key={m.id}
-            onClick={() => onSelect(m.id)}
-            style={{
-              all:"unset", cursor:"pointer", display:"flex", flexDirection:"column",
-              alignItems:"center", justifyContent:"center",
-              padding:"14px 10px 12px", borderRadius:16,
-              background: isSelected ? `${m.color}18` : "rgba(255,255,255,0.02)",
-              border: isSelected ? `1.5px solid ${m.color}60` : "1.5px solid rgba(255,255,255,0.07)",
-              transition:"all .2s ease", position:"relative",
-            }}
-          >
-            {isSelected && (
-              <div style={{ position:"absolute", top:0, left:"50%", transform:"translateX(-50%)", width:"40%", height:2, background:m.color, borderRadius:"0 0 4px 4px" }}/>
-            )}
-            <span style={{ fontSize:20, marginBottom:8 }}>{m.icon}</span>
-            <div style={{
-              fontSize:19, fontWeight:900,
-              color: isSelected ? "#f9fafb" : "rgba(255,255,255,0.5)",
-              lineHeight:1, letterSpacing:"-0.02em", transition:"color .2s",
-            }}>
-              {displayVal !== null && displayVal !== undefined ? fmt(displayVal, m.dec) : "—"}
-            </div>
-            <div style={{ fontSize:10, color: isSelected ? m.color : "rgba(255,255,255,0.25)", marginTop:3, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.05em", transition:"color .2s" }}>
-              {m.label}
-            </div>
-            <div style={{ fontSize:8, color:"rgba(255,255,255,0.2)", marginTop:1, fontWeight:500 }}>
-              {subLabel}
-            </div>
-            {m.goal && displayVal != null && (
-              <div style={{ width:"70%", marginTop:3 }}>
-                <Bar value={displayVal} max={m.goal} color={m.color} />
-              </div>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Helpers de formatação compacta para as células ───────────────────────────
 function cellFmt(value, metricId) {
   if (value === null || value === undefined) return null;
-  if (metricId === "steps")    return value >= 1000 ? `${(value/1000).toFixed(1).replace(".",",")}k` : String(Math.round(value));
-  if (metricId === "sleep_h")  return `${Number(value).toFixed(1).replace(".",",")}h`;
-  if (metricId === "calories") return String(Math.round(value));
-  if (metricId === "bpm_avg")  return String(Math.round(value));
-  return String(value);
+  if (metricId === "steps")   return value >= 1000 ? `${(value/1000).toFixed(1).replace(".",",")}k` : String(Math.round(value));
+  if (metricId === "sleep_h") return `${Number(value).toFixed(1).replace(".",",")}h`;
+  return String(Math.round(value));
 }
 function fmtDur(min) {
   if (!min) return null;
@@ -207,27 +72,40 @@ function fmtDur(min) {
   return m ? `${h}h${String(m).padStart(2,"0")}` : `${h}h`;
 }
 
-// ── Calendário mensal ─────────────────────────────────────────────────────────
+// Estatísticas de um mês: médias, total de treinos e dias que bateram a meta
+function calcMonthStats(year, month, dayMap, workoutMap) {
+  const lastDate = new Date(year, month + 1, 0).getDate();
+  const acc = { steps:[], sleep_h:[], calories:[], bpm_avg:[], workouts:0, wkDays:0 };
+  for (let d = 1; d <= lastDate; d++) {
+    const br  = brOf(year, month, d);
+    const day = dayMap[br];
+    const wks = workoutMap[br] ?? [];
+    for (const k of ["steps","sleep_h","calories","bpm_avg"]) if (day?.[k] != null) acc[k].push(day[k]);
+    acc.workouts += wks.length;
+    if (wks.length) acc.wkDays++;
+  }
+  const avg = arr => arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length : null;
+  const hits = {};
+  for (const m of METRICS) if (m.goal && m.id !== "workouts") hits[m.id] = { ok: acc[m.id].filter(v => v >= m.goal).length, of: acc[m.id].length };
+  return {
+    steps: avg(acc.steps), sleep_h: avg(acc.sleep_h), calories: avg(acc.calories), bpm_avg: avg(acc.bpm_avg),
+    workouts: acc.workouts, wkDays: acc.wkDays, hits,
+  };
+}
+
+// ── Calendário ────────────────────────────────────────────────────────────────
 function MonthCalendar({ year, month, metric, dayMap, workoutMap, selectedDate, onSelect }) {
   const grid     = useMemo(() => getMonthGrid(year, month), [year, month]);
   const today    = new Date();
   const todayStr = dateToBR(today);
 
   return (
-    <div style={{ background:"rgba(255,255,255,0.02)", border:`1px solid ${metric.color}20`, borderRadius:12, padding:"5px 8px", overflowX:"auto" }}>
-      {/* Header dias da semana */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2, marginBottom:3 }}>
-        {WEEK_SHORT.map(l => (
-          <div key={l} style={{ textAlign:"center", fontSize:8, fontWeight:700, color:"rgba(255,255,255,0.18)", padding:"2px 0" }}>{l}</div>
-        ))}
-      </div>
-
-      {/* Grade de dias */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2 }}>
+    <div className={ex.panel}>
+      <div className={hl.weekHead}>{WEEK_SHORT.map(l => <span key={l}>{l}</span>)}</div>
+      <div className={hl.grid}>
         {grid.map((day, i) => {
-          if (!day) return <div key={`e${i}`} style={{ height:62 }}/>;
-
-          const br       = `${String(day).padStart(2,"0")}/${String(month+1).padStart(2,"0")}/${year}`;
+          if (!day) return <div key={`e${i}`} className={hl.cellBlank} />;
+          const br       = brOf(year, month, day);
           const dayData  = dayMap[br];
           const wks      = workoutMap[br] ?? [];
           const isFuture = new Date(year, month, day) > today;
@@ -236,165 +114,39 @@ function MonthCalendar({ year, month, metric, dayMap, workoutMap, selectedDate, 
           const mainType = wks[0]?.tipo ?? "";
           const wColor   = WORKOUT_COLOR[mainType] ?? metric.color;
 
-          // Fundo baseado na métrica selecionada
-          let bgColor = null;
+          let bg = null, content = null;
           if (!isFuture) {
             if (metric.id === "workouts") {
-              bgColor = wks.length > 0 ? `${wColor}30` : null;
+              if (wks.length) {
+                bg = `color-mix(in srgb, ${wColor} 26%, transparent)`;
+                content = (<>
+                  <span className={hl.emoji}>{wks.length > 1 ? `×${wks.length}` : WORKOUT_EMOJI[mainType] ?? "🏋️"}</span>
+                  {wks[0]?.duracao_min && <span className={hl.mini} style={{ color: wColor }}>{fmtDur(wks[0].duracao_min)}</span>}
+                </>);
+              }
             } else if (dayData?.[metric.id] != null) {
-              bgColor = metric.cellColor?.(dayData[metric.id]) ?? null;
+              bg = metric.cellColor?.(dayData[metric.id]) ?? null;
+              content = <span className={hl.val}>{cellFmt(dayData[metric.id], metric.id)}</span>;
             }
-          }
-
-          // Conteúdo central: muda conforme métrica
-          let centerContent = null;
-          if (metric.id === "workouts") {
-            if (wks.length > 0) {
-              centerContent = (
-                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
-                  <span style={{ fontSize:18, lineHeight:1 }}>
-                    {wks.length > 1 ? `×${wks.length}` : WORKOUT_EMOJI[mainType] ?? "🏋️"}
-                  </span>
-                  {wks[0]?.duracao_min && (
-                    <span style={{ fontSize:9, fontWeight:800, color:`${wColor}dd`, lineHeight:1 }}>
-                      {fmtDur(wks[0].duracao_min)}
-                    </span>
-                  )}
-                </div>
-              );
-            }
-          } else if (!isFuture && dayData?.[metric.id] != null) {
-            const val     = cellFmt(dayData[metric.id], metric.id);
-            const hasWrkt = wks.length > 0;
-            centerContent = (
-              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
-                <span style={{
-                  fontSize:13, fontWeight:900, lineHeight:1,
-                  color: bgColor ? "#fff" : "rgba(255,255,255,0.28)",
-                  letterSpacing:"-0.03em",
-                }}>
-                  {val}
-                </span>
-                {hasWrkt && (
-                  <span style={{ fontSize:10, lineHeight:1 }}>{WORKOUT_EMOJI[mainType] ?? "🏋️"}</span>
-                )}
-              </div>
-            );
           }
 
           return (
-            <div
-              key={br}
-              onClick={() => !isFuture && onSelect(isSel ? null : br)}
-              style={{
-                height:62, borderRadius:8, position:"relative",
-                display:"flex", flexDirection:"column",
-                alignItems:"center", justifyContent:"center",
-                cursor: isFuture ? "default" : "pointer",
-                background: isSel    ? "rgba(255,255,255,0.12)"
-                          : bgColor  ? bgColor
-                          : isFuture ? "transparent"
-                          : "rgba(255,255,255,0.025)",
-                border: isToday ? `2px solid ${metric.color}`
-                      : isSel   ? "2px solid rgba(255,255,255,0.35)"
-                      : metric.id === "workouts" && wks.length > 0 ? `1px solid ${wColor}45`
-                      : "1px solid rgba(255,255,255,0.04)",
-                opacity: isFuture ? 0.15 : 1,
-                transition:"background .15s, border .15s",
-              }}
-            >
-              {/* Número do dia — topo esquerdo */}
-              <span style={{
-                position:"absolute", top:3, left:5,
-                fontSize:8, fontWeight: isToday ? 900 : 600, lineHeight:1,
-                color: isToday ? metric.color
-                     : bgColor ? "rgba(255,255,255,0.5)"
-                     : "rgba(255,255,255,0.2)",
-              }}>
-                {day}
-              </span>
-
-              {/* Valor central */}
-              <div style={{ marginTop:6 }}>
-                {centerContent}
-              </div>
-            </div>
+            <button key={br} disabled={isFuture} onClick={() => onSelect(isSel ? null : br)}
+              className={`${hl.cell} ${isToday ? hl.cellToday : ""} ${isSel ? hl.cellSel : ""}`}
+              style={{ "--c": metric.color, ...(bg ? { background: bg, borderColor: "transparent" } : {}) }}>
+              <span className={hl.num}>{day}</span>
+              {metric.id !== "workouts" && wks.length > 0 && !isFuture && <span className={hl.wk}>{WORKOUT_EMOJI[mainType] ?? "🏋️"}</span>}
+              {content}
+            </button>
           );
         })}
       </div>
-    </div>
-  );
-}
-
-// ── Detalhe do dia ────────────────────────────────────────────────────────────
-function DayDetail({ dateStr, dayMap, workoutMap, metric }) {
-  const day  = dayMap[dateStr];
-  const wks  = workoutMap[dateStr] ?? [];
-  const d    = new Date(dateStr.split("/").reverse().join("-"));
-  const label = `${WEEKDAY_PT[d.getDay()]}, ${d.getDate()} de ${MONTH_ABBR[d.getMonth()]}`;
-
-  return (
-    <div style={{
-      padding:"16px 18px",
-      background:"rgba(255,255,255,0.03)",
-      border:`1px solid ${metric.color}25`,
-      borderRadius:14,
-    }}>
-      <div style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,0.4)", marginBottom:12 }}>{label}</div>
-
-      {day ? (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))", gap:10 }}>
-          {[
-            { key:"steps",        icon:"👟", label:"Passos",       unit:"",     dec:0 },
-            { key:"calories",     icon:"🔥", label:"Calorias",     unit:" kcal",dec:0 },
-            { key:"distance_km",  icon:"📍", label:"Distância",    unit:" km",  dec:1 },
-            { key:"bpm_avg",      icon:"💓", label:"BPM médio",    unit:" bpm", dec:0 },
-            { key:"sleep_h",      icon:"🌙", label:"Sono",         unit:"h",    dec:1 },
-            { key:"sleep_deep_h", icon:"💤", label:"Sono profundo",unit:"h",    dec:1 },
-          ].map(m => {
-            const v = day[m.key];
-            if (v === null || v === undefined) return null;
-            const isHighlight = m.key === metric.id;
-            return (
-              <div key={m.key} style={{
-                display:"flex", alignItems:"center", gap:8,
-                padding:"8px 10px", borderRadius:10,
-                background: isHighlight ? `${metric.color}15` : "transparent",
-                border: isHighlight ? `1px solid ${metric.color}30` : "1px solid transparent",
-              }}>
-                <span style={{ fontSize:18 }}>{m.icon}</span>
-                <div>
-                  <div style={{ fontSize:14, fontWeight:800, color: isHighlight ? "#f9fafb" : "rgba(255,255,255,0.7)", lineHeight:1 }}>
-                    {fmt(v, m.dec)}{m.unit}
-                  </div>
-                  <div style={{ fontSize:10, color:"rgba(255,255,255,0.3)", marginTop:2 }}>{m.label}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p style={{ fontSize:13, color:"rgba(255,255,255,0.25)" }}>Sem métricas para este dia.</p>
-      )}
-
-      {wks.length > 0 && (
-        <div style={{ marginTop:12, display:"flex", flexDirection:"column", gap:6 }}>
-          {wks.map((w, i) => (
-            <div key={i} style={{
-              display:"flex", alignItems:"center", gap:10, padding:"8px 12px",
-              background:"rgba(255,255,255,0.03)", borderRadius:10,
-              borderLeft:`3px solid ${WORKOUT_COLOR[w.tipo] ?? "#8b5cf6"}`,
-            }}>
-              <span style={{ fontSize:16 }}>{WORKOUT_EMOJI[w.tipo] ?? "🏋️"}</span>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:13, fontWeight:700, color:"#f9fafb" }}>{w.tipo}</div>
-              </div>
-              <div style={{ fontSize:12, color:"rgba(255,255,255,0.35)", textAlign:"right" }}>
-                {w.duracao_min ? `${w.duracao_min}min` : ""}
-                {w.distancia_km ? ` · ${fmt(w.distancia_km,1)}km` : ""}
-                {w.calorias ? ` · ${fmt(w.calorias)}kcal` : ""}
-              </div>
-            </div>
+      {metric.scale && (
+        <div className={hl.scale}>
+          {metric.scale.map((s, i) => (
+            <span key={s} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+              <i style={{ background: `color-mix(in srgb, ${metric.color} ${[18, 36, 60, 90][i]}%, transparent)` }} />{s}
+            </span>
           ))}
         </div>
       )}
@@ -402,114 +154,94 @@ function DayDetail({ dateStr, dayMap, workoutMap, metric }) {
   );
 }
 
-// ── Gráfico de barras do mês ──────────────────────────────────────────────────
+// ── Gráfico dia a dia ─────────────────────────────────────────────────────────
 function MonthBarChart({ year, month, metric, dayMap, workoutMap }) {
   const [hovered, setHovered] = useState(null);
   const lastDate = new Date(year, month + 1, 0).getDate();
   const today    = new Date();
   const todayStr = dateToBR(today);
 
-  const values = useMemo(() => {
-    return Array.from({ length: lastDate }, (_, i) => {
-      const day = i + 1;
-      const br  = `${String(day).padStart(2,"0")}/${String(month+1).padStart(2,"0")}/${year}`;
-      if (metric.id === "workouts") {
-        return workoutMap[br]?.length ?? 0;
-      }
-      return dayMap[br]?.[metric.id] ?? null;
-    });
-  }, [year, month, metric, dayMap, workoutMap]);
+  const values = useMemo(() => Array.from({ length: lastDate }, (_, i) => {
+    const br = brOf(year, month, i + 1);
+    return metric.id === "workouts" ? (workoutMap[br]?.length ?? 0) : (dayMap[br]?.[metric.id] ?? null);
+  }), [year, month, metric, dayMap, workoutMap, lastDate]);
 
-  const maxVal = useMemo(() => {
-    const validVals = values.filter(v => v !== null && v > 0);
-    return validVals.length ? Math.max(...validVals) : metric.goal ?? 1;
-  }, [values, metric]);
-
-  const avg = useMemo(() => {
-    const valid = values.filter(v => v !== null && v > 0);
-    return valid.length ? valid.reduce((s,v) => s + v, 0) / valid.length : null;
-  }, [values]);
+  const valid  = values.filter(v => v !== null && v > 0);
+  const maxVal = Math.max(...(valid.length ? valid : [1]), metric.id !== "workouts" && metric.goal ? metric.goal : 0);
+  const avg    = valid.length ? valid.reduce((s, v) => s + v, 0) / valid.length : null;
 
   return (
-    <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
-        <span style={{ fontSize:12, color:"rgba(255,255,255,0.35)", fontWeight:600 }}>
-          {MONTH_NAMES[month]} — dia a dia
+    <div className={ex.panel}>
+      <div className={hl.chartHead}>
+        <div className={ex.panelTitle} style={{ marginBottom: 0 }}>{MONTH_NAMES[month]} dia a dia</div>
+        <span style={{ color: metric.color }}>
+          {avg !== null && `média ${fmt(avg, metric.dec)}${metric.unit ? ` ${metric.unit}` : ""}`}
+          {metric.goal && metric.id !== "workouts" && <span style={{ color: "rgba(255,255,255,0.45)" }}> · meta {fmt(metric.goal)}{metric.unit ? ` ${metric.unit}` : ""}</span>}
         </span>
-        {avg !== null && (
-          <span style={{ fontSize:12, color:`${metric.color}cc`, fontWeight:700 }}>
-            ø {fmt(avg, metric.dec)} {metric.unit}
-          </span>
-        )}
       </div>
-
-      <div style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, padding:"10px 10px" }}>
-        {/* Linha de meta */}
-        {metric.goal && (
-          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:4 }}>
-            <span style={{ fontSize:9, color:`${metric.color}55`, fontWeight:700 }}>
-              meta {fmt(metric.goal, 0)}{metric.unit !== "" ? ` ${metric.unit}` : ""}
-            </span>
-          </div>
+      <div className={hl.bars}>
+        {metric.goal && metric.id !== "workouts" && (
+          <div className={hl.avgLine} style={{ bottom: `${(metric.goal / maxVal) * 100}%`, borderColor: "rgba(255,255,255,0.25)" }} />
         )}
+        {avg !== null && <div className={hl.avgLine} style={{ bottom: `${(avg / maxVal) * 100}%`, borderColor: `${metric.color}aa` }} />}
+        {values.map((val, i) => {
+          const br       = brOf(year, month, i + 1);
+          const isToday  = br === todayStr;
+          const isFuture = new Date(year, month, i + 1) > today;
+          const hitGoal  = metric.goal && metric.id !== "workouts" && val >= metric.goal;
+          return (
+            <div key={i} className={hl.barCol} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
+              {hovered === i && val > 0 && <div className={hl.tip}>{i + 1}/{month + 1} · {fmt(val, metric.dec)}{metric.unit ? ` ${metric.unit}` : ""}</div>}
+              <div className={hl.bar} style={{
+                height: val ? `${Math.max(3, (val / maxVal) * 100)}%` : "3px",
+                background: isFuture || !val ? "rgba(255,255,255,0.05)" : isToday || hitGoal ? metric.color : `${metric.color}88`,
+                opacity: hovered === null || hovered === i ? 1 : 0.6,
+              }} />
+            </div>
+          );
+        })}
+      </div>
+      <div className={hl.axis}>{values.map((_, i) => <span key={i}>{(i + 1) % 5 === 0 || i === 0 ? i + 1 : ""}</span>)}</div>
+    </div>
+  );
+}
 
-        {/* Barras */}
-        <div style={{ display:"flex", alignItems:"flex-end", gap:3, height:101, position:"relative" }}>
-          {/* Linha de média */}
-          {avg !== null && (
-            <div style={{
-              position:"absolute", left:0, right:0,
-              top: `${100 - Math.min(100, (avg / maxVal) * 100)}%`,
-              borderTop:`1px dashed ${metric.color}40`,
-              pointerEvents:"none",
-            }}/>
-          )}
+// ── Detalhe do dia (lateral) ─────────────────────────────────────────────────
+function DayDetail({ dateStr, dayMap, workoutMap, metric }) {
+  const day = dayMap[dateStr];
+  const wks = workoutMap[dateStr] ?? [];
+  const [dd, mm, yy] = dateStr.split("/").map(Number);
+  const d = new Date(yy, mm - 1, dd);
+  const isToday = dateStr === dateToBR(new Date());
+  const ITEMS = [
+    { key:"steps",        label:"Passos",        unit:"",     dec:0 },
+    { key:"calories",     label:"Calorias",      unit:" kcal",dec:0 },
+    { key:"sleep_h",      label:"Sono",          unit:"h",    dec:1 },
+    { key:"sleep_deep_h", label:"Sono profundo", unit:"h",    dec:1 },
+    { key:"bpm_avg",      label:"BPM médio",     unit:"",     dec:0 },
+    { key:"distance_km",  label:"Distância",     unit:" km",  dec:1 },
+  ].filter(m => day?.[m.key] != null);
 
-          {values.map((val, i) => {
-            const day    = i + 1;
-            const br     = `${String(day).padStart(2,"0")}/${String(month+1).padStart(2,"0")}/${year}`;
-            const isToday  = br === todayStr;
-            const isFuture = new Date(year, month, day) > today;
-            const h      = val ? Math.max(3, (val / maxVal) * 101) : 2;
-            const isHov  = hovered === i;
-
-            return (
-              <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", position:"relative" }}
-                onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
-                {isHov && val !== null && val > 0 && (
-                  <div style={{
-                    position:"absolute", bottom:"calc(100% + 4px)",
-                    background:"rgba(10,10,15,0.95)", color:"#fff",
-                    fontSize:10, padding:"4px 7px", borderRadius:6,
-                    whiteSpace:"nowrap", zIndex:10,
-                    border:`1px solid ${metric.color}40`,
-                  }}>
-                    {day}/{month+1} · {fmt(val, metric.dec)}{metric.unit !== "" ? ` ${metric.unit}` : ""}
-                  </div>
-                )}
-                <div style={{
-                  width:"100%", height:h,
-                  background: isFuture ? "rgba(255,255,255,0.04)"
-                            : val       ? isToday ? metric.color : `${metric.color}88`
-                            : "rgba(255,255,255,0.04)",
-                  borderRadius:"3px 3px 2px 2px",
-                  transition:"height .3s ease, opacity .2s",
-                  opacity: isHov ? 1 : 0.85,
-                }}/>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Eixo X — números dos dias (só múltiplos de 5) */}
-        <div style={{ display:"flex", gap:3, marginTop:3 }}>
-          {values.map((_, i) => (
-            <div key={i} style={{ flex:1, textAlign:"center", fontSize:8, color:"rgba(255,255,255,0.18)", fontWeight:600 }}>
-              {(i + 1) % 5 === 0 || i === 0 ? i + 1 : ""}
+  return (
+    <div className={ex.panel}>
+      <div className={hl.dayTitle}>{isToday ? "Hoje" : `${d.getDate()} de ${MONTH_ABBR[d.getMonth()]}`}</div>
+      <div className={hl.daySub}>{WEEKDAY_FULL[d.getDay()]}{isToday ? `, ${d.getDate()} de ${MONTH_ABBR[d.getMonth()]}` : ""}</div>
+      {ITEMS.length ? (
+        <div className={hl.stats}>
+          {ITEMS.map(m => (
+            <div key={m.key} className={`${hl.stat} ${m.key === metric.id ? hl.statOn : ""}`} style={{ "--c": metric.color }}>
+              <b>{fmt(day[m.key], m.dec)}{m.unit}</b><span>{m.label}</span>
             </div>
           ))}
         </div>
-      </div>
+      ) : <p className={ex.muted}>Sem métricas para este dia.</p>}
+      {wks.map((w, i) => (
+        <div key={i} className={hl.wkRow} style={{ "--c": WORKOUT_COLOR[w.tipo] ?? "#a78bfa" }}>
+          <span style={{ fontSize: 18 }}>{WORKOUT_EMOJI[w.tipo] ?? "🏋️"}</span>
+          <b>{w.tipo}</b>
+          <span>{[w.duracao_min && fmtDur(w.duracao_min), w.distancia_km && `${fmt(w.distancia_km, 1)} km`, w.calorias && `${fmt(w.calorias)} kcal`].filter(Boolean).join(" · ")}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -518,7 +250,7 @@ function MonthBarChart({ year, month, metric, dayMap, workoutMap }) {
 export default function HealthPage() {
   const { data, loading, error, refetch } = useHealth();
 
-  const now     = new Date();
+  const now      = new Date();
   const todayStr = dateToBR(now);
 
   const [activeMetric, setActiveMetric] = useState("steps");
@@ -531,162 +263,120 @@ export default function HealthPage() {
     for (const d of data?.days ?? []) m[d.date] = d;
     return m;
   }, [data]);
-
   const workoutMap = useMemo(() => {
     const m = {};
-    for (const w of data?.workouts ?? []) {
-      if (!m[w.date]) m[w.date] = [];
-      m[w.date].push(w);
-    }
+    for (const w of data?.workouts ?? []) { if (!m[w.date]) m[w.date] = []; m[w.date].push(w); }
     return m;
   }, [data]);
 
   const metric = METRICS.find(m => m.id === activeMetric) ?? METRICS[0];
-
-  function prevMonth() {
-    setSelected(null);
-    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
-    else setViewMonth(m => m - 1);
-  }
-  function nextMonth() {
-    if (viewYear > now.getFullYear() || (viewYear === now.getFullYear() && viewMonth >= now.getMonth())) return;
-    setSelected(null);
-    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0); }
-    else setViewMonth(m => m + 1);
-  }
-
   const isAtCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth();
   const hasData = (data?.days ?? []).length > 0 || (data?.workouts ?? []).length > 0;
 
+  function prevMonth() {
+    setSelected(null);
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); } else setViewMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (isAtCurrentMonth) return;
+    setSelected(null);
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0); } else setViewMonth(m => m + 1);
+  }
+
   const monthStats = useMemo(() => calcMonthStats(viewYear, viewMonth, dayMap, workoutMap), [viewYear, viewMonth, dayMap, workoutMap]);
   const todayStats = useMemo(() => ({
-    steps:    dayMap[todayStr]?.steps    ?? null,
-    sleep_h:  dayMap[todayStr]?.sleep_h  ?? null,
-    calories: dayMap[todayStr]?.calories ?? null,
-    bpm_avg:  dayMap[todayStr]?.bpm_avg  ?? null,
+    steps: dayMap[todayStr]?.steps ?? null, sleep_h: dayMap[todayStr]?.sleep_h ?? null,
+    calories: dayMap[todayStr]?.calories ?? null, bpm_avg: dayMap[todayStr]?.bpm_avg ?? null,
   }), [dayMap, todayStr]);
 
+  // Dia mostrado na lateral: o clicado, ou hoje (no mês atual), ou o último dia com dados do mês
+  const sideDate = selectedDate ?? (isAtCurrentMonth ? todayStr : (() => {
+    const last = new Date(viewYear, viewMonth + 1, 0).getDate();
+    for (let d = last; d >= 1; d--) { const br = brOf(viewYear, viewMonth, d); if (dayMap[br] || workoutMap[br]) return br; }
+    return null;
+  })());
+
+  // Anel do mês: treinos ÷ meta, ou dias que bateram a meta
+  const ring = metric.id === "workouts"
+    ? { pct: Math.round((monthStats.workouts / metric.goal) * 100), big: monthStats.workouts, of: metric.goal, sub: "treinos no mês", ringSub: "da meta" }
+    : metric.goal
+      ? (() => { const h = monthStats.hits[metric.id]; return { pct: h.of ? Math.round((h.ok / h.of) * 100) : 0, big: h.ok, of: h.of, sub: `dias com ${fmt(metric.goal)}${metric.unit ? ` ${metric.unit}` : ""} ou mais`, ringSub: "dos dias" }; })()
+      : null;
+
   return (
-    <div style={{ marginLeft:220, minHeight:"calc(100vh / var(--vz, 1))" }}>
-      <ModuleHeader title="Saúde" />
+    <div className={ex.page} style={{ background: "radial-gradient(50% 35% at 85% 0%, rgba(251,113,133,0.10), transparent 70%), #07080c" }}>
+      <ModuleHeader title="Saúde" hideOnDesktop />
       <Navigation />
 
-      {/* ── Header ── */}
-      <header style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", padding:"8px 20px 6px", gap:8 }}>
-<button onClick={refetch} style={{
-          padding:"5px 10px", borderRadius:99,
-          background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.09)",
-          color:"rgba(255,255,255,0.4)", fontSize:13, cursor:"pointer",
-        }}>↻</button>
+      <header className={ex.top}>
+        <div className={ex.topLeft}>
+          <span className={ex.eyebrow}>Saúde · {now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</span>
+          <h1 className={ex.title}>Atividade</h1>
+        </div>
+        <div className={ex.topRight}>
+          {!isAtCurrentMonth && (
+            <button className={hl.todayBtn} onClick={() => { setViewYear(now.getFullYear()); setViewMonth(now.getMonth()); setSelected(null); }}>Hoje</button>
+          )}
+          <div className={hl.monthNav}>
+            <button onClick={prevMonth} title="Mês anterior">‹</button>
+            <b>{MONTH_NAMES[viewMonth]}<small>{viewYear}</small></b>
+            <button onClick={nextMonth} disabled={isAtCurrentMonth} title="Próximo mês">›</button>
+          </div>
+          <button className={hl.refresh} onClick={refetch} title="Atualizar">↻</button>
+        </div>
       </header>
 
-      {loading && <div style={{ padding:"80px", textAlign:"center", color:"rgba(255,255,255,0.2)", fontSize:14 }}>Carregando...</div>}
-      {error && !loading && (
-        <div style={{ margin:"0 28px", padding:"14px 18px", background:"rgba(239,68,68,0.07)", border:"1px solid rgba(239,68,68,0.2)", borderRadius:12 }}>
-          <p style={{ color:"#ef4444", fontSize:13 }}>⚠ {error}</p>
+      {loading && <div className={ex.loading}>Carregando…</div>}
+      {error && !loading && <div className={ex.errorBox}><p><b>Erro ao carregar.</b> {error}</p><button onClick={refetch} className={ex.retryBtn}>Tentar novamente</button></div>}
+      {!loading && !error && !hasData && <p className={ex.empty}>⌚ Sem dados ainda.</p>}
+
+      {!loading && !error && hasData && (<>
+        {/* Seletores = big numbers */}
+        <div className={`${ex.tabs} ${hl.metrics}`}>
+          {METRICS.map(m => {
+            const todayVal = todayStats[m.id];
+            const value = m.id === "workouts" ? monthStats.workouts : isAtCurrentMonth ? (todayVal ?? monthStats[m.id]) : monthStats[m.id];
+            const sub   = m.id === "workouts" ? "no mês" : isAtCurrentMonth ? (todayVal != null ? "hoje" : "média do mês") : "média do mês";
+            const pct   = m.goal && value != null ? Math.min(100, (value / m.goal) * 100) : null;
+            return (
+              <button key={m.id} onClick={() => { setActiveMetric(m.id); setSelected(null); }}
+                className={`${ex.tabBox} ${activeMetric === m.id ? ex.tabActive : ""}`} style={{ "--t": m.color }}>
+                <span className={ex.tabLabel}><span className={hl.mIcon}>{m.icon}</span>{m.label}</span>
+                <span className={ex.tabValue} style={{ color: m.color }}>{value != null ? fmt(value, m.dec) : "—"}</span>
+                <span className={ex.tabHint}>{sub}{m.goal ? ` · meta ${fmt(m.goal)}` : ""}</span>
+                {pct != null && <div className={hl.goal}><span style={{ width: `${pct}%`, background: m.color }} /></div>}
+              </button>
+            );
+          })}
         </div>
-      )}
 
-      {!loading && !error && !hasData && (
-        <div style={{ textAlign:"center", padding:"80px 28px" }}>
-          <div style={{ fontSize:48, marginBottom:16 }}>⌚</div>
-          <p style={{ fontSize:15, fontWeight:700, color:"rgba(255,255,255,0.4)", marginBottom:10 }}>Sem dados ainda</p>
-        </div>
-      )}
-
-      {!loading && !error && hasData && (
-        <div style={{ padding:"0 20px 12px", display:"flex", flexDirection:"column", gap:18 }}>
-
-          {/* ── NAVEGAÇÃO DE MÊS — destaque acima de tudo ── */}
-          <div style={{
-            display:"flex", alignItems:"center", justifyContent:"space-between",
-            background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)",
-            borderRadius:14, padding:"7px 14px",
-          }}>
-            <button onClick={prevMonth} style={{
-              all:"unset", cursor:"pointer",
-              width:32, height:32, borderRadius:8,
-              background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)",
-              color:"#f9fafb", fontSize:18, fontWeight:300,
-              display:"flex", alignItems:"center", justifyContent:"center",
-              transition:"background .15s",
-            }}>‹</button>
-
-            <div style={{ textAlign:"center" }}>
-              <div style={{ fontSize:21, fontWeight:900, color:"#f9fafb", letterSpacing:"-0.03em", lineHeight:1 }}>
-                {MONTH_NAMES[viewMonth]}
-              </div>
-              <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)", fontWeight:600, marginTop:2 }}>
-                {viewYear}
-                {!isAtCurrentMonth && (
-                  <button onClick={() => { setViewYear(now.getFullYear()); setViewMonth(now.getMonth()); setSelected(null); }} style={{
-                    all:"unset", cursor:"pointer", marginLeft:8,
-                    fontSize:10, color:"#10b981", fontWeight:700,
-                    background:"rgba(16,185,129,0.1)", border:"1px solid rgba(16,185,129,0.25)",
-                    borderRadius:99, padding:"1px 7px",
-                  }}>hoje</button>
-                )}
-              </div>
-            </div>
-
-            <button onClick={nextMonth} style={{
-              all:"unset", cursor: isAtCurrentMonth ? "default" : "pointer",
-              width:32, height:32, borderRadius:8,
-              background: isAtCurrentMonth ? "transparent" : "rgba(255,255,255,0.06)",
-              border: isAtCurrentMonth ? "1px solid rgba(255,255,255,0.04)" : "1px solid rgba(255,255,255,0.12)",
-              color: isAtCurrentMonth ? "rgba(255,255,255,0.15)" : "#f9fafb",
-              fontSize:18, fontWeight:300,
-              display:"flex", alignItems:"center", justifyContent:"center",
-              transition:"background .15s",
-            }}>›</button>
+        <div className={ex.layout}>
+          <div className={ex.mainArea}>
+            <MonthCalendar year={viewYear} month={viewMonth} metric={metric}
+              dayMap={dayMap} workoutMap={workoutMap} selectedDate={selectedDate} onSelect={setSelected} />
+            <MonthBarChart year={viewYear} month={viewMonth} metric={metric} dayMap={dayMap} workoutMap={workoutMap} />
           </div>
 
-          {/* ── BIG NUMBERS — seletores ── */}
-          <section>
-            <MetricSelector
-              metrics={METRICS}
-              selected={activeMetric}
-              onSelect={id => { setActiveMetric(id); setSelected(null); }}
-              monthStats={monthStats}
-              todayStats={todayStats}
-              isCurrentMonth={isAtCurrentMonth}
-            />
-          </section>
-
-          {/* ── CALENDÁRIO MENSAL ── */}
-          <section>
-            <MonthCalendar
-              year={viewYear} month={viewMonth}
-              metric={metric}
-              dayMap={dayMap} workoutMap={workoutMap}
-              selectedDate={selectedDate} onSelect={setSelected}
-            />
-
-            {/* Detalhe do dia clicado */}
-            {selectedDate && (
-              <div style={{ marginTop:10 }}>
-                <DayDetail
-                  dateStr={selectedDate}
-                  dayMap={dayMap}
-                  workoutMap={workoutMap}
-                  metric={metric}
-                />
+          <div className={ex.side}>
+            {sideDate && <DayDetail dateStr={sideDate} dayMap={dayMap} workoutMap={workoutMap} metric={metric} />}
+            {ring && (
+              <div className={ex.panel}>
+                <div className={ex.panelTitle}>{metric.label} em {MONTH_NAMES[viewMonth].toLowerCase()}</div>
+                <div className={ex.ringPanel}>
+                  <Ring pct={ring.pct} color={metric.color} size={108} stroke={10}>
+                    <span className={ex.ringPct}>{ring.pct}%</span>
+                    <span className={ex.ringSub}>{ring.ringSub}</span>
+                  </Ring>
+                  <div className={ex.ringInfo}>
+                    <span className={ex.bigValue} style={{ color: metric.color }}>{ring.big}<span className={ex.muted}> / {ring.of}</span></span>
+                    <span className={ex.muted}>{ring.sub}</span>
+                  </div>
+                </div>
               </div>
             )}
-          </section>
-
-          {/* ── GRÁFICO DO MÊS ── */}
-          <section>
-            <MonthBarChart
-              year={viewYear} month={viewMonth}
-              metric={metric}
-              dayMap={dayMap}
-              workoutMap={workoutMap}
-            />
-          </section>
-
+          </div>
         </div>
-      )}
+      </>)}
     </div>
   );
 }
