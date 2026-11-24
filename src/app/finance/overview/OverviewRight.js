@@ -108,8 +108,8 @@ export function RightB(p) {
           <span className={rs.muted}>{saldo.value < 0 ? "acima do previsto" : "disponível para gastar"}</span>
         </div>
         <div className={rs.split}>
-          <span style={{ width: `${saldo.budgetW}%`, background: saldo.isOver ? "rgba(251,113,133,0.4)" : saldo.color }} />
-          {saldo.isOver && <span style={{ width: `${saldo.overflowW}%`, background: "#fb7185" }} />}
+          <span style={{ width: `${saldo.budgetW}%`, background: saldo.isOver ? "#fb7185" : saldo.color }} />
+          {saldo.isOver && <span style={{ width: `${saldo.overflowW}%`, background: "rgba(251,113,133,0.4)" }} />}
         </div>
         <div className={rs.rowMeta}>
           <span>{saldo.rawPct}% do orçamento</span>
