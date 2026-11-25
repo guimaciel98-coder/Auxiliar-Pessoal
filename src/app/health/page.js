@@ -304,7 +304,7 @@ export default function HealthPage() {
       : null;
 
   return (
-    <div className={ex.page} style={{ background: "radial-gradient(50% 35% at 85% 0%, rgba(251,113,133,0.10), transparent 70%), #07080c" }}>
+    <div className={`${ex.page} ${hl.fitPage}`} style={{ background: "radial-gradient(50% 35% at 85% 0%, rgba(251,113,133,0.10), transparent 70%), #07080c" }}>
       <ModuleHeader title="Saúde" hideOnDesktop />
       <Navigation />
 
@@ -350,7 +350,7 @@ export default function HealthPage() {
           })}
         </div>
 
-        <div className={ex.layout}>
+        <div className={`${ex.layout} ${hl.fitLayout}`}>
           <div className={ex.mainArea}>
             <MonthCalendar year={viewYear} month={viewMonth} metric={metric}
               dayMap={dayMap} workoutMap={workoutMap} selectedDate={selectedDate} onSelect={setSelected} />

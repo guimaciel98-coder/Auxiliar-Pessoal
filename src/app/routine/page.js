@@ -266,10 +266,10 @@ function TabDia({ selectedDay, onDayChange }) {
       )}
 
       {!loading && !error && (
-        <div className={ex.layout}>
+        <div className={`${ex.layout} ${rt.fitLayout}`}>
           {/* Linha do tempo */}
           <div className={ex.mainArea}>
-            <section className={ex.listPanel}>
+            <section className={`${ex.listPanel} ${rt.fitList}`}>
               <div className={ex.sectionHead}>
                 <span className={ex.sectionDot} style={{ background: "#38bdf8", boxShadow: "0 0 10px #38bdf8" }} />
                 <span className={ex.sectionName}>{DAYS_FULL[selectedDay]}</span>
@@ -456,7 +456,7 @@ export default function RoutinePage() {
   const dateLabel = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
 
   return (
-    <div className={ex.page} style={{ background: "radial-gradient(50% 35% at 85% 0%, rgba(56,189,248,0.10), transparent 70%), #07080c" }}>
+    <div className={`${ex.page} ${tab === "dia" ? rt.fitPage : ""}`} style={{ background: "radial-gradient(50% 35% at 85% 0%, rgba(56,189,248,0.10), transparent 70%), #07080c" }}>
       <ModuleHeader title="Rotina" hideOnDesktop />
       <Navigation />
 

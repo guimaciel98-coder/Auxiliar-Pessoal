@@ -77,3 +77,16 @@
   .num { top: 4px; left: 5px; font-size: 9.5px; }
   .monthNav b { min-width: 96px; }
 }
+
+/* ═══ Computador: Atividade cabe numa tela só ═══ */
+@media (min-width: 769px) {
+  .fitPage > header { padding-top: 18px; padding-bottom: 12px; }
+  .fitPage h1 { font-size: 36px; }
+  .fitPage .metrics { padding-bottom: 12px; }
+  .fitLayout { padding-bottom: 18px !important; }
+  .fitLayout > div:first-child { gap: 12px; }
+  /* 6 semanas + cabeçalho + gráfico dividem a altura que sobra */
+  .fitPage .cell, .fitPage .cellBlank { height: clamp(40px, calc((100vh / var(--vz, 1) - 620px) / 6), 78px); }
+  .fitPage .bars { height: clamp(56px, calc((100vh / var(--vz, 1) - 900px) + 80px), 130px); }
+  .fitPage .scale { margin-top: 8px; }
+}
