@@ -1,0 +1,66 @@
+/* Saúde > Importar — peças próprias (base: finance/expenses/Expenses.module.css). */
+
+.nums { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+
+/* Área de soltar o arquivo */
+.drop {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center;
+  min-height: calc(340px / var(--vz, 1)); padding: 36px 24px; border-radius: 22px; cursor: pointer;
+  background: radial-gradient(60% 60% at 50% 0%, rgba(251,113,133,0.08), transparent 70%), rgba(255,255,255,0.02);
+  border: 2px dashed rgba(255,255,255,0.12); transition: border-color .15s, background .15s, transform .15s;
+}
+.drop:hover { border-color: rgba(251,113,133,0.5); }
+.dropOn { border-color: #fb7185; background: rgba(251,113,133,0.08); transform: scale(1.01); }
+.dropBusy, .dropDone, .dropErr { cursor: default; border-style: solid; }
+.dropBusy:hover { border-color: rgba(255,255,255,0.12); }
+.dropDone { border-color: rgba(52,211,153,0.4); background: radial-gradient(60% 60% at 50% 0%, rgba(52,211,153,0.1), transparent 70%), rgba(255,255,255,0.02); }
+.dropDone:hover { border-color: rgba(52,211,153,0.4); }
+.dropErr { border-color: rgba(251,113,133,0.4); }
+
+.icon {
+  --c: #fb7185;
+  width: 64px; height: 64px; border-radius: 20px; display: grid; place-items: center; margin-bottom: 6px;
+  font-size: 28px; font-weight: 900; color: var(--c);
+  background: color-mix(in srgb, var(--c) 14%, transparent); border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+}
+.big { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; color: #fff; }
+.sub { font-size: 13px; color: rgba(255,255,255,0.5); font-weight: 600; max-width: 520px; }
+.sub u { color: #fb7185; text-decoration: none; }
+
+.pct { font-size: 56px; font-weight: 900; letter-spacing: -0.05em; color: #fb7185; line-height: 1; font-variant-numeric: tabular-nums; }
+.pct small { font-size: 24px; margin-left: 2px; color: rgba(251,113,133,0.6); }
+.bar { width: min(420px, 90%); height: 6px; border-radius: 99px; background: rgba(255,255,255,0.08); overflow: hidden; margin: 6px 0 2px; }
+.bar span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #f472b6, #fb7185); transition: width .3s ease; }
+
+.actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 14px; }
+.actions a { text-decoration: none; }
+
+/* O que é importado */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  --c: #fff;
+  display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px 0 10px; border-radius: 99px;
+  font-size: 13.5px; font-weight: 700; color: #f4f5f7;
+  background: color-mix(in srgb, var(--c) 12%, transparent); border: 1px solid color-mix(in srgb, var(--c) 32%, transparent);
+}
+.chip i { font-style: normal; font-size: 15px; }
+.note { margin: 14px 0 0; font-size: 12.5px; color: rgba(255,255,255,0.45); line-height: 1.5; }
+
+/* Passo a passo */
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.steps li { display: flex; align-items: center; gap: 12px; }
+.steps b { flex-shrink: 0; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; font-size: 14px; font-weight: 800; color: #fb7185; background: rgba(251,113,133,0.12); }
+.steps span { font-size: 13.5px; color: rgba(255,255,255,0.7); line-height: 1.35; }
+.steps em { font-style: normal; font-weight: 700; color: #fff; }
+
+@media (max-width: 1180px) { .nums { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+@media (max-width: 768px) {
+  .drop { min-height: 260px; padding: 28px 16px; }
+  .big { font-size: 19px; }
+  .pct { font-size: 46px; }
+}
+
+.ghost { height: 40px; padding: 0 18px; border-radius: 99px; font-size: 13.5px; font-weight: 700; font-family: inherit; cursor: pointer; color: rgba(255,255,255,0.8) !important; background: rgba(255,255,255,0.06) !important; border: 1px solid rgba(255,255,255,0.14) !important; transition: all .15s; }
+.ghost:hover { color: #fff !important; background: rgba(255,255,255,0.1) !important; }
+.mob { display: none; }
+@media (max-width: 768px), (pointer: coarse) { .desk { display: none; } .mob { display: inline; } }

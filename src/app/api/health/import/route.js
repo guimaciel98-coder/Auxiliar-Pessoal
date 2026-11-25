@@ -126,7 +126,8 @@ export async function POST(req) {
       spreadsheetId, range: "'App_Treinos'!A2:C9999",
     }).catch(() => ({ data: { values: [] } }));
     const existingWorkoutKeys = new Set(
-      (existingTreinos.data.values ?? []).map(r => `${r[0]}|${r[1]}|${r[2]}`)
+      // Chave = data + duração (o nome do tipo pode ter mudado entre exports, ex.: "Outro" → "Trilha")
+      (existingTreinos.data.values ?? []).map(r => `${String(r[0] ?? "").trim()}|${String(r[2] ?? "").trim()}`)
     );
 
     // ── Filtra e escreve novos dias em App_Saude ──────────────────────────
@@ -175,8 +176,10 @@ export async function POST(req) {
 
     // ── Filtra e escreve App_Treinos ──────────────────────────────────────
     const newWorkouts = workouts.filter(w => {
-      const key = `${w.date}|${w.tipo}|${w.duracao_min}`;
-      return w.date && !existingWorkoutKeys.has(key);
+      const key = `${w.date}|${toNum(w.duracao_min)}`;
+      if (!w.date || existingWorkoutKeys.has(key)) return false;
+      existingWorkoutKeys.add(key);
+      return true;
     });
     let workoutsWritten = 0;
     for (let i = 0; i < newWorkouts.length; i += CHUNK) {
