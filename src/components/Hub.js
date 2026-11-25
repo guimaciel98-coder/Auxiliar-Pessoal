@@ -17,10 +17,6 @@ function greet(h) {
   if (h < 18) return "Boa tarde";
   return "Boa noite";
 }
-// Cores das categorias variáveis (mesmas da página Lançar)
-const CAT_COLOR = { comida: "#34d399", mercado: "#38bdf8", pito: "#fbbf24", psicologa: "#22d3ee", outros: "#a78bfa", "outros (disponível)": "#a78bfa", transporte: "#fb7185" };
-// R$ curto: 1.156 → "1,2k", 700 → "700"
-const fmtK = v => v >= 1000 ? `${(v / 1000).toFixed(1).replace(".", ",")}k` : String(Math.round(v));
 
 function fmtNum(v, dec = 0) {
   if (v == null) return "—";
@@ -170,21 +166,38 @@ function TaskBeads({ done, open }) {
   );
 }
 
-// ── Gasto variável por categoria numa barra só, com a marca do orçamento ──
-function SpendBar({ cats, budget, spent }) {
-  if (!cats?.length || !budget) return <div className={styles.sparkEmpty}> </div>;
-  const max = Math.max(budget, spent);
+// Início do ciclo atual (DD/MM/AAAA) → ms
+const cycleStartMs = s => { const [d, m, y] = String(s ?? "").split("/").map(Number); return d ? new Date(y, m - 1, d).getTime() : null; };
+const dayMs = br => { const [d, m, y] = br.split("/").map(Number); return new Date(y, m - 1, d).getTime(); };
+
+// ── Financeiro: gasto acumulado no ciclo + linha do orçamento ──
+function SpendCurve({ history, cycleStart, budget, catNames }) {
+  const s0 = cycleStartMs(cycleStart);
+  if (!history || !s0 || !budget) return <div className={styles.sparkEmpty}> </div>;
+  const names = new Set((catNames ?? []).map(n => n.toLowerCase()));
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.max(1, Math.round((today.getTime() - s0) / 86400000) + 1);
+  const perDay = Array(days).fill(0);
+  for (const h of history) {
+    const i = Math.round((dayMs(h.date) - s0) / 86400000);
+    if (i < 0 || i >= days) continue;
+    for (const e of h.entries) if (!names.size || names.has(e.category.toLowerCase())) perDay[i] += e.value;
+  }
+  let acc = 0; const cum = perDay.map(v => (acc += v));
+  const W = 300, H = 44, pad = 3, max = Math.max(budget, acc) * 1.05;
+  const x = i => pad + (i / Math.max(1, days - 1)) * (W - pad * 2);
+  const y = v => H - pad - (v / max) * (H - pad * 2);
+  const line = cum.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const over = acc > budget, col = over ? "#fb7185" : "#34d399";
   return (
     <div className={styles.timeline}>
-      <div className={styles.tlTrack}>
-        <div className={styles.spendFill}>
-          {cats.filter(c => c.real > 0).map(c => (
-            <span key={c.name} style={{ width: `${(c.real / max) * 100}%`, background: CAT_COLOR[c.name.toLowerCase()] ?? "#94a3b8" }} title={`${c.name}: R${Math.round(c.real)}`} />
-          ))}
-        </div>
-        <span className={styles.tlNow} style={{ left: `${(budget / max) * 100}%` }} title="orçamento" />
-      </div>
-      <div className={styles.tlScale}><span>gasto {fmtBRL(spent)}</span><span>orçamento {fmtBRL(budget)}</span></div>
+      <svg className={styles.spark} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ height: H }}>
+        <defs><linearGradient id="spendCurve" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor={col} stopOpacity=".35" /><stop offset="100%" stopColor={col} stopOpacity="0" /></linearGradient></defs>
+        <path d={`${line} L${x(days - 1)},${H} L${x(0)},${H} Z`} fill="url(#spendCurve)" />
+        <line x1="0" x2={W} y1={y(budget)} y2={y(budget)} stroke="rgba(255,255,255,0.45)" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
+        <path d={line} fill="none" stroke={col} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+      </svg>
+      <div className={styles.tlScale}><span>início do ciclo</span><span>- - orçamento {fmtBRL(budget)}</span></div>
     </div>
   );
 }
@@ -198,6 +211,7 @@ export default function Hub() {
   const [doneApiIds,   setDoneApiIds]   = useState(null);  // concluídas hoje segundo o Todoist (fonte real)
   const [finance,      setFinance]      = useState(null);
   const [routine,      setRoutine]      = useState(null);
+  const [finHist,      setFinHist]      = useState(null);  // lançamentos por dia
 
   const now    = new Date();
   const hour   = now.getHours();
@@ -274,8 +288,10 @@ export default function Hub() {
         const saldoVar  = budgetVar != null && gastoVar != null ? budgetVar - gastoVar : null;
         const pctVar    = budgetVar > 0 ? Math.round((gastoVar / budgetVar) * 100) : null;
         const cats = (d.gastos?.variaveis?.items ?? []).map(i => ({ name: i.item, real: i.real ?? 0, prev: i.previsao ?? 0 }));
-        setFinance({ saldoVar, budgetVar, gastoVar, pctVar, cats });
+        setFinance({ saldoVar, budgetVar, gastoVar, pctVar, cats, cicloInicio: d.config?.cicloInicio ?? null });
       }).catch(() => {});
+
+    fetch("/api/finance/history").then(r => r.json()).then(d => setFinHist(d.ok ? d.history : [])).catch(() => setFinHist([]));
 
     // ── Rotina ──
     fetch("/api/routine")
@@ -402,7 +418,7 @@ export default function Hub() {
               />
             </div>
           </div>
-          <SpendBar cats={finance?.cats} budget={finance?.budgetVar} spent={finance?.gastoVar} />
+          <SpendCurve history={finHist} cycleStart={finance?.cicloInicio} budget={finance?.budgetVar} catNames={finance?.cats?.map(c => c.name)} />
         </Link>
 
         {/* Rotina */}
