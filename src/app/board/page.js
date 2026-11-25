@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   DndContext, DragOverlay, PointerSensor, TouchSensor,
-  useSensor, useSensors, pointerWithin,
+  useSensor, useSensors, pointerWithin, useDroppable,
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -209,6 +209,12 @@ function SortableTaskCard({ t, onComplete, onReschedule, onEdit, columnId, showS
       )}
     </div>
   );
+}
+
+// Coluna que aceita soltar em qualquer ponto (inclusive vazia ou abaixo dos cartões)
+function DropColumn({ columnId, className, children }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `col:${columnId}`, data: { column: columnId } });
+  return <div ref={setNodeRef} className={`${className} ${isOver ? styles.columnOver : ""}`}>{children}</div>;
 }
 
 function DragGhostCard({ t }) {
@@ -469,6 +475,7 @@ export default function ProjectsPage() {
 
     } else {
       // ── Vista "Por Marca/Cliente": arrastar entre colunas = mudar seção ──
+      if (dst === "unassigned") return; // "Geral"/Pessoal não é uma seção do Todoist
       setTasks(prev => prev.map(t =>
         t.id === active.id ? { ...t, _section_id: dst } : t
       ));
@@ -619,7 +626,7 @@ export default function ProjectsPage() {
                   const pct = filteredTasks.length > 0 ? Math.round((ct.length / Math.max(filteredTasks.length / columnsToShow.length, 1)) * 100) : 0;
                   return (
                     <SortableContext key={client.id} id={client.cf_value} items={ct.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                      <div className={styles.column}>
+                      <DropColumn columnId={client.cf_value} className={styles.column}>
                         <div className={styles.colHead}>
                           <span className={styles.colName} style={{ color: accent }} title={client.name}>
                             {niceName(client.name)}
@@ -640,7 +647,7 @@ export default function ProjectsPage() {
                         <button className={styles.addTaskBtn} onClick={() => { setSelectedClient(client); setIsModalOpen(true); }}>
                           + Adicionar tarefa
                         </button>
-                      </div>
+                      </DropColumn>
                     </SortableContext>
                   );
                 })}
@@ -648,7 +655,7 @@ export default function ProjectsPage() {
                 {/* Pessoal ou tarefas sem seção */}
                 {(activeProject === "pessoal" || unassignedTasks.length > 0) && (
                   <SortableContext items={unassignedTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                    <div className={styles.column}>
+                    <DropColumn columnId="unassigned" className={styles.column}>
                       <div className={styles.colHead}>
                         <span className={styles.colName} style={{ color: accent }}>
                           {activeProject === "pessoal" ? "Pessoal" : "Geral"}
@@ -661,7 +668,7 @@ export default function ProjectsPage() {
                       <button className={styles.addTaskBtn} onClick={() => { setSelectedClient(null); setIsModalOpen(true); }}>
                         + Adicionar tarefa
                       </button>
-                    </div>
+                    </DropColumn>
                   </SortableContext>
                 )}
               </>
@@ -670,7 +677,7 @@ export default function ProjectsPage() {
             {/* ── Vista Por Dia ── */}
             {isDay && dayGroups.map(group => (
               <SortableContext key={group.id} items={group.tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                <div className={styles.column}>
+                <DropColumn columnId={group.id} className={styles.column}>
                   <div className={`${styles.colHead} ${group.isOverdue ? styles.colHeadOverdue : ""}`}>
                     <div className={styles.colHeadDay}>
                       <span className={styles.colName}>{group.label}</span>
@@ -699,7 +706,7 @@ export default function ProjectsPage() {
                       + Adicionar tarefa
                     </button>
                   )}
-                </div>
+                </DropColumn>
               </SortableContext>
             ))}
           </div>

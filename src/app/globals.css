@@ -61,6 +61,6 @@ button:active{transform:scale(0.97)}
 
 /* Telas grandes: aumenta tudo proporcionalmente (o app foi desenhado em px para notebook).
    O tamanho visível da tela continua o mesmo: --vz compensa as alturas em vh. */
-@media (min-width: 1680px) { html { zoom: 1.12; --vz: 1.12; } }
-@media (min-width: 1920px) { html { zoom: 1.22; --vz: 1.22; } }
-@media (min-width: 2400px) { html { zoom: 1.45; --vz: 1.45; } }
+@media (min-width: 1680px) { html { zoom: 1.04; --vz: 1.04; } }
+@media (min-width: 1920px) { html { zoom: 1.1;  --vz: 1.1;  } }
+@media (min-width: 2400px) { html { zoom: 1.3;  --vz: 1.3;  } }
