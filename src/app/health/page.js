@@ -100,7 +100,7 @@ function MonthCalendar({ year, month, metric, dayMap, workoutMap, selectedDate, 
   const todayStr = dateToBR(today);
 
   return (
-    <div className={ex.panel}>
+    <div className={`${ex.panel} ${hl.calPanel}`}>
       <div className={hl.weekHead}>{WEEK_SHORT.map(l => <span key={l}>{l}</span>)}</div>
       <div className={hl.grid}>
         {grid.map((day, i) => {
