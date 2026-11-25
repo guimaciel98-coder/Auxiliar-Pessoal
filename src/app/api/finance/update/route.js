@@ -35,10 +35,24 @@ export async function PATCH(req) {
       if (type === "fixo" && campos.real !== undefined) updates.push({ range: `'${tab}'!D${row}`, values: [[campos.real]] });
       if (type === "fixo" && campos.auto !== undefined) updates.push({ range: `'${tab}'!F${row}`, values: [[campos.auto ? "TRUE" : "FALSE"]] });
 
-      if (updates.length) {
+      // Variável renomeada: os lançamentos guardam o nome da categoria (col C), então
+      // renomeia neles também — senão o gasto do item zera (ex.: "Outros (Disponível)" → "Outros").
+      const novoNome = String(campos.nome ?? "").trim();
+      if (type === "variavel" && novoNome && novoNome.toLowerCase() !== nomeAtual.trim().toLowerCase()) {
+        const lanc = await sheets.spreadsheets.values.get({ spreadsheetId: ssId, range: "'App_Lancamentos'!C2:C9999" })
+          .catch(() => ({ data: { values: [] } }));
+        const alvo = nomeAtual.trim().toLowerCase();
+        (lanc.data.values ?? []).forEach((r, i) => {
+          if (String(r[0] ?? "").trim().toLowerCase() === alvo) {
+            updates.push({ range: `'App_Lancamentos'!C${i + 2}`, values: [[novoNome]] });
+          }
+        });
+      }
+
+      for (let i = 0; i < updates.length; i += 500) {
         await sheets.spreadsheets.values.batchUpdate({
           spreadsheetId: ssId,
-          requestBody: { valueInputOption: "USER_ENTERED", data: updates },
+          requestBody: { valueInputOption: "USER_ENTERED", data: updates.slice(i, i + 500) },
         });
       }
       return Response.json({ ok: true });

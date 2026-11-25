@@ -244,7 +244,7 @@ export default function OverviewPage() {
     }
 
     // Variáveis: pelo nome da categoria (categoria nova cai em Contas pessoais até entrar na regra)
-    const VAR_TEMA = { "mercado": "Alimentação", "comida": "Alimentação", "pito": "Pito", "transporte": "Transporte", "outros (disponível)": "Livre" };
+    const VAR_TEMA = { "mercado": "Alimentação", "comida": "Alimentação", "pito": "Pito", "transporte": "Transporte", "outros (disponível)": "Livre", "outros": "Livre" };
     for (const item of data?.gastos?.variaveis?.items ?? []) {
       if (!item.real) continue;
       t[VAR_TEMA[String(item.item).toLowerCase()] ?? "Contas pessoais"] += item.real;

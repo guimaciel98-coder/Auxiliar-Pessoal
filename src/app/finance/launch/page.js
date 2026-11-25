@@ -37,7 +37,7 @@ function cicloAtualLabel(melhorDia, cicloInicio) {
 }
 
 // Cor de cada categoria (as conhecidas têm cor fixa; as demais pegam da paleta)
-const CAT_FIXA = { "comida": "#34d399", "mercado": "#38bdf8", "pito": "#fbbf24", "psicologa": "#22d3ee", "outros (disponível)": "#a78bfa", "transporte": "#fb7185" };
+const CAT_FIXA = { "comida": "#34d399", "mercado": "#38bdf8", "pito": "#fbbf24", "psicologa": "#22d3ee", "outros (disponível)": "#a78bfa", "outros": "#a78bfa", "transporte": "#fb7185" };
 const PALETA   = ["#f472b6", "#f97316", "#a3e635", "#e879f9", "#60a5fa", "#facc15"];
 function catColor(name) {
   const k = String(name ?? "").toLowerCase();
