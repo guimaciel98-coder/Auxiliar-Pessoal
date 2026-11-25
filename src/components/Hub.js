@@ -9,7 +9,7 @@ import { PROJ } from "../config/constants";
 
 const DAYS         = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
 const MONTHS       = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
-const TREINOS_META = 16;
+const TREINOS_META = 27; // mesma meta da página Atividade
 const LS_KEY       = "dailyapp_completed";
 
 function greet(h) {
@@ -17,6 +17,11 @@ function greet(h) {
   if (h < 18) return "Boa tarde";
   return "Boa noite";
 }
+// Cores das categorias variáveis (mesmas da página Lançar)
+const CAT_COLOR = { comida: "#34d399", mercado: "#38bdf8", pito: "#fbbf24", psicologa: "#22d3ee", outros: "#a78bfa", "outros (disponível)": "#a78bfa", transporte: "#fb7185" };
+// R$ curto: 1.156 → "1,2k", 700 → "700"
+const fmtK = v => v >= 1000 ? `${(v / 1000).toFixed(1).replace(".", ",")}k` : String(Math.round(v));
+
 function fmtNum(v, dec = 0) {
   if (v == null) return "—";
   return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -149,6 +154,41 @@ function DayTimeline({ blocks: allBlocks, nowMin, current }) {
   );
 }
 
+// ── Tarefas do dia como contas: feitas (cheias) + abertas (cor do projeto, vazadas) ──
+function TaskBeads({ done, open }) {
+  if (done == null || !open) return <div className={styles.sparkEmpty}> </div>;
+  const total = done + open.length;
+  if (!total) return <div className={styles.sparkEmpty}>sem tarefas hoje</div>;
+  return (
+    <div className={styles.timeline}>
+      <div className={styles.beads}>
+        {Array.from({ length: done }, (_, i) => <span key={"d" + i} className={styles.beadDone} />)}
+        {open.map(t => <span key={t.id} className={styles.beadOpen} style={{ "--p": PROJ[t.proj]?.cor ?? "#a78bfa" }} title={t.name} />)}
+      </div>
+      <div className={styles.tlScale}><span>{done} feitas</span><span>{open.length ? `faltam ${open.length}` : "tudo feito"}</span></div>
+    </div>
+  );
+}
+
+// ── Gasto variável por categoria numa barra só, com a marca do orçamento ──
+function SpendBar({ cats, budget, spent }) {
+  if (!cats?.length || !budget) return <div className={styles.sparkEmpty}> </div>;
+  const max = Math.max(budget, spent);
+  return (
+    <div className={styles.timeline}>
+      <div className={styles.tlTrack}>
+        <div className={styles.spendFill}>
+          {cats.filter(c => c.real > 0).map(c => (
+            <span key={c.name} style={{ width: `${(c.real / max) * 100}%`, background: CAT_COLOR[c.name.toLowerCase()] ?? "#94a3b8" }} title={`${c.name}: R${Math.round(c.real)}`} />
+          ))}
+        </div>
+        <span className={styles.tlNow} style={{ left: `${(budget / max) * 100}%` }} title="orçamento" />
+      </div>
+      <div className={styles.tlScale}><span>gasto {fmtBRL(spent)}</span><span>orçamento {fmtBRL(budget)}</span></div>
+    </div>
+  );
+}
+
 export default function Hub() {
   const [modal,        setModal]        = useState(false);
   const [health,       setHealth]       = useState(null);
@@ -233,7 +273,8 @@ export default function Hub() {
         const gastoVar  = d.gastos?.variaveis?.realTotal     ?? null;
         const saldoVar  = budgetVar != null && gastoVar != null ? budgetVar - gastoVar : null;
         const pctVar    = budgetVar > 0 ? Math.round((gastoVar / budgetVar) * 100) : null;
-        setFinance({ saldoVar, budgetVar, gastoVar, pctVar });
+        const cats = (d.gastos?.variaveis?.items ?? []).map(i => ({ name: i.item, real: i.real ?? 0, prev: i.previsao ?? 0 }));
+        setFinance({ saldoVar, budgetVar, gastoVar, pctVar, cats });
       }).catch(() => {});
 
     // ── Rotina ──
@@ -282,8 +323,6 @@ export default function Hub() {
 
   // Tarefas abertas por projeto
   const openCls  = (openTasks ?? []).map(classify);
-  const PROJ_NAME = { pessoal: "Pessoal", vca: "VCA Brasil", pdv: "Ponto de Vista" };
-  const byProj   = Object.keys(PROJ).map(k => ({ k, name: PROJ_NAME[k] ?? PROJ[k].label, cor: PROJ[k].cor, n: openCls.filter(t => t.proj === k).length }));
   const finColor = finance
     ? (finance.pctVar > 85 ? "#fb7185" : finance.pctVar > 60 ? "#fbbf24" : "#34d399")
     : "#34d399";
@@ -337,16 +376,10 @@ export default function Hub() {
               <span className={styles.ringPct}>{tasksTotal != null ? `${tasksPct}%` : "—"}</span>
             </Ring>
             <div className={styles.quadRight}>
-                <Stat label="feitas hoje" value={tasksTotal != null ? <>{tasksDone}<span className={styles.of}>/{tasksTotal}</span></> : null} big />
-                <div className={styles.projList}>
-                  {byProj.map(p => (
-                    <div key={p.k} className={`${styles.projRow} ${p.n ? "" : styles.projZero}`} style={{ "--p": p.cor }}>
-                      <i /><span>{p.name}</span><b>{openTasks ? p.n : "—"}</b>
-                    </div>
-                  ))}
-                </div>
+              <Stat label="feitas hoje" value={tasksTotal != null ? <>{tasksDone}<span className={styles.of}>/{tasksTotal}</span></> : null} big />
             </div>
           </div>
+          <TaskBeads done={tasksDone} open={openTasks ? openCls : null} />
         </Link>
 
         {/* Financeiro */}
@@ -367,12 +400,9 @@ export default function Hub() {
                 color={finance && finance.saldoVar < 0 ? "#fb7185" : undefined}
                 big
               />
-              <div className={styles.statRow}>
-                <Stat label="gasto" value={finance ? fmtBRL(finance.gastoVar) : null} />
-                <Stat label="orçamento" value={finance ? fmtBRL(finance.budgetVar) : null} />
-              </div>
             </div>
           </div>
+          <SpendBar cats={finance?.cats} budget={finance?.budgetVar} spent={finance?.gastoVar} />
         </Link>
 
         {/* Rotina */}
@@ -386,12 +416,12 @@ export default function Hub() {
               <span className={styles.ringPct}>{dayDonePct(routine?.blocks, nowMin) != null ? `${dayDonePct(routine?.blocks, nowMin)}%` : "—"}</span>
             </Ring>
             <div className={styles.quadRight}>
-              <div className={styles.statLabel}>{routine?.current && <span className={styles.liveDot} />}agora</div>
               <div className={styles.nowTitle}>
                 {routine == null ? <span className={styles.skeleton} />
                   : routine.current ? routine.current.activity
                   : "Livre"}
               </div>
+              <div className={styles.statLabel}>{routine?.current && <span className={styles.liveDot} />}agora</div>
             </div>
           </div>
           <DayTimeline blocks={routine?.blocks} nowMin={nowMin} current={routine?.current} />
@@ -409,11 +439,7 @@ export default function Hub() {
               <span className={styles.ringSub}>/{TREINOS_META} treinos</span>
             </Ring>
             <div className={styles.quadRight}>
-              <Stat label="passos / dia" value={health ? fmtNum(health.steps) : null} big />
-              <div className={styles.statRow}>
-                <Stat label="sono"    value={health ? fmtNum(health.sleep_h, 1) : null} unit="h" />
-                <Stat label="bpm rep." value={health ? fmtNum(health.bpm) : null} />
-              </div>
+              <Stat label="passos por dia no mês" value={health ? fmtNum(health.steps) : null} big />
             </div>
           </div>
           <Sparkline data={health?.stepsSeries} color="#fb7185" />
