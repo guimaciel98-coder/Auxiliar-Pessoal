@@ -4,6 +4,8 @@ import Link from "next/link";
 import QuickAddModal from "./Daily/QuickAddModal";
 import styles from "./Hub.module.css";
 import BrandMark from "./ui/BrandMark";
+import { classify } from "../utils/helpers";
+import { PROJ } from "../config/constants";
 
 const DAYS         = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
 const MONTHS       = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
@@ -163,9 +165,13 @@ export default function Hub() {
 
   useEffect(() => {
     // ── Concluídas do localStorage (mesmo mecanismo do painel) ──
+    // Mesma regra da página Hoje: adiadas não contam; concluída só deste navegador precisa ter nome
     try {
-      const raw = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
-      setCompletedIds(new Set(raw[brtTodayKey()] ?? []));
+      const day   = brtTodayKey();
+      const raw   = JSON.parse(localStorage.getItem(LS_KEY) || "{}")[day] ?? [];
+      const moved = new Set((JSON.parse(localStorage.getItem("dailyapp_moved") || "{}")[day] ?? []).map(String));
+      const names = JSON.parse(localStorage.getItem("dailyapp_done_names") || "{}")[day] ?? {};
+      setCompletedIds(new Set(raw.map(String).filter(id => !moved.has(id) && names[id])));
     } catch { setCompletedIds(new Set()); }
 
     // ── Tarefas abertas ──
@@ -274,6 +280,16 @@ export default function Hub() {
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const overdue    = (openTasks ?? []).filter(t => Number(t.due_date) < startToday).length;
 
+  // Próxima tarefa: a próxima com horário; senão a mais urgente; senão a primeira aberta
+  const nextTask = (() => {
+    const list = (openTasks ?? []).map(classify);
+    if (!list.length) return null;
+    const timed = list.filter(t => t.timed && t.ts >= now.getTime() - 30 * 60000).sort((a, b) => a.ts - b.ts);
+    const t = timed[0] ?? list.find(x => x.urgent) ?? list.find(x => x.high) ?? list[0];
+    const late = t.ts && t.ts < startToday;
+    return { name: t.name, hm: t.hm, late, cor: PROJ[t.proj]?.cor ?? "#a78bfa", urgent: t.urgent || t.high };
+  })();
+
   const finColor = finance
     ? (finance.pctVar > 85 ? "#fb7185" : finance.pctVar > 60 ? "#fbbf24" : "#34d399")
     : "#34d399";
@@ -334,6 +350,21 @@ export default function Hub() {
               </div>
             </div>
           </div>
+          {openTasks && (
+            nextTask ? (
+              <div className={styles.nextTask} style={{ "--p": nextTask.cor }}>
+                <span className={styles.nextLabel}>próxima</span>
+                <span className={styles.nextName}>{nextTask.name}</span>
+                <span className={`${styles.nextTime} ${nextTask.late ? styles.nextLate : ""}`}>
+                  {nextTask.late ? "atrasada" : nextTask.hm ?? (nextTask.urgent ? "urgente" : "hoje")}
+                </span>
+              </div>
+            ) : (
+              <div className={`${styles.nextTask} ${styles.nextDone}`}>
+                <span className={styles.nextName}>Tudo feito por hoje 🎉</span>
+              </div>
+            )
+          )}
         </Link>
 
         {/* Financeiro */}

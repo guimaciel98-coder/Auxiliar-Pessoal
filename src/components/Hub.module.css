@@ -381,3 +381,19 @@
   .quadRight { gap: clamp(6px, calc(1.5vh / var(--vz, 1)), 14px); }
   .chipIcon, .arrow { width: clamp(24px, calc(3.6vh / var(--vz, 1)), 30px); height: clamp(24px, calc(3.6vh / var(--vz, 1)), 30px); }
 }
+
+/* Tarefas: próxima tarefa no rodapé do quadrado */
+.nextTask {
+  --p: #a78bfa;
+  position: relative; display: flex; align-items: center; gap: 12px; min-width: 0;
+  height: 40px; padding: 0 14px 0 16px; border-radius: 12px;
+  background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06);
+}
+.nextTask::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--p); }
+.nextLabel { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: .06em; flex-shrink: 0; }
+.nextName  { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nextTime  { flex-shrink: 0; font-size: 12px; font-weight: 800; color: #a78bfa; padding: 3px 9px; border-radius: 99px; background: rgba(167,139,250,0.14); font-variant-numeric: tabular-nums; }
+.nextLate  { color: #fb7185; background: rgba(251,113,133,0.14); }
+.nextDone  { justify-content: center; background: rgba(52,211,153,0.08); border: 1px dashed rgba(52,211,153,0.3); }
+.nextDone::before { display: none; }
+.nextDone .nextName { flex: none; color: rgba(255,255,255,0.8); }
