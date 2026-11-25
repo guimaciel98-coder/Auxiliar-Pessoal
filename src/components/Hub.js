@@ -280,16 +280,10 @@ export default function Hub() {
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const overdue    = (openTasks ?? []).filter(t => Number(t.due_date) < startToday).length;
 
-  // Próxima tarefa: a próxima com horário; senão a mais urgente; senão a primeira aberta
-  const nextTask = (() => {
-    const list = (openTasks ?? []).map(classify);
-    if (!list.length) return null;
-    const timed = list.filter(t => t.timed && t.ts >= now.getTime() - 30 * 60000).sort((a, b) => a.ts - b.ts);
-    const t = timed[0] ?? list.find(x => x.urgent) ?? list.find(x => x.high) ?? list[0];
-    const late = t.ts && t.ts < startToday;
-    return { name: t.name, hm: t.hm, late, cor: PROJ[t.proj]?.cor ?? "#a78bfa", urgent: t.urgent || t.high };
-  })();
-
+  // Tarefas abertas por projeto
+  const openCls  = (openTasks ?? []).map(classify);
+  const PROJ_NAME = { pessoal: "Pessoal", vca: "VCA Brasil", pdv: "Ponto de Vista" };
+  const byProj   = Object.keys(PROJ).map(k => ({ k, name: PROJ_NAME[k] ?? PROJ[k].label, cor: PROJ[k].cor, n: openCls.filter(t => t.proj === k).length }));
   const finColor = finance
     ? (finance.pctVar > 85 ? "#fb7185" : finance.pctVar > 60 ? "#fbbf24" : "#34d399")
     : "#34d399";
@@ -343,28 +337,16 @@ export default function Hub() {
               <span className={styles.ringPct}>{tasksTotal != null ? `${tasksPct}%` : "—"}</span>
             </Ring>
             <div className={styles.quadRight}>
-              <Stat label="feitas hoje" value={tasksTotal != null ? <>{tasksDone}<span className={styles.of}>/{tasksTotal}</span></> : null} big />
-              <div className={styles.statRow}>
-                <Stat label="pendentes" value={tasksOpen} />
-                <Stat label="atrasadas" value={openTasks ? overdue : null} color={overdue ? "#fb7185" : undefined} />
-              </div>
+                <Stat label="feitas hoje" value={tasksTotal != null ? <>{tasksDone}<span className={styles.of}>/{tasksTotal}</span></> : null} big />
+                <div className={styles.projList}>
+                  {byProj.map(p => (
+                    <div key={p.k} className={`${styles.projRow} ${p.n ? "" : styles.projZero}`} style={{ "--p": p.cor }}>
+                      <i /><span>{p.name}</span><b>{openTasks ? p.n : "—"}</b>
+                    </div>
+                  ))}
+                </div>
             </div>
           </div>
-          {openTasks && (
-            nextTask ? (
-              <div className={styles.nextTask} style={{ "--p": nextTask.cor }}>
-                <span className={styles.nextLabel}>próxima</span>
-                <span className={styles.nextName}>{nextTask.name}</span>
-                <span className={`${styles.nextTime} ${nextTask.late ? styles.nextLate : ""}`}>
-                  {nextTask.late ? "atrasada" : nextTask.hm ?? (nextTask.urgent ? "urgente" : "hoje")}
-                </span>
-              </div>
-            ) : (
-              <div className={`${styles.nextTask} ${styles.nextDone}`}>
-                <span className={styles.nextName}>Tudo feito por hoje 🎉</span>
-              </div>
-            )
-          )}
         </Link>
 
         {/* Financeiro */}
