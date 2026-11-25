@@ -390,3 +390,11 @@
 .beads span { flex: 1; min-width: 4px; border-radius: 99px; }
 .beadDone { background: #a78bfa; opacity: .85; }
 .beadOpen { --p: #a78bfa; background: transparent; box-shadow: inset 0 0 0 2px var(--p); }
+
+/* Sair — topo do Hub */
+.logoutBtn {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;
+  color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer; transition: color .15s, background .15s, border-color .15s;
+}
+.logoutBtn:hover { color: #fb7185; background: rgba(251,113,133,0.1); border-color: rgba(251,113,133,0.35); }

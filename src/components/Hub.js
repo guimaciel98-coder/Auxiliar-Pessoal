@@ -4,6 +4,7 @@ import Link from "next/link";
 import QuickAddModal from "./Daily/QuickAddModal";
 import styles from "./Hub.module.css";
 import BrandMark from "./ui/BrandMark";
+import { logout } from "../lib/logout";
 import { classify } from "../utils/helpers";
 import { PROJ } from "../config/constants";
 
@@ -366,6 +367,9 @@ export default function Hub() {
           </div>
           <button className={styles.quickBtn} onClick={() => setModal(true)}>
             <span className={styles.quickPlus}>+</span> Nova tarefa
+          </button>
+          <button className={styles.logoutBtn} onClick={logout} title="Sair do app" aria-label="Sair">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
           </button>
         </div>
       </header>

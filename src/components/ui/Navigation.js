@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import styles from "./Navigation.module.css";
 import NavIcon from "./NavIcon";
 import BrandMark from "./BrandMark";
+import { logout } from "@/lib/logout";
 
 const FINANCE_ONLY = process.env.NEXT_PUBLIC_FINANCE_ONLY === "true";
 
@@ -177,6 +178,12 @@ export default function Navigation() {
           );
         })}
       </div>
+
+      {/* ── Sair (desktop) ───────────────────────────────────────────────── */}
+      <button className={styles.logout} onClick={logout} title="Sair do app">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        <span>Sair</span>
+      </button>
 
       {/* ── Barra mobile: flat + contexto-sensitiva ──────────────────────── */}
       <div className={`${styles.items} ${styles.mobileItems}`}>
