@@ -131,15 +131,21 @@
 }
 @media (max-width: 768px) { .weekCol { padding: 0 16px 100px; } }
 
-/* ═══ Computador: a aba Dia ocupa exatamente a primeira tela ═══ */
-@media (min-width: 769px) {
-  .fitPage { height: calc(100vh / var(--vz, 1)); min-height: 0 !important; display: flex; flex-direction: column; overflow: hidden; }
+/* ═══ Computador: a aba Dia ocupa exatamente a primeira tela (só em janelas com altura suficiente) ═══ */
+@media (min-width: 769px) and (min-height: 700px) {
+  .fitPage { height: calc(100vh / var(--vz, 1)); min-height: 0 !important; display: flex; flex-direction: column; overflow-y: auto; }
   .fitLayout { flex: 1; min-height: 0; padding-bottom: 24px !important; align-items: stretch !important; }
   .fitLayout > div { min-height: 0; }
   .fitLayout > div:first-child { display: flex; flex-direction: column; }
   .fitList { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto !important; scrollbar-width: thin; }
-  .fitList .blk { flex: 1 1 0; min-height: 34px; max-height: 64px; padding-top: 0; padding-bottom: 0; }
+  .fitList .blk { flex: 1 1 0; min-height: 32px; max-height: 60px; padding-top: 0; padding-bottom: 0; }
   .fitList .blk::before { top: 22%; bottom: 22%; }
-  .fitList .addRow { flex-shrink: 0; }
-  .fitLayout > div:last-child { overflow-y: auto; scrollbar-width: none; }
+  .fitList .name { flex-direction: row; align-items: baseline; gap: 10px; }
+  .fitList .name small { flex-shrink: 0; }
+  .fitList .addRow { flex-shrink: 0; padding: 10px; }
+  .fitLayout > div:last-child { overflow-y: auto; scrollbar-width: thin; gap: 11px; }
+  .fitLayout > div:last-child > div { padding-top: 14px; padding-bottom: 14px; }
+  .fitLayout .nowName { margin: 6px 0 4px; }
+  .fitLayout .nowBar { margin-top: 10px; }
+  .fitLayout .next { margin-top: 10px; padding-top: 10px; }
 }

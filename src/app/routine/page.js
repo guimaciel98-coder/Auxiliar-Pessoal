@@ -324,7 +324,7 @@ function TabDia({ selectedDay, onDayChange }) {
               <div className={ex.panel}>
                 <div className={ex.panelTitle}>Progresso do dia</div>
                 <div className={ex.ringPanel}>
-                  <Ring pct={donePct} color="#38bdf8" size={108} stroke={10}>
+                  <Ring pct={donePct} color="#38bdf8" size={88} stroke={9}>
                     <span className={ex.ringPct}>{donePct}%</span>
                     <span className={ex.ringSub}>feito</span>
                   </Ring>
