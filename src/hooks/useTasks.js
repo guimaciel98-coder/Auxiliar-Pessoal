@@ -20,6 +20,16 @@ function ssSave(set) {
   } catch {}
 }
 
+// Tarefas adiadas hoje (somem de Hoje, mas NÃO contam como feitas) e nomes das concluídas aqui
+const LS_MOVED = "dailyapp_moved";
+const LS_NAMES = "dailyapp_done_names";
+function lsDay(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || "{}")[todayKey()] ?? fallback; } catch { return fallback; }
+}
+function lsDaySave(key, value) {
+  try { localStorage.setItem(key, JSON.stringify({ [todayKey()]: value })); } catch {}
+}
+
 export function useTasks(mode = "today") {
   const [data, setData]           = useState(null);
   const [loading, setLoading]     = useState(true);
@@ -31,6 +41,21 @@ export function useTasks(mode = "today") {
   const [rescheduling, setRescheduling] = useState(new Set());
   const [clockNow, setClockNow]   = useState(Date.now());
   const [toast, setToast]         = useState(null);
+  const [moved, setMoved]         = useState(new Set());   // adiadas hoje (ids em string)
+  const [doneNames, setDoneNames] = useState({});          // id → nome das concluídas por aqui
+
+  function markMoved(taskId, on) {
+    setMoved(prev => {
+      const next = new Set(prev);
+      on ? next.add(String(taskId)) : next.delete(String(taskId));
+      lsDaySave(LS_MOVED, [...next]);
+      return next;
+    });
+  }
+  function rememberName(taskId, name) {
+    if (!name) return;
+    setDoneNames(prev => { const next = { ...prev, [String(taskId)]: name }; lsDaySave(LS_NAMES, next); return next; });
+  }
 
   const isLoadingRef = useRef(false);
   const reloadTimerRef = useRef(null);
@@ -98,6 +123,10 @@ export function useTasks(mode = "today") {
   useEffect(() => {
     const restored = ssLoad();
     if (restored.size > 0) setCompleted(restored);
+    setMoved(new Set(lsDay(LS_MOVED, [])));
+    setDoneNames(lsDay(LS_NAMES, {}));
+    setMoved(new Set(lsDay(LS_MOVED, [])));
+    setDoneNames(lsDay(LS_NAMES, {}));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
@@ -148,6 +177,7 @@ export function useTasks(mode = "today") {
         throw new Error(data.error || `HTTP ${res.status}`);
       }
       addHidden(taskId);
+      markMoved(taskId, true);
       setFading(prev => { const s = new Set(prev); s.delete(taskId); return s; });
 
       const undoReschedule = prevDueDate ? async () => {
@@ -161,6 +191,7 @@ export function useTasks(mode = "today") {
             body: JSON.stringify({ taskId, dueDate: iso, timed, isRecurring: !!isRecurring, recurrence: recurrence ?? null }),
           });
           removeHidden(taskId);
+          markMoved(taskId, false);
           setTimeout(load, 500);
         } catch {}
       } : null;
@@ -195,6 +226,8 @@ export function useTasks(mode = "today") {
 
       if (navigator.vibrate) navigator.vibrate(50);
       addHidden(taskId);
+      markMoved(taskId, false);
+      rememberName(taskId, taskName);
       setFading(prev => { const s = new Set(prev); s.delete(taskId); return s; });
       const name = taskName;
 
@@ -257,7 +290,7 @@ export function useTasks(mode = "today") {
   return {
     data, loading, syncing, clockNow,
     load, sync, showToast,
-    completed, completing, fading, rescheduling, reopening,
+    completed, moved, doneNames, completing, fading, rescheduling, reopening,
     rescheduleTask, completeTask, reopenCompleted,
     toast,
   };

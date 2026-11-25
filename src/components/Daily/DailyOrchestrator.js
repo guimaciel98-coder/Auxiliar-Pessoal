@@ -18,7 +18,7 @@ export default function DailyOrchestrator({ mode = "today" }) {
   const {
     data, loading, syncing, clockNow,
     load, sync,
-    completed, completing, fading, rescheduling, reopening,
+    completed, moved, doneNames, completing, fading, rescheduling, reopening,
     rescheduleTask, completeTask, reopenCompleted,
     toast, showToast,
   } = useTasks(mode);
@@ -92,15 +92,18 @@ export default function DailyOrchestrator({ mode = "today" }) {
     : all;
 
   // Concluídas = Todoist ∪ marcadas neste navegador, sem as que ainda estão abertas
+  // e sem as que foram só adiadas (elas somem de Hoje, mas não foram feitas)
   const openIds        = new Set(all.map(t => String(t.id)));
-  const doneIds        = new Set([...doneApiItems.map(i => i.id), ...[...completed].map(String)].filter(id => !openIds.has(id)));
+  const apiDoneIds     = new Set(doneApiItems.map(i => i.id));
+  const doneIds        = new Set([...apiDoneIds, ...[...completed].map(String)]
+    .filter(id => !openIds.has(id) && (apiDoneIds.has(id) || (!moved.has(id) && !!doneNames[id]))));
   const completedCount = doneIds.size;
   const totalCount     = all.length + completedCount;
   const doneList = [...doneIds].map(id => {
     const api = doneApiItems.find(i => i.id === id);
     const loc = apiAllTasks.find(t => String(t.id) === id);
     const recurring = api ? !!api.recurring : !!(loc?._recurrence && loc._recurrence !== "none");
-    return { id, name: api?.name ?? loc?.name ?? "Tarefa concluída", at: api?.completed_at ?? null, recurring };
+    return { id, name: api?.name || loc?.name || doneNames[id] || "Tarefa concluída", at: api?.completed_at ?? null, recurring };
   }).sort((x, y) => String(y.at ?? "").localeCompare(String(x.at ?? "")));
   const overdueCount   = overdueTasks.length;
   const timedCount     = all.filter(t => t.timed).length;
