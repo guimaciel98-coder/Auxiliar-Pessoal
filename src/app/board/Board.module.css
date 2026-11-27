@@ -160,7 +160,8 @@
   border-radius: 12px;
   background: rgba(255,255,255,0.045);
   border: 1px solid rgba(255,255,255,0.06);
-  cursor: default;
+  cursor: grab;
+  touch-action: manipulation;
   transition: background 0.15s, border-color 0.15s, transform .15s;
   position: relative;
 }
@@ -170,8 +171,7 @@
 .dragArea {
   position: absolute; left: -2px; top: 0; bottom: 0;
   width: 14px; display: flex; align-items: center; justify-content: center;
-  cursor: grab; opacity: 0; transition: opacity 0.15s;
-  touch-action: none;
+  opacity: 0; transition: opacity 0.15s; pointer-events: none;
 }
 .card:hover .dragArea { opacity: 1; }
 .dragDots { font-size: 11px; color: rgba(255,255,255,0.35); user-select: none; }

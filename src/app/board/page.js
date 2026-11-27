@@ -99,6 +99,7 @@ function fmtDay(ms) {
 }
 
 // ─── Card de tarefa ──────────────────────────────────────────────────────────
+let lastDragEndAt = 0; // evita que soltar o cartão conte como clique (abrir edição)
 
 function SortableTaskCard({ t, onComplete, onReschedule, onEdit, columnId, showSection }) {
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
@@ -129,9 +130,10 @@ function SortableTaskCard({ t, onComplete, onReschedule, onEdit, columnId, showS
         data-nodrag
         style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.35 : 1 }}
         className={`${styles.card} ${rescheduleOpen ? styles.cardOpen : ""}`}
+        {...attributes} {...listeners}
       >
-        {/* Drag handle — aparece só no hover via CSS */}
-        <div className={styles.dragArea} {...attributes} {...listeners}>
+        {/* Indicador de que dá para arrastar (o cartão inteiro arrasta) */}
+        <div className={styles.dragArea} aria-hidden>
           <span className={styles.dragDots}>⠿</span>
         </div>
 
@@ -141,7 +143,7 @@ function SortableTaskCard({ t, onComplete, onReschedule, onEdit, columnId, showS
         {/* Conteúdo */}
         <div
           className={styles.cardBody}
-          onClick={() => onEdit && onEdit(t)}
+          onClick={() => { if (Date.now() - lastDragEndAt > 300 && onEdit) onEdit(t); }}
           style={{ cursor: onEdit ? "pointer" : "default" }}
         >
           <span className={styles.cardName}>{t.name}</span>
@@ -405,6 +407,7 @@ export default function ProjectsPage() {
   const unassignedTasks = filteredTasks.filter(t => activeProject === "pessoal" || !t._section_id);
 
   function handleDragStart(e) { setActiveTask(tasks.find(t => t.id === e.active.id) || null); }
+  function handleDragCancel() { setActiveTask(null); lastDragEndAt = Date.now(); }
 
   // Converte ID de coluna do modo "Por Dia" em timestamp BRT
   function dayGroupToMs(groupId) {
@@ -419,6 +422,7 @@ export default function ProjectsPage() {
   async function handleDragEnd(e) {
     const { active, over } = e;
     setActiveTask(null);
+    lastDragEndAt = Date.now();
     if (!over || active.id === over.id) return;
 
     const src = active.data.current?.column;
@@ -616,7 +620,7 @@ export default function ProjectsPage() {
 
         {/* Board — boardWrap fora do DndContext para drag-to-scroll funcionar */}
         <div className={styles.boardWrap} ref={boardRef} onPointerDown={handleBoardPointerDown}>
-        <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
           <div className={styles.columns}>
 
             {!isDay && (
@@ -710,7 +714,7 @@ export default function ProjectsPage() {
               </SortableContext>
             ))}
           </div>
-          <DragOverlay dropAnimation={{ duration: 150 }}>
+          <DragOverlay dropAnimation={null}>
             {activeTask ? <DragGhostCard t={activeTask} /> : null}
           </DragOverlay>
         </DndContext>
